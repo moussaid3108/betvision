@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BetVision AI</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-0: #050608;
+    --bg-1: #0c0e12;
+    --bg-2: #131620;
+    --bg-3: #1a1e2a;
+    --bg-4: #212636;
+    --accent: #00e5a0;
+    --accent-dim: rgba(0,229,160,0.12);
+    --accent-glow: rgba(0,229,160,0.35);
+    --gold: #f5c842;
+    --gold-dim: rgba(245,200,66,0.12);
+    --red: #ff4d6a;
+    --red-dim: rgba(255,77,106,0.12);
+    --blue: #4d9fff;
+    --blue-dim: rgba(77,159,255,0.12);
+    --text-1: #f0f2f7;
+    --text-2: #8b92a8;
+    --text-3: #555d72;
+    --border: rgba(255,255,255,0.06);
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg-0);
+    color: var(--text-1);
+    font-family: 'Barlow', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    padding-bottom: 80px;
+  }
+
+  /* ─── HEADER ─── */
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: linear-gradient(180deg, var(--bg-0) 60%, transparent);
+    padding: 16px 20px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), #00b377);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 0 16px var(--accent-glow);
+  }
+  .logo-text {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800; font-size: 22px; letter-spacing: 0.5px;
+    background: linear-gradient(90deg, #fff 40%, var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .logo-sub { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 2px; margin-top: -2px; }
+  .header-badge {
+    background: var(--accent-dim);
+    border: 1px solid rgba(0,229,160,0.25);
+    color: var(--accent);
+    font-size: 10px; font-weight: 600;
+    padding: 4px 10px; border-radius: 20px;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+
+  /* ─── BOTTOM NAV ─── */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+    background: var(--bg-1);
+    border-top: 1px solid var(--border);
+    display: flex;
+    padding: 0 0 env(safe-area-inset-bottom);
+    backdrop-filter: blur(20px);
+  }
+  .nav-item {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 10px 0 8px; gap: 4px;
+    cursor: pointer; transition: all .2s;
+    color: var(--text-3);
+    font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.8px;
+    border: none; background: none;
+  }
+  .nav-item .nav-icon { font-size: 20px; transition: transform .2s; }
+  .nav-item.active { color: var(--accent); }
+  .nav-item.active .nav-icon { transform: scale(1.15); }
+
+  /* ─── PAGES ─── */
+  .page { display: none; padding: 0 16px; animation: fadeIn .3s ease; }
+  .page.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  /* ─── SECTION TITLE ─── */
+  .section-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px; font-weight: 700;
+    color: var(--text-3); text-transform: uppercase; letter-spacing: 2.5px;
+    margin: 20px 0 12px;
+  }
+
+  /* ─── LEAGUE GRID ─── */
+  .league-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    margin-bottom: 20px;
+  }
+  .league-card {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 10px;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 6px;
+    cursor: pointer; transition: all .2s;
+    position: relative; overflow: hidden;
+  }
+  .league-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(circle at 50% 0%, var(--accent-dim), transparent 70%);
+    opacity: 0; transition: opacity .3s;
+  }
+  .league-card:active::before, .league-card.selected::before { opacity: 1; }
+  .league-card.selected {
+    border-color: rgba(0,229,160,0.4);
+    background: var(--bg-3);
+  }
+  .league-flag { font-size: 26px; }
+  .league-name {
+    font-size: 10px; font-weight: 600; color: var(--text-2);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    text-align: center; line-height: 1.2;
+  }
+  .league-count {
+    background: var(--bg-4); border-radius: 10px;
+    padding: 2px 8px; font-size: 9px; color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* ─── MATCH LIST ─── */
+  .match-list { display: flex; flex-direction: column; gap: 10px; }
+  .match-card {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px;
+    cursor: pointer; transition: all .2s;
+    position: relative; overflow: hidden;
+  }
+  .match-card:active { transform: scale(0.98); }
+  .match-card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .match-date { font-size: 10px; color: var(--text-3); font-weight: 500; }
+  .match-competition { 
+    font-size: 10px; color: var(--accent); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .match-teams {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .team-block { flex: 1; }
+  .team-name { font-family: 'Barlow Condensed', sans-serif; font-size: 17px; font-weight: 700; }
+  .team-block.away { text-align: right; }
+  .match-vs {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px; font-weight: 800; color: var(--text-3);
+    padding: 0 8px;
+  }
+  .match-indicators {
+    display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap;
+  }
+  .indicator {
+    padding: 3px 8px; border-radius: 6px;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .ind-btts { background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(245,200,66,0.2); }
+  .ind-over { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(77,159,255,0.2); }
+  .ind-hot { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,77,106,0.2); }
+  .ind-safe { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(0,229,160,0.2); }
+  .confidence-bar {
+    margin-top: 10px; height: 3px;
+    background: var(--bg-4); border-radius: 2px; overflow: hidden;
+  }
+  .confidence-fill {
+    height: 100%; border-radius: 2px;
+    background: linear-gradient(90deg, var(--accent), #00b377);
+    transition: width 1s ease;
+  }
+
+  /* ─── ANALYSE DÉTAILLÉE ─── */
+  .analysis-page { padding: 0 16px 20px; }
+  .back-btn {
+    display: flex; align-items: center; gap: 8px;
+    color: var(--text-2); font-size: 14px; font-weight: 500;
+    cursor: pointer; padding: 12px 0; border: none; background: none;
+  }
+  .back-btn:active { color: var(--accent); }
+
+  .analysis-hero {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+    margin-bottom: 16px; position: relative; overflow: hidden;
+  }
+  .analysis-hero::before {
+    content: ''; position: absolute; top: -40px; left: 50%;
+    transform: translateX(-50%);
+    width: 200px; height: 100px;
+    background: radial-gradient(ellipse, var(--accent-dim), transparent 70%);
+  }
+  .hero-league {
+    text-align: center; font-size: 11px; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 2px; font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .hero-teams {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .hero-team { flex: 1; text-align: center; }
+  .hero-team-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px; font-weight: 800; line-height: 1.1;
+  }
+  .hero-team-form { margin-top: 6px; display: flex; justify-content: center; gap: 3px; }
+  .form-dot {
+    width: 18px; height: 18px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 800;
+  }
+  .form-w { background: rgba(0,229,160,0.2); color: var(--accent); }
+  .form-d { background: rgba(255,200,66,0.2); color: var(--gold); }
+  .form-l { background: rgba(255,77,106,0.2); color: var(--red); }
+  .hero-vs {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 28px; font-weight: 800; color: var(--text-3);
+    padding: 0 12px;
+  }
+  .hero-datetime {
+    text-align: center; margin-top: 12px;
+    font-size: 12px; color: var(--text-3); font-weight: 500;
+  }
+
+  /* ─── STATS GRID ─── */
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+  .stat-box {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 10px;
+    text-align: center;
+  }
+  .stat-value {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 26px; font-weight: 800; line-height: 1;
+  }
+  .stat-label { font-size: 10px; color: var(--text-3); font-weight: 500; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-green { color: var(--accent); }
+  .stat-gold { color: var(--gold); }
+  .stat-blue { color: var(--blue); }
+  .stat-red { color: var(--red); }
+
+  /* ─── PROBA BARS ─── */
+  .proba-section {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; margin-bottom: 14px;
+  }
+  .proba-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px; font-weight: 700; color: var(--text-2);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px;
+  }
+  .proba-row { margin-bottom: 10px; }
+  .proba-header { display: flex; justify-content: space-between; margin-bottom: 5px; }
+  .proba-name { font-size: 12px; font-weight: 600; color: var(--text-1); }
+  .proba-pct { font-size: 12px; font-weight: 700; }
+  .proba-track {
+    height: 5px; background: var(--bg-4); border-radius: 3px; overflow: hidden;
+  }
+  .proba-fill { height: 100%; border-radius: 3px; transition: width 1.2s cubic-bezier(.4,0,.2,1); }
+  .fill-green { background: linear-gradient(90deg, var(--accent), #00b377); }
+  .fill-gold { background: linear-gradient(90deg, var(--gold), #d4a800); }
+  .fill-blue { background: linear-gradient(90deg, var(--blue), #2271d4); }
+
+  /* ─── H2H ─── */
+  .h2h-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 0; border-bottom: 1px solid var(--border);
+  }
+  .h2h-row:last-child { border-bottom: none; }
+  .h2h-date { font-size: 10px; color: var(--text-3); width: 60px; flex-shrink: 0; }
+  .h2h-teams { flex: 1; font-size: 12px; font-weight: 500; }
+  .h2h-score {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px; font-weight: 800;
+    min-width: 40px; text-align: center;
+  }
+
+  /* ─── SIGNAL GLOBAL ─── */
+  .signal-card {
+    background: var(--bg-2);
+    border: 1px solid rgba(0,229,160,0.3);
+    border-radius: var(--radius); padding: 18px;
+    margin-bottom: 14px; position: relative; overflow: hidden;
+  }
+  .signal-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(0,229,160,0.07), transparent 60%);
+  }
+  .signal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .signal-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px; font-weight: 700; color: var(--text-2);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .signal-badge {
+    background: var(--accent-dim); border: 1px solid rgba(0,229,160,0.3);
+    color: var(--accent); padding: 4px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+  }
+  .signal-text { font-size: 14px; line-height: 1.6; color: var(--text-1); }
+  .signal-meter {
+    display: flex; align-items: center; gap: 10px; margin-top: 14px;
+  }
+  .signal-level {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 36px; font-weight: 800; color: var(--accent);
+    line-height: 1;
+  }
+  .signal-desc { font-size: 12px; color: var(--text-2); line-height: 1.4; }
+
+  /* ─── IA CHAT ─── */
+  .ia-page { padding: 0 16px 20px; }
+  .ia-intro {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px; margin-bottom: 20px;
+  }
+  .ia-intro-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 20px; font-weight: 800; margin-bottom: 6px;
+  }
+  .ia-intro-sub { font-size: 13px; color: var(--text-2); line-height: 1.5; }
+
+  .chat-box {
+    display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;
+    min-height: 200px;
+  }
+  .chat-msg {
+    max-width: 85%; padding: 12px 14px;
+    border-radius: 12px; font-size: 13px; line-height: 1.5;
+    animation: fadeIn .25s ease;
+  }
+  .chat-msg.user {
+    align-self: flex-end;
+    background: var(--accent);
+    color: #050608; font-weight: 500;
+    border-bottom-right-radius: 4px;
+  }
+  .chat-msg.ai {
+    align-self: flex-start;
+    background: var(--bg-2); border: 1px solid var(--border);
+    color: var(--text-1);
+    border-bottom-left-radius: 4px;
+  }
+  .chat-msg.typing { color: var(--text-3); font-style: italic; }
+
+  .chat-input-row {
+    display: flex; gap: 8px; align-items: flex-end;
+  }
+  .chat-input {
+    flex: 1; background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 14px;
+    font-size: 14px; color: var(--text-1); font-family: 'Barlow', sans-serif;
+    resize: none; outline: none; min-height: 48px; max-height: 120px;
+    transition: border-color .2s;
+  }
+  .chat-input:focus { border-color: rgba(0,229,160,0.4); }
+  .chat-input::placeholder { color: var(--text-3); }
+  .chat-send {
+    width: 48px; height: 48px; flex-shrink: 0;
+    background: var(--accent); border: none; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all .2s; font-size: 18px;
+  }
+  .chat-send:active { transform: scale(0.93); background: #00b377; }
+  .chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .quick-questions {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px;
+  }
+  .quick-q {
+    background: var(--bg-3); border: 1px solid var(--border);
+    border-radius: 20px; padding: 6px 12px;
+    font-size: 12px; color: var(--text-2); cursor: pointer;
+    transition: all .2s;
+  }
+  .quick-q:active { background: var(--accent-dim); color: var(--accent); border-color: rgba(0,229,160,0.3); }
+
+  /* ─── DASHBOARD ─── */
+  .dashboard-page { padding: 0 16px 20px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+  .kpi-card {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px;
+  }
+  .kpi-value {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 32px; font-weight: 800; line-height: 1;
+  }
+  .kpi-label { font-size: 11px; color: var(--text-3); font-weight: 500; margin-top: 4px; }
+  .kpi-trend { font-size: 11px; font-weight: 600; margin-top: 2px; }
+  .trend-up { color: var(--accent); }
+  .trend-down { color: var(--red); }
+
+  .live-ticker {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .ticker-label {
+    font-size: 10px; color: var(--red); font-weight: 700;
+    text-transform: uppercase; letter-spacing: 2px;
+    display: flex; align-items: center; gap: 6px; margin-bottom: 10px;
+  }
+  .live-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--red); animation: pulse 1.2s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .ticker-scroll { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+  .ticker-scroll::-webkit-scrollbar { display: none; }
+  .ticker-match {
+    flex-shrink: 0; background: var(--bg-3); border-radius: 10px;
+    padding: 10px 14px; min-width: 160px;
+  }
+  .ticker-teams { font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700; }
+  .ticker-score { color: var(--accent); font-size: 13px; font-weight: 600; margin-top: 3px; }
+
+  /* ─── EMPTY STATE ─── */
+  .empty-state {
+    text-align: center; padding: 40px 20px;
+    color: var(--text-3);
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; line-height: 1.5; }
+
+  /* ─── LOADING SPINNER ─── */
+  .spinner {
+    width: 24px; height: 24px; border: 2px solid var(--bg-4);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin .7s linear infinite; margin: 20px auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── SCROLLBAR ─── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon">⚽</div>
+    <div>
+      <div class="logo-text">BetVision AI</div>
+      <div class="logo-sub">Algorithme Prédictif</div>
+    </div>
+  </div>
+  <div class="header-badge">v2.0</div>
+</div>
+
+<!-- PAGE: LIGUES -->
+<div class="page active" id="page-leagues">
+  <div class="section-label">Sélectionner une ligue</div>
+  <div class="league-grid" id="league-grid">
+    <div class="league-card selected" onclick="selectLeague(this,'PL','Premier League','🏴󠁧󠁢󠁥󠁮󠁧󠁿')">
+      <div class="league-flag">🏴󠁧󠁢󠁥󠁮󠁧󠁿</div>
+      <div class="league-name">Premier League</div>
+      <div class="league-count">10 matchs</div>
+    </div>
+    <div class="league-card" onclick="selectLeague(this,'FL1','Ligue 1','🇫🇷')">
+      <div class="league-flag">🇫🇷</div>
+      <div class="league-name">Ligue 1</div>
+      <div class="league-count">8 matchs</div>
+    </div>
+    <div class="league-card" onclick="selectLeague(this,'PD','La Liga','🇪🇸')">
+      <div class="league-flag">🇪🇸</div>
+      <div class="league-name">La Liga</div>
+      <div class="league-count">9 matchs</div>
+    </div>
+    <div class="league-card" onclick="selectLeague(this,'SA','Serie A','🇮🇹')">
+      <div class="league-flag">🇮🇹</div>
+      <div class="league-name">Serie A</div>
+      <div class="league-count">7 matchs</div>
+    </div>
+    <div class="league-card" onclick="selectLeague(this,'BL1','Bundesliga','🇩🇪')">
+      <div class="league-flag">🇩🇪</div>
+      <div class="league-name">Bundesliga</div>
+      <div class="league-count">6 matchs</div>
+    </div>
+    <div class="league-card" onclick="selectLeague(this,'CL','Champions League','⭐')">
+      <div class="league-flag">⭐</div>
+      <div class="league-name">Champions League</div>
+      <div class="league-count">4 matchs</div>
+    </div>
+  </div>
+
+  <div class="section-label" id="matches-label">Matchs — Premier League</div>
+  <div class="match-list" id="match-list">
+    <div class="spinner"></div>
+  </div>
+</div>
+
+<!-- PAGE: ANALYSE -->
+<div class="page" id="page-analysis">
+  <div class="analysis-page">
+    <button class="back-btn" onclick="showPage('leagues')">← Retour</button>
+    <div id="analysis-content"></div>
+  </div>
+</div>
+
+<!-- PAGE: IA -->
+<div class="page" id="page-ia">
+  <div class="ia-page">
+    <div class="ia-intro">
+      <div class="ia-intro-title">🤖 Assistant IA</div>
+      <div class="ia-intro-sub">Posez vos questions sur les statistiques, tendances et algorithmes prédictifs. L'IA analyse les données pour vous.</div>
+    </div>
+
+    <div class="quick-questions">
+      <div class="quick-q" onclick="sendQuick('Quels matchs ont le meilleur potentiel BTTS ce week-end ?')">🎯 Meilleur BTTS</div>
+      <div class="quick-q" onclick="sendQuick('Analyse les équipes en forme en Premier League')">📈 En forme</div>
+      <div class="quick-q" onclick="sendQuick('Quels matchs ont le plus de buts en moyenne cette saison ?')">⚡ +2.5 buts</div>
+      <div class="quick-q" onclick="sendQuick('Donne-moi une analyse risque/rendement pour un combiné de 3 matchs')">🔥 Combiné 3</div>
+    </div>
+
+    <div class="chat-box" id="chat-box">
+      <div class="chat-msg ai">Bonjour ! Je suis votre assistant d'analyse statistique. Posez-moi vos questions sur les matchs, les tendances ou les algorithmes prédictifs. 📊</div>
+    </div>
+
+    <div class="chat-input-row">
+      <textarea class="chat-input" id="chat-input" placeholder="Votre question..." rows="1"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
+        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+      <button class="chat-send" id="chat-send" onclick="sendMessage()">➤</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: DASHBOARD -->
+<div class="page" id="page-dashboard">
+  <div class="dashboard-page">
+    <div class="section-label">Aujourd'hui</div>
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-value stat-green">87%</div>
+        <div class="kpi-label">Précision BTTS (7j)</div>
+        <div class="kpi-trend trend-up">↑ +4% vs sem. dernière</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value stat-gold">23</div>
+        <div class="kpi-label">Matchs analysés</div>
+        <div class="kpi-trend trend-up">↑ 5 ligues actives</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value stat-blue">71%</div>
+        <div class="kpi-label">Over 2.5 (7j)</div>
+        <div class="kpi-trend trend-down">↓ -2% tendance</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value stat-red">4</div>
+        <div class="kpi-label">Alertes haute conf.</div>
+        <div class="kpi-trend trend-up">Signal ≥ 80%</div>
+      </div>
+    </div>
+
+    <div class="live-ticker">
+      <div class="ticker-label">
+        <div class="live-dot"></div>
+        En cours
+      </div>
+      <div class="ticker-scroll">
+        <div class="ticker-match">
+          <div class="ticker-teams">Man City vs Arsenal</div>
+          <div class="ticker-score">⚽ 1 - 1 (67')</div>
+        </div>
+        <div class="ticker-match">
+          <div class="ticker-teams">Real Madrid vs Barça</div>
+          <div class="ticker-score">⚽ 2 - 0 (54')</div>
+        </div>
+        <div class="ticker-match">
+          <div class="ticker-teams">PSG vs Monaco</div>
+          <div class="ticker-score">⚽ 0 - 1 (38')</div>
+        </div>
+        <div class="ticker-match">
+          <div class="ticker-teams">Bayern vs Dortmund</div>
+          <div class="ticker-score">⚽ 3 - 1 (82')</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Top signaux du jour</div>
+    <div class="match-list" id="top-signals-list"></div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <button class="nav-item active" id="nav-leagues" onclick="showPage('leagues')">
+    <span class="nav-icon">🏆</span>Ligues
+  </button>
+  <button class="nav-item" id="nav-ia" onclick="showPage('ia')">
+    <span class="nav-icon">🤖</span>IA
+  </button>
+  <button class="nav-item" id="nav-dashboard" onclick="showPage('dashboard')">
+    <span class="nav-icon">📊</span>Dashboard
+  </button>
+</nav>
+
+<script>
+// ─── TELEGRAM WEB APP INIT ───
+const tg = window.Telegram?.WebApp;
+if (tg) {
+  tg.ready();
+  tg.expand();
+  tg.setHeaderColor('#050608');
+  tg.setBackgroundColor('#050608');
+}
+
+// ─── GROQ API KEY (injecté depuis le backend en prod) ───
+// En production: le Mini App reçoit les données depuis bot.py via webhooks
+// Pour la démo, on simule les données
+const GROQ_API_KEY = ''; // À injecter depuis bot.py via query params ou postMessage
+
+// ─── STATE ───
+let currentLeague = { code: 'PL', name: 'Premier League', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' };
+let currentMatch = null;
+let chatHistory = [];
+
+// ─── MOCK DATA ───
+const MOCK_MATCHES = {
+  PL: [
+    { id:1, home:'Arsenal', away:'Man City', date:'Dim 06 Avr', time:'17:30', competition:'Premier League',
+      btts:72, over25:65, over15:84, confidence:78, formHome:['W','W','D','W','L'], formAway:['W','W','W','D','W'],
+      goalsHome:2.1, goalsAway:1.8, cleanHome:0.3, cleanAway:0.4 },
+    { id:2, home:'Chelsea', away:'Liverpool', date:'Sam 05 Avr', time:'20:00', competition:'Premier League',
+      btts:68, over25:71, over15:88, confidence:82, formHome:['W','D','W','L','W'], formAway:['W','W','W','W','D'],
+      goalsHome:1.9, goalsAway:2.3, cleanHome:0.4, cleanAway:0.3 },
+    { id:3, home:'Tottenham', away:'Newcastle', date:'Sam 05 Avr', time:'16:00', competition:'Premier League',
+      btts:61, over25:58, over15:79, confidence:65, formHome:['D','W','D','W','W'], formAway:['L','W','W','D','W'],
+      goalsHome:1.6, goalsAway:1.5, cleanHome:0.5, cleanAway:0.5 },
+    { id:4, home:'Man United', away:'Aston Villa', date:'Dim 06 Avr', time:'15:00', competition:'Premier League',
+      btts:55, over25:49, over15:71, confidence:58, formHome:['L','L','D','W','L'], formAway:['W','W','D','W','W'],
+      goalsHome:1.2, goalsAway:1.8, cleanHome:0.6, cleanAway:0.4 },
+  ],
+  FL1: [
+    { id:5, home:'PSG', away:'Monaco', date:'Sam 05 Avr', time:'21:00', competition:'Ligue 1',
+      btts:64, over25:60, over15:82, confidence:74, formHome:['W','W','W','W','W'], formAway:['W','D','W','L','W'],
+      goalsHome:2.8, goalsAway:1.6, cleanHome:0.2, cleanAway:0.4 },
+    { id:6, home:'Marseille', away:'Lyon', date:'Dim 06 Avr', time:'20:45', competition:'Ligue 1',
+      btts:70, over25:67, over15:85, confidence:76, formHome:['W','D','W','W','D'], formAway:['D','W','L','W','W'],
+      goalsHome:1.9, goalsAway:1.7, cleanHome:0.4, cleanAway:0.4 },
+  ],
+  PD: [
+    { id:7, home:'Barcelona', away:'Real Madrid', date:'Dim 06 Avr', time:'21:00', competition:'La Liga',
+      btts:66, over25:63, over15:86, confidence:80, formHome:['W','W','D','W','W'], formAway:['W','W','W','W','D'],
+      goalsHome:2.5, goalsAway:2.2, cleanHome:0.3, cleanAway:0.3 },
+    { id:8, home:'Atletico', away:'Sevilla', date:'Sam 05 Avr', time:'18:30', competition:'La Liga',
+      btts:52, over25:44, over15:68, confidence:61, formHome:['W','W','W','D','W'], formAway:['L','D','W','L','D'],
+      goalsHome:1.4, goalsAway:1.1, cleanHome:0.5, cleanAway:0.6 },
+  ],
+  SA: [
+    { id:9, home:'Inter', away:'Juventus', date:'Dim 06 Avr', time:'20:45', competition:'Serie A',
+      btts:58, over25:54, over15:77, confidence:68, formHome:['W','W','W','D','W'], formAway:['W','D','W','W','L'],
+      goalsHome:1.8, goalsAway:1.3, cleanHome:0.3, cleanAway:0.5 },
+  ],
+  BL1: [
+    { id:10, home:'Bayern', away:'Dortmund', date:'Sam 05 Avr', time:'18:30', competition:'Bundesliga',
+      btts:73, over25:78, over15:91, confidence:85, formHome:['W','W','W','W','W'], formAway:['W','W','D','W','W'],
+      goalsHome:3.1, goalsAway:2.4, cleanHome:0.2, cleanAway:0.2 },
+  ],
+  CL: [
+    { id:11, home:'Real Madrid', away:'PSG', date:'Mar 08 Avr', time:'21:00', competition:'Champions League',
+      btts:69, over25:65, over15:87, confidence:79, formHome:['W','W','W','W','D'], formAway:['W','W','W','W','W'],
+      goalsHome:2.4, goalsAway:2.1, cleanHome:0.3, cleanAway:0.3 },
+  ],
+};
+
+// ─── NAVIGATION ───
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  const navEl = document.getElementById('nav-' + name);
+  if (navEl) navEl.classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+// ─── LEAGUE SELECTION ───
+function selectLeague(el, code, name, flag) {
+  document.querySelectorAll('.league-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  currentLeague = { code, name, flag };
+  document.getElementById('matches-label').textContent = `Matchs — ${name}`;
+  loadMatches(code);
+}
+
+function loadMatches(code) {
+  const list = document.getElementById('match-list');
+  list.innerHTML = '<div class="spinner"></div>';
+  setTimeout(() => {
+    const matches = MOCK_MATCHES[code] || [];
+    if (!matches.length) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-text">Aucun match prévu<br>pour cette ligue</div></div>';
+      return;
+    }
+    list.innerHTML = matches.map(m => renderMatchCard(m)).join('');
+    setTimeout(() => {
+      list.querySelectorAll('.confidence-fill').forEach(el => {
+        el.style.width = el.dataset.width + '%';
+      });
+    }, 100);
+  }, 600);
+}
+
+function renderMatchCard(m) {
+  const tags = [];
+  if (m.btts >= 65) tags.push('<span class="indicator ind-btts">BTTS ' + m.btts + '%</span>');
+  if (m.over25 >= 60) tags.push('<span class="indicator ind-over">+2.5G ' + m.over25 + '%</span>');
+  if (m.over15 >= 80) tags.push('<span class="indicator ind-over">+1.5G ' + m.over15 + '%</span>');
+  if (m.confidence >= 75) tags.push('<span class="indicator ind-hot">🔥 Haute conf.</span>');
+
+  return `<div class="match-card" onclick="openAnalysis(${m.id})">
+    <div class="match-card-header">
+      <span class="match-date">${m.date} • ${m.time}</span>
+      <span class="match-competition">${m.competition}</span>
+    </div>
+    <div class="match-teams">
+      <div class="team-block"><div class="team-name">${m.home}</div></div>
+      <div class="match-vs">VS</div>
+      <div class="team-block away"><div class="team-name">${m.away}</div></div>
+    </div>
+    <div class="match-indicators">${tags.join('')}</div>
+    <div class="confidence-bar">
+      <div class="confidence-fill" data-width="${m.confidence}" style="width:0%"></div>
+    </div>
+  </div>`;
+}
+
+// ─── ANALYSE MATCH ───
+function openAnalysis(id) {
+  const allMatches = Object.values(MOCK_MATCHES).flat();
+  currentMatch = allMatches.find(m => m.id === id);
+  if (!currentMatch) return;
+  renderAnalysis(currentMatch);
+  showPage('analysis');
+  document.getElementById('nav-leagues').classList.add('active');
+}
+
+function renderAnalysis(m) {
+  const formBlock = (form) => form.map(r => {
+    const cls = r==='W'?'form-w':r==='D'?'form-d':'form-l';
+    return `<div class="form-dot ${cls}">${r}</div>`;
+  }).join('');
+
+  const content = `
+    <div class="analysis-hero">
+      <div class="hero-league">${m.competition}</div>
+      <div class="hero-teams">
+        <div class="hero-team">
+          <div class="hero-team-name">${m.home}</div>
+          <div class="hero-team-form">${formBlock(m.formHome)}</div>
+        </div>
+        <div class="hero-vs">VS</div>
+        <div class="hero-team" style="text-align:right">
+          <div class="hero-team-name">${m.away}</div>
+          <div class="hero-team-form" style="justify-content:flex-end">${formBlock(m.formAway)}</div>
+        </div>
+      </div>
+      <div class="hero-datetime">📅 ${m.date} à ${m.time} (Paris)</div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-value stat-gold">${m.btts}%</div>
+        <div class="stat-label">BTTS</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value stat-blue">${m.over25}%</div>
+        <div class="stat-label">Over 2.5</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value stat-green">${m.over15}%</div>
+        <div class="stat-label">Over 1.5</div>
+      </div>
+    </div>
+
+    <div class="proba-section">
+      <div class="proba-title">📊 Probabilités algorithmiques</div>
+      <div class="proba-row">
+        <div class="proba-header">
+          <span class="proba-name">Les deux équipes marquent</span>
+          <span class="proba-pct stat-gold">${m.btts}%</span>
+        </div>
+        <div class="proba-track"><div class="proba-fill fill-gold" style="width:0" data-w="${m.btts}"></div></div>
+      </div>
+      <div class="proba-row">
+        <div class="proba-header">
+          <span class="proba-name">Plus de 2.5 buts</span>
+          <span class="proba-pct stat-blue">${m.over25}%</span>
+        </div>
+        <div class="proba-track"><div class="proba-fill fill-blue" style="width:0" data-w="${m.over25}"></div></div>
+      </div>
+      <div class="proba-row">
+        <div class="proba-header">
+          <span class="proba-name">Plus de 1.5 buts</span>
+          <span class="proba-pct stat-green">${m.over15}%</span>
+        </div>
+        <div class="proba-track"><div class="proba-fill fill-green" style="width:0" data-w="${m.over15}"></div></div>
+      </div>
+    </div>
+
+    <div class="proba-section">
+      <div class="proba-title">⚽ Moyennes 10 derniers matchs</div>
+      <div class="h2h-row">
+        <div class="h2h-date">Att. dom.</div>
+        <div class="h2h-teams">${m.home}</div>
+        <div class="h2h-score stat-green">${m.goalsHome.toFixed(1)}</div>
+      </div>
+      <div class="h2h-row">
+        <div class="h2h-date">Att. ext.</div>
+        <div class="h2h-teams">${m.away}</div>
+        <div class="h2h-score stat-gold">${m.goalsAway.toFixed(1)}</div>
+      </div>
+      <div class="h2h-row">
+        <div class="h2h-date">CS dom.</div>
+        <div class="h2h-teams">Clean sheets / match</div>
+        <div class="h2h-score stat-blue">${m.cleanHome}</div>
+      </div>
+      <div class="h2h-row">
+        <div class="h2h-date">CS ext.</div>
+        <div class="h2h-teams">Clean sheets / match</div>
+        <div class="h2h-score stat-blue">${m.cleanAway}</div>
+      </div>
+    </div>
+
+    <div class="signal-card">
+      <div class="signal-header">
+        <span class="signal-title">🎯 Signal algorithmique</span>
+        <span class="signal-badge">${m.confidence >= 80 ? 'Élevé' : m.confidence >= 65 ? 'Modéré' : 'Faible'}</span>
+      </div>
+      <div class="signal-meter">
+        <div class="signal-level">${m.confidence}%</div>
+        <div class="signal-desc">Indice de confiance calculé par l'algorithme prédictif basé sur les 10 derniers matchs, H2H et contexte de saison.</div>
+      </div>
+    </div>
+
+    <button style="width:100%;padding:14px;background:var(--accent-dim);border:1px solid rgba(0,229,160,0.3);border-radius:var(--radius);color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px;cursor:pointer;" onclick="askAIAboutMatch()">
+      🤖 Analyser avec l'IA
+    </button>
+  `;
+
+  document.getElementById('analysis-content').innerHTML = content;
+
+  setTimeout(() => {
+    document.querySelectorAll('.proba-fill[data-w]').forEach(el => {
+      el.style.width = el.dataset.w + '%';
+      el.style.transition = 'width 1.2s cubic-bezier(.4,0,.2,1)';
+    });
+  }, 100);
+}
+
+function askAIAboutMatch() {
+  showPage('ia');
+  document.getElementById('nav-ia').classList.add('active');
+  const q = `Analyse détaillée pour ${currentMatch.home} vs ${currentMatch.away} : BTTS ${currentMatch.btts}%, Over 2.5 à ${currentMatch.over25}%, signal de confiance ${currentMatch.confidence}%. Que recommande l'algorithme prédictif ?`;
+  setTimeout(() => {
+    document.getElementById('chat-input').value = q;
+    sendMessage();
+  }, 400);
+}
+
+// ─── IA CHAT (GROQ) ───
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  input.style.height = 'auto';
+  appendMessage('user', msg);
+  await callGroqAI(msg);
+}
+
+function sendQuick(q) {
+  document.getElementById('chat-input').value = q;
+  sendMessage();
+}
+
+function appendMessage(role, text) {
+  const box = document.getElementById('chat-box');
+  const div = document.createElement('div');
+  div.className = `chat-msg ${role}`;
+  div.textContent = text;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+  chatHistory.push({ role: role === 'user' ? 'user' : 'assistant', content: text });
+}
+
+async function callGroqAI(userMsg) {
+  const btn = document.getElementById('chat-send');
+  btn.disabled = true;
+
+  const typing = document.createElement('div');
+  typing.className = 'chat-msg ai typing';
+  typing.id = 'typing-indicator';
+  typing.textContent = '⏳ Analyse en cours...';
+  document.getElementById('chat-box').appendChild(typing);
+  document.getElementById('chat-box').scrollTop = 9999;
+
+  try {
+    const messages = [
+      {
+        role: 'system',
+        content: `Tu es BetVision AI, un expert en analyse statistique et algorithmique du football. 
+Tu fournis des analyses basées sur des données : forme récente, statistiques, tendances. 
+Tu n'utilises JAMAIS les mots "pronos" ou "paris". 
+Tu parles toujours d'"analyse statistique", "algorithme prédictif", "outil d'aide à la décision", "signal de confiance".
+Tu réponds en français, de façon concise et structurée avec des émojis pertinents.
+Tu rappelles toujours que tes analyses sont des outils statistiques et ne constituent pas des conseils financiers.`
+      },
+      ...chatHistory.slice(-8).map(h => ({ role: h.role, content: h.content })),
+      { role: 'user', content: userMsg }
+    ];
+
+    // Appel Groq via le backend (bot.py doit exposer un endpoint /ai-chat)
+    // En production, on passe par bot.py pour ne pas exposer la clé API
+    // Pour la démo, simulation d'une réponse
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GROQ_API_KEY || 'GROQ_KEY_FROM_BACKEND'}`
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages,
+        max_tokens: 400,
+        temperature: 0.7
+      })
+    });
+
+    document.getElementById('typing-indicator')?.remove();
+
+    if (response.ok) {
+      const data = await response.json();
+      const reply = data.choices?.[0]?.message?.content || 'Erreur de réponse.';
+      appendMessage('ai', reply);
+    } else {
+      // Mode démo si clé non configurée
+      const demoReply = getDemoReply(userMsg);
+      appendMessage('ai', demoReply);
+    }
+  } catch (e) {
+    document.getElementById('typing-indicator')?.remove();
+    const demoReply = getDemoReply(userMsg);
+    appendMessage('ai', demoReply);
+  }
+
+  btn.disabled = false;
+}
+
+function getDemoReply(msg) {
+  if (msg.includes('BTTS') || msg.includes('btts')) {
+    return '📊 **Analyse BTTS** : Les matchs avec BTTS ≥ 65% correspondent à des rencontres où les deux équipes affichent ≥ 1.6 buts/match offensivement et < 0.5 clean sheet/match en défense. L\'algorithme identifie Chelsea-Liverpool (68%) et Arsenal-Man City (72%) comme les meilleurs profils BTTS ce week-end. ⚠️ Outil d\'aide à la décision uniquement.';
+  }
+  if (msg.includes('forme') || msg.includes('Forme')) {
+    return '📈 **Équipes en forme** : En Premier League, Man City (5V sur 5) et Liverpool (4V 1N) présentent les meilleures trajectoires. Le signal algorithmique est renforcé par leur moyenne de buts offensive (>2.0/match). Bayern Munich domine en Bundesliga avec 3.1 buts/match sur les 10 derniers matchs.';
+  }
+  if (msg.includes('combiné') || msg.includes('combine')) {
+    return '🎯 **Algorithme combiné 3 sélections** : Pour minimiser le risque, l\'outil préconise des sélections avec signal ≥ 70% et corrélation faible entre les matchs. Suggestion algorithmique : Bayern +2.5G (78%), Liverpool BTTS (68%), Barça victoire (74%). Indice de confiance combiné : ~38%. ⚠️ Ces données sont à titre informatif.';
+  }
+  return '🤖 **BetVision AI** : Votre question a été analysée. Pour obtenir des données en temps réel, connectez la clé Groq depuis Replit Secrets. En mode démo, je simule des réponses statistiques. L\'algorithme prédictif sera pleinement opérationnel une fois l\'API configurée.';
+}
+
+// ─── DASHBOARD SIGNALS ───
+function loadTopSignals() {
+  const allMatches = Object.values(MOCK_MATCHES).flat()
+    .filter(m => m.confidence >= 70)
+    .sort((a, b) => b.confidence - a.confidence)
+    .slice(0, 3);
+
+  const list = document.getElementById('top-signals-list');
+  list.innerHTML = allMatches.map(m => renderMatchCard(m)).join('');
+  setTimeout(() => {
+    list.querySelectorAll('.confidence-fill').forEach(el => {
+      el.style.width = el.dataset.width + '%';
+    });
+  }, 100);
+}
+
+// ─── INIT ───
+loadMatches('PL');
+loadTopSignals();
+</script>
+</body>
+</html>
