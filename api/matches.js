@@ -23,20 +23,20 @@ export default async function handler(req, res) {
     const data = await response.json();
     
     const raw = data?.response?.matches || data?.response || [];
-    
-    const matches = raw.map((item, idx) => {
-      const home = item.home?.name || item.homeTeam?.name || 'Équipe A';
-      const away = item.away?.name || item.awayTeam?.name || 'Équipe B';
-      const dateRaw = item.utcTime || item.date || '';
-      const dateObj = dateRaw ? new Date(dateRaw) : new Date();
-      const dateStr = dateObj.toLocaleDateString('fr-FR', { weekday:'short', day:'2-digit', month:'short' });
-      const timeStr = dateObj.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit', timeZone:'Europe/Paris' });
-      
-      return {
+    const now = new Date();
+
+    const matches = raw
+      .filter(item => {
+        const d = new Date(item.utcTime || item.date || '');
+        return d >= now;
+      })
+      .slice(0, 10)
+      .map((item, idx) => ({
         id: idx,
-        home, away,
-        date: dateStr,
-        time: timeStr,
+        home: item.home || 'Équipe A',
+        away: item.away || 'Équipe B',
+        date: item.date || '',
+        time: item.time || '',
         btts: Math.floor(50 + Math.random() * 35),
         over25: Math.floor(45 + Math.random() * 35),
         over15: Math.floor(65 + Math.random() * 25),
@@ -47,8 +47,7 @@ export default async function handler(req, res) {
         goalsAway: +(1.0 + Math.random()).toFixed(1),
         cleanHome: +(Math.random() * 0.6).toFixed(1),
         cleanAway: +(Math.random() * 0.6).toFixed(1),
-      };
-    });
+      }));
 
     res.status(200).json({ matches });
   } catch (e) {
