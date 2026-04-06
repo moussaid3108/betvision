@@ -12,7 +12,7 @@ export default async function handler(req, res) {
 
   try {
     const response = await fetch(
-      `https://free-api-live-football-data.p.rapidapi.com/football-get-matches-by-league?leagueid=${leagueId}`,
+      `https://free-api-live-football-data.p.rapidapi.com/football-get-all-matches-by-league?leagueid=${leagueId}`,
       {
         headers: {
           'x-rapidapi-host': 'free-api-live-football-data.p.rapidapi.com',
