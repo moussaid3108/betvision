@@ -4,11 +4,15 @@ export default async function handler(req, res) {
   const league = req.query.league || 'PL';
   
   const leagueMap = {
-    'PL': '152', 'FL1': '168', 'PD': '302',
-    'SA': '207', 'BL1': '175', 'CL': '181'
+    'PL': '47',
+    'FL1': '53',
+    'PD': '87',
+    'SA': '55',
+    'BL1': '54',
+    'CL': '42'
   };
   
-  const leagueId = leagueMap[league] || '152';
+  const leagueId = leagueMap[league] || '47';
 
   try {
     const response = await fetch(
