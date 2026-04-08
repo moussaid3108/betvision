@@ -565,24 +565,24 @@
     <div class="section-label">Aujourd'hui</div>
     <div class="kpi-row">
       <div class="kpi-card">
-        <div class="kpi-value stat-green">87%</div>
-        <div class="kpi-label">Précision BTTS (7j)</div>
-        <div class="kpi-trend trend-up">↑ +4% vs sem. dernière</div>
+        <div class="kpi-value stat-green" id="kpi-btts">--</div>
+        <div class="kpi-label">BTTS moyen</div>
+        <div class="kpi-trend trend-up">Ligues chargées</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-value stat-gold">23</div>
+        <div class="kpi-value stat-gold" id="kpi-count">--</div>
         <div class="kpi-label">Matchs analysés</div>
-        <div class="kpi-trend trend-up">↑ 5 ligues actives</div>
+        <div class="kpi-trend trend-up">Toutes ligues</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-value stat-blue">71%</div>
-        <div class="kpi-label">Over 2.5 (7j)</div>
-        <div class="kpi-trend trend-down">↓ -2% tendance</div>
+        <div class="kpi-value stat-blue" id="kpi-over25">--</div>
+        <div class="kpi-label">Over 2.5 moyen</div>
+        <div class="kpi-trend trend-up">Calcul Poisson</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-value stat-red">4</div>
-        <div class="kpi-label">Alertes haute conf.</div>
-        <div class="kpi-trend trend-up">Signal ≥ 80%</div>
+        <div class="kpi-value stat-red" id="kpi-high">--</div>
+        <div class="kpi-label">Haute confiance</div>
+        <div class="kpi-trend trend-up">Signal ≥ 75%</div>
       </div>
     </div>
 
@@ -624,13 +624,13 @@
   <button class="nav-item" id="nav-ia" onclick="showPage('ia')">
     <span class="nav-icon">🤖</span>IA
   </button>
-  <button class="nav-item" id="nav-dashboard" onclick="showPage('dashboard')">
+  <button class="nav-item" id="nav-dashboard" onclick="showPage('dashboard');loadDashboard()">
     <span class="nav-icon">📊</span>Dashboard
   </button>
 </nav>
 
 <script>
-// ─── TELEGRAM WEB APP INIT ───
+// ─── TELEGRAM WEB APP ───
 const tg = window.Telegram?.WebApp;
 if (tg) {
   tg.ready();
@@ -639,62 +639,61 @@ if (tg) {
   tg.setBackgroundColor('#050608');
 }
 
-// ─── GROQ API KEY (injecté depuis le backend en prod) ───
-// En production: le Mini App reçoit les données depuis bot.py via webhooks
-// Pour la démo, on simule les données
-const GROQ_API_KEY = ''; // À injecter depuis bot.py via query params ou postMessage
-
 // ─── STATE ───
 let currentLeague = { code: 'PL', name: 'Premier League', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' };
-let currentMatch = null;
-let chatHistory = [];
+let currentMatch  = null;
+let chatHistory   = [];
+let loadedMatchesMap = {}; // id → match object
 
-// ─── MOCK DATA ───
-const MOCK_MATCHES = {
+// ─── DONNÉES DE SECOURS (si API indisponible) ───
+const FALLBACK = {
   PL: [
-    { id:1, home:'Arsenal', away:'Man City', date:'Dim 06 Avr', time:'17:30', competition:'Premier League',
-      btts:72, over25:65, over15:84, confidence:78, formHome:['W','W','D','W','L'], formAway:['W','W','W','D','W'],
-      goalsHome:2.1, goalsAway:1.8, cleanHome:0.3, cleanAway:0.4 },
-    { id:2, home:'Chelsea', away:'Liverpool', date:'Sam 05 Avr', time:'20:00', competition:'Premier League',
-      btts:68, over25:71, over15:88, confidence:82, formHome:['W','D','W','L','W'], formAway:['W','W','W','W','D'],
-      goalsHome:1.9, goalsAway:2.3, cleanHome:0.4, cleanAway:0.3 },
-    { id:3, home:'Tottenham', away:'Newcastle', date:'Sam 05 Avr', time:'16:00', competition:'Premier League',
-      btts:61, over25:58, over15:79, confidence:65, formHome:['D','W','D','W','W'], formAway:['L','W','W','D','W'],
-      goalsHome:1.6, goalsAway:1.5, cleanHome:0.5, cleanAway:0.5 },
-    { id:4, home:'Man United', away:'Aston Villa', date:'Dim 06 Avr', time:'15:00', competition:'Premier League',
-      btts:55, over25:49, over15:71, confidence:58, formHome:['L','L','D','W','L'], formAway:['W','W','D','W','W'],
-      goalsHome:1.2, goalsAway:1.8, cleanHome:0.6, cleanAway:0.4 },
+    { id:1, home:'Arsenal', away:'Man City', date:'TBD', time:'--:--', competition:'Premier League',
+      btts:72, over25:65, over15:84, homeWin:42, draw:28, awayWin:30, confidence:78,
+      formHome:['W','W','D','W','L'], formAway:['W','W','W','D','W'],
+      goalsHome:2.1, goalsAway:1.8, cleanHome:0.30, cleanAway:0.40 },
+    { id:2, home:'Chelsea', away:'Liverpool', date:'TBD', time:'--:--', competition:'Premier League',
+      btts:68, over25:71, over15:88, homeWin:35, draw:26, awayWin:39, confidence:82,
+      formHome:['W','D','W','L','W'], formAway:['W','W','W','W','D'],
+      goalsHome:1.9, goalsAway:2.3, cleanHome:0.40, cleanAway:0.30 },
+    { id:3, home:'Tottenham', away:'Newcastle', date:'TBD', time:'--:--', competition:'Premier League',
+      btts:61, over25:58, over15:79, homeWin:44, draw:27, awayWin:29, confidence:65,
+      formHome:['D','W','D','W','W'], formAway:['L','W','W','D','W'],
+      goalsHome:1.6, goalsAway:1.5, cleanHome:0.50, cleanAway:0.50 },
   ],
   FL1: [
-    { id:5, home:'PSG', away:'Monaco', date:'Sam 05 Avr', time:'21:00', competition:'Ligue 1',
-      btts:64, over25:60, over15:82, confidence:74, formHome:['W','W','W','W','W'], formAway:['W','D','W','L','W'],
-      goalsHome:2.8, goalsAway:1.6, cleanHome:0.2, cleanAway:0.4 },
-    { id:6, home:'Marseille', away:'Lyon', date:'Dim 06 Avr', time:'20:45', competition:'Ligue 1',
-      btts:70, over25:67, over15:85, confidence:76, formHome:['W','D','W','W','D'], formAway:['D','W','L','W','W'],
-      goalsHome:1.9, goalsAway:1.7, cleanHome:0.4, cleanAway:0.4 },
+    { id:5, home:'PSG', away:'Monaco', date:'TBD', time:'--:--', competition:'Ligue 1',
+      btts:64, over25:60, over15:82, homeWin:55, draw:24, awayWin:21, confidence:74,
+      formHome:['W','W','W','W','W'], formAway:['W','D','W','L','W'],
+      goalsHome:2.8, goalsAway:1.6, cleanHome:0.20, cleanAway:0.40 },
+    { id:6, home:'Marseille', away:'Lyon', date:'TBD', time:'--:--', competition:'Ligue 1',
+      btts:70, over25:67, over15:85, homeWin:40, draw:28, awayWin:32, confidence:76,
+      formHome:['W','D','W','W','D'], formAway:['D','W','L','W','W'],
+      goalsHome:1.9, goalsAway:1.7, cleanHome:0.40, cleanAway:0.40 },
   ],
   PD: [
-    { id:7, home:'Barcelona', away:'Real Madrid', date:'Dim 06 Avr', time:'21:00', competition:'La Liga',
-      btts:66, over25:63, over15:86, confidence:80, formHome:['W','W','D','W','W'], formAway:['W','W','W','W','D'],
-      goalsHome:2.5, goalsAway:2.2, cleanHome:0.3, cleanAway:0.3 },
-    { id:8, home:'Atletico', away:'Sevilla', date:'Sam 05 Avr', time:'18:30', competition:'La Liga',
-      btts:52, over25:44, over15:68, confidence:61, formHome:['W','W','W','D','W'], formAway:['L','D','W','L','D'],
-      goalsHome:1.4, goalsAway:1.1, cleanHome:0.5, cleanAway:0.6 },
+    { id:7, home:'Barcelona', away:'Real Madrid', date:'TBD', time:'--:--', competition:'La Liga',
+      btts:66, over25:63, over15:86, homeWin:44, draw:25, awayWin:31, confidence:80,
+      formHome:['W','W','D','W','W'], formAway:['W','W','W','W','D'],
+      goalsHome:2.5, goalsAway:2.2, cleanHome:0.30, cleanAway:0.30 },
   ],
   SA: [
-    { id:9, home:'Inter', away:'Juventus', date:'Dim 06 Avr', time:'20:45', competition:'Serie A',
-      btts:58, over25:54, over15:77, confidence:68, formHome:['W','W','W','D','W'], formAway:['W','D','W','W','L'],
-      goalsHome:1.8, goalsAway:1.3, cleanHome:0.3, cleanAway:0.5 },
+    { id:9, home:'Inter', away:'Juventus', date:'TBD', time:'--:--', competition:'Serie A',
+      btts:58, over25:54, over15:77, homeWin:42, draw:30, awayWin:28, confidence:68,
+      formHome:['W','W','W','D','W'], formAway:['W','D','W','W','L'],
+      goalsHome:1.8, goalsAway:1.3, cleanHome:0.30, cleanAway:0.50 },
   ],
   BL1: [
-    { id:10, home:'Bayern', away:'Dortmund', date:'Sam 05 Avr', time:'18:30', competition:'Bundesliga',
-      btts:73, over25:78, over15:91, confidence:85, formHome:['W','W','W','W','W'], formAway:['W','W','D','W','W'],
-      goalsHome:3.1, goalsAway:2.4, cleanHome:0.2, cleanAway:0.2 },
+    { id:10, home:'Bayern', away:'Dortmund', date:'TBD', time:'--:--', competition:'Bundesliga',
+      btts:73, over25:78, over15:91, homeWin:60, draw:20, awayWin:20, confidence:85,
+      formHome:['W','W','W','W','W'], formAway:['W','W','D','W','W'],
+      goalsHome:3.1, goalsAway:2.4, cleanHome:0.20, cleanAway:0.20 },
   ],
   CL: [
-    { id:11, home:'Real Madrid', away:'PSG', date:'Mar 08 Avr', time:'21:00', competition:'Champions League',
-      btts:69, over25:65, over15:87, confidence:79, formHome:['W','W','W','W','D'], formAway:['W','W','W','W','W'],
-      goalsHome:2.4, goalsAway:2.1, cleanHome:0.3, cleanAway:0.3 },
+    { id:11, home:'Real Madrid', away:'PSG', date:'TBD', time:'--:--', competition:'Champions League',
+      btts:69, over25:65, over15:87, homeWin:45, draw:26, awayWin:29, confidence:79,
+      formHome:['W','W','W','W','D'], formAway:['W','W','W','W','W'],
+      goalsHome:2.4, goalsAway:2.1, cleanHome:0.30, cleanAway:0.30 },
   ],
 };
 
@@ -708,7 +707,7 @@ function showPage(name) {
   window.scrollTo(0, 0);
 }
 
-// ─── LEAGUE SELECTION ───
+// ─── SÉLECTION LIGUE ───
 function selectLeague(el, code, name, flag) {
   document.querySelectorAll('.league-card').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
@@ -720,52 +719,24 @@ function selectLeague(el, code, name, flag) {
 async function loadMatches(code) {
   const list = document.getElementById('match-list');
   list.innerHTML = '<div class="spinner"></div>';
+
   try {
     const res = await fetch(`/api/matches?league=${code}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
-    // Adapter la réponse RapidAPI au format interne
-    let matches = [];
-    const raw = data?.response || data?.data || data?.matches || data?.fixtures || [];
+    let matches = data?.matches || [];
 
-    raw.forEach((item, idx) => {
-      const fixture = item.fixture || item;
-      const teams = item.teams || {};
-      const home = teams.home?.name || item.homeTeam?.name || item.home_team || 'Équipe A';
-      const away = teams.away?.name || item.awayTeam?.name || item.away_team || 'Équipe B';
-      const dateRaw = fixture.date || item.date || item.match_date || '';
-      const dateObj = dateRaw ? new Date(dateRaw) : new Date();
-      const dateStr = dateObj.toLocaleDateString('fr-FR', { weekday:'short', day:'2-digit', month:'short' });
-      const timeStr = dateObj.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit', timeZone:'Europe/Paris' });
-
-      matches.push({
-        id: idx,
-        home, away,
-        date: dateStr,
-        time: timeStr,
-        competition: currentLeague.name,
-        btts: Math.floor(50 + Math.random() * 35),
-        over25: Math.floor(45 + Math.random() * 35),
-        over15: Math.floor(65 + Math.random() * 25),
-        confidence: Math.floor(55 + Math.random() * 35),
-        formHome: ['W','D','W','L','W'],
-        formAway: ['W','W','D','W','L'],
-        goalsHome: +(1.2 + Math.random()).toFixed(1),
-        goalsAway: +(1.0 + Math.random()).toFixed(1),
-        cleanHome: +(Math.random() * 0.6).toFixed(1),
-        cleanAway: +(Math.random() * 0.6).toFixed(1),
-      });
-    });
-
-    // Fallback si API renvoie rien
-    if (!matches.length) {
-      matches = MOCK_MATCHES[code] || [];
-    }
+    // Fallback si l'API ne retourne rien
+    if (!matches.length) matches = FALLBACK[code] || [];
 
     if (!matches.length) {
-      list.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-text">Aucun match prévu<br>pour cette ligue</div></div>';
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-text">Aucun match à venir<br>pour cette ligue</div></div>';
       return;
     }
+
+    // Stocker dans la map globale (clé = id)
+    matches.forEach(m => { loadedMatchesMap[m.id] = m; });
 
     list.innerHTML = matches.map(m => renderMatchCard(m)).join('');
     setTimeout(() => {
@@ -774,10 +745,12 @@ async function loadMatches(code) {
       });
     }, 100);
 
-  } catch(e) {
-    // Fallback données mock si erreur
-    const matches = MOCK_MATCHES[code] || [];
-    list.innerHTML = matches.map(m => renderMatchCard(m)).join('');
+  } catch (e) {
+    const matches = FALLBACK[code] || [];
+    matches.forEach(m => { loadedMatchesMap[m.id] = m; });
+    list.innerHTML = matches.length
+      ? matches.map(m => renderMatchCard(m)).join('')
+      : '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Erreur de chargement.<br>Données de secours affichées.</div></div>';
     setTimeout(() => {
       list.querySelectorAll('.confidence-fill').forEach(el => {
         el.style.width = el.dataset.width + '%';
@@ -788,10 +761,12 @@ async function loadMatches(code) {
 
 function renderMatchCard(m) {
   const tags = [];
-  if (m.btts >= 65) tags.push('<span class="indicator ind-btts">BTTS ' + m.btts + '%</span>');
-  if (m.over25 >= 60) tags.push('<span class="indicator ind-over">+2.5G ' + m.over25 + '%</span>');
-  if (m.over15 >= 80) tags.push('<span class="indicator ind-over">+1.5G ' + m.over15 + '%</span>');
+  if (m.btts    >= 65) tags.push(`<span class="indicator ind-btts">BTTS ${m.btts}%</span>`);
+  if (m.over25  >= 60) tags.push(`<span class="indicator ind-over">+2.5G ${m.over25}%</span>`);
+  if (m.over15  >= 82) tags.push(`<span class="indicator ind-over">+1.5G ${m.over15}%</span>`);
   if (m.confidence >= 75) tags.push('<span class="indicator ind-hot">🔥 Haute conf.</span>');
+  if (m.homeWin >= 60) tags.push(`<span class="indicator ind-safe">Dom. ${m.homeWin}%</span>`);
+  if (m.awayWin >= 55) tags.push(`<span class="indicator ind-safe">Ext. ${m.awayWin}%</span>`);
 
   return `<div class="match-card" onclick="openAnalysis(${m.id})">
     <div class="match-card-header">
@@ -803,7 +778,7 @@ function renderMatchCard(m) {
       <div class="match-vs">VS</div>
       <div class="team-block away"><div class="team-name">${m.away}</div></div>
     </div>
-    <div class="match-indicators">${tags.join('')}</div>
+    <div class="match-indicators">${tags.join('') || '<span style="font-size:11px;color:var(--text-3);">Voir analyse →</span>'}</div>
     <div class="confidence-bar">
       <div class="confidence-fill" data-width="${m.confidence}" style="width:0%"></div>
     </div>
@@ -812,8 +787,9 @@ function renderMatchCard(m) {
 
 // ─── ANALYSE MATCH ───
 function openAnalysis(id) {
-  const allMatches = Object.values(MOCK_MATCHES).flat();
-  currentMatch = allMatches.find(m => m.id === id);
+  // Chercher dans les matchs chargés dynamiquement, puis dans le fallback
+  currentMatch = loadedMatchesMap[id] ||
+    Object.values(FALLBACK).flat().find(m => m.id === id);
   if (!currentMatch) return;
   renderAnalysis(currentMatch);
   showPage('analysis');
@@ -822,9 +798,17 @@ function openAnalysis(id) {
 
 function renderAnalysis(m) {
   const formBlock = (form) => form.map(r => {
-    const cls = r==='W'?'form-w':r==='D'?'form-d':'form-l';
+    const cls = r==='W' ? 'form-w' : r==='D' ? 'form-d' : 'form-l';
     return `<div class="form-dot ${cls}">${r}</div>`;
   }).join('');
+
+  const homeWin = m.homeWin ?? 45;
+  const drawPct = m.draw    ?? 27;
+  const awayWin = m.awayWin ?? (100 - homeWin - drawPct);
+  const gH = typeof m.goalsHome === 'number' ? m.goalsHome.toFixed(1) : m.goalsHome;
+  const gA = typeof m.goalsAway === 'number' ? m.goalsAway.toFixed(1) : m.goalsAway;
+  const csH = Math.round((m.cleanHome || 0) * 100);
+  const csA = Math.round((m.cleanAway || 0) * 100);
 
   const content = `
     <div class="analysis-hero">
@@ -840,7 +824,7 @@ function renderAnalysis(m) {
           <div class="hero-team-form" style="justify-content:flex-end">${formBlock(m.formAway)}</div>
         </div>
       </div>
-      <div class="hero-datetime">📅 ${m.date} à ${m.time} (Paris)</div>
+      <div class="hero-datetime">📅 ${m.date} à ${m.time}${m.venue ? ` · 🏟 ${m.venue}` : ''}</div>
     </div>
 
     <div class="stats-grid">
@@ -853,8 +837,33 @@ function renderAnalysis(m) {
         <div class="stat-label">Over 2.5</div>
       </div>
       <div class="stat-box">
-        <div class="stat-value stat-green">${m.over15}%</div>
-        <div class="stat-label">Over 1.5</div>
+        <div class="stat-value stat-green">${m.confidence}%</div>
+        <div class="stat-label">Confiance</div>
+      </div>
+    </div>
+
+    <div class="proba-section">
+      <div class="proba-title">🏆 Résultat probable (1X2)</div>
+      <div class="proba-row">
+        <div class="proba-header">
+          <span class="proba-name">Victoire ${m.home}</span>
+          <span class="proba-pct stat-green">${homeWin}%</span>
+        </div>
+        <div class="proba-track"><div class="proba-fill fill-green" style="width:0" data-w="${homeWin}"></div></div>
+      </div>
+      <div class="proba-row">
+        <div class="proba-header">
+          <span class="proba-name">Match nul</span>
+          <span class="proba-pct stat-gold">${drawPct}%</span>
+        </div>
+        <div class="proba-track"><div class="proba-fill fill-gold" style="width:0" data-w="${drawPct}"></div></div>
+      </div>
+      <div class="proba-row">
+        <div class="proba-header">
+          <span class="proba-name">Victoire ${m.away}</span>
+          <span class="proba-pct stat-blue">${awayWin}%</span>
+        </div>
+        <div class="proba-track"><div class="proba-fill fill-blue" style="width:0" data-w="${awayWin}"></div></div>
       </div>
     </div>
 
@@ -884,26 +893,26 @@ function renderAnalysis(m) {
     </div>
 
     <div class="proba-section">
-      <div class="proba-title">⚽ Moyennes 10 derniers matchs</div>
+      <div class="proba-title">⚽ Buts attendus (Poisson)</div>
       <div class="h2h-row">
-        <div class="h2h-date">Att. dom.</div>
+        <div class="h2h-date">λ dom.</div>
         <div class="h2h-teams">${m.home}</div>
-        <div class="h2h-score stat-green">${m.goalsHome.toFixed(1)}</div>
+        <div class="h2h-score stat-green">${gH}</div>
       </div>
       <div class="h2h-row">
-        <div class="h2h-date">Att. ext.</div>
+        <div class="h2h-date">λ ext.</div>
         <div class="h2h-teams">${m.away}</div>
-        <div class="h2h-score stat-gold">${m.goalsAway.toFixed(1)}</div>
+        <div class="h2h-score stat-gold">${gA}</div>
       </div>
       <div class="h2h-row">
         <div class="h2h-date">CS dom.</div>
-        <div class="h2h-teams">Clean sheets / match</div>
-        <div class="h2h-score stat-blue">${m.cleanHome}</div>
+        <div class="h2h-teams">Prob. feuille blanche</div>
+        <div class="h2h-score stat-blue">${csH}%</div>
       </div>
       <div class="h2h-row">
         <div class="h2h-date">CS ext.</div>
-        <div class="h2h-teams">Clean sheets / match</div>
-        <div class="h2h-score stat-blue">${m.cleanAway}</div>
+        <div class="h2h-teams">Prob. feuille blanche</div>
+        <div class="h2h-score stat-blue">${csA}%</div>
       </div>
     </div>
 
@@ -914,7 +923,7 @@ function renderAnalysis(m) {
       </div>
       <div class="signal-meter">
         <div class="signal-level">${m.confidence}%</div>
-        <div class="signal-desc">Indice de confiance calculé par l'algorithme prédictif basé sur les 10 derniers matchs, H2H et contexte de saison.</div>
+        <div class="signal-desc">Indice calculé via distribution de Poisson : forme récente (5 derniers matchs), attaque/défense dom.–ext. et stats de saison 2025.</div>
       </div>
     </div>
 
@@ -924,7 +933,6 @@ function renderAnalysis(m) {
   `;
 
   document.getElementById('analysis-content').innerHTML = content;
-
   setTimeout(() => {
     document.querySelectorAll('.proba-fill[data-w]').forEach(el => {
       el.style.width = el.dataset.w + '%';
@@ -936,14 +944,15 @@ function renderAnalysis(m) {
 function askAIAboutMatch() {
   showPage('ia');
   document.getElementById('nav-ia').classList.add('active');
-  const q = `Analyse détaillée pour ${currentMatch.home} vs ${currentMatch.away} : BTTS ${currentMatch.btts}%, Over 2.5 à ${currentMatch.over25}%, signal de confiance ${currentMatch.confidence}%. Que recommande l'algorithme prédictif ?`;
+  const m = currentMatch;
+  const q = `Analyse complète pour ${m.home} vs ${m.away} : victoire dom. ${m.homeWin ?? '?'}%, nul ${m.draw ?? '?'}%, BTTS ${m.btts}%, Over 2.5 ${m.over25}%, signal global ${m.confidence}%. Que recommande l'algorithme ?`;
   setTimeout(() => {
     document.getElementById('chat-input').value = q;
     sendMessage();
   }, 400);
 }
 
-// ─── IA CHAT (GROQ) ───
+// ─── IA CHAT ───
 async function sendMessage() {
   const input = document.getElementById('chat-input');
   const msg = input.value.trim();
@@ -951,7 +960,7 @@ async function sendMessage() {
   input.value = '';
   input.style.height = 'auto';
   appendMessage('user', msg);
-  await callGroqAI(msg);
+  await callAI(msg);
 }
 
 function sendQuick(q) {
@@ -969,7 +978,7 @@ function appendMessage(role, text) {
   chatHistory.push({ role: role === 'user' ? 'user' : 'assistant', content: text });
 }
 
-async function callGroqAI(userMsg) {
+async function callAI(userMsg) {
   const btn = document.getElementById('chat-send');
   btn.disabled = true;
 
@@ -980,80 +989,102 @@ async function callGroqAI(userMsg) {
   document.getElementById('chat-box').appendChild(typing);
   document.getElementById('chat-box').scrollTop = 9999;
 
-  try {
-    const messages = [
-      {
-        role: 'system',
-        content: `Tu es BetVision AI, un expert en analyse statistique et algorithmique du football. 
-Tu fournis des analyses basées sur des données : forme récente, statistiques, tendances. 
-Tu n'utilises JAMAIS les mots "pronos" ou "paris". 
-Tu parles toujours d'"analyse statistique", "algorithme prédictif", "outil d'aide à la décision", "signal de confiance".
-Tu réponds en français, de façon concise et structurée avec des émojis pertinents.
-Tu rappelles toujours que tes analyses sont des outils statistiques et ne constituent pas des conseils financiers.`
-      },
-      ...chatHistory.slice(-8).map(h => ({ role: h.role, content: h.content })),
-      { role: 'user', content: userMsg }
-    ];
+  const messages = [
+    {
+      role: 'system',
+      content: `Tu es BetVision AI, expert en analyse statistique et algorithmique du football.
+Tu fournis des analyses basées sur des données réelles : forme récente, distribution de Poisson, stats dom./ext.
+Tu n'utilises JAMAIS "pronos" ou "paris". Tu parles d'"analyse statistique", "algorithme prédictif", "signal de confiance".
+Tu réponds en français, de façon concise et structurée avec des émojis. Maximum 4 paragraphes.
+Tu rappelles toujours que tes analyses sont des outils statistiques et non des conseils financiers.`
+    },
+    ...chatHistory.slice(-8).map(h => ({ role: h.role, content: h.content })),
+    { role: 'user', content: userMsg }
+  ];
 
-    // Appel Groq via le backend (bot.py doit exposer un endpoint /ai-chat)
-    // En production, on passe par bot.py pour ne pas exposer la clé API
-    // Pour la démo, simulation d'une réponse
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  try {
+    const res = await fetch('/api/chat', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${GROQ_API_KEY || 'GROQ_KEY_FROM_BACKEND'}`
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages,
-        max_tokens: 400,
-        temperature: 0.7
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages })
     });
 
     document.getElementById('typing-indicator')?.remove();
 
-    if (response.ok) {
-      const data = await response.json();
-      const reply = data.choices?.[0]?.message?.content || 'Erreur de réponse.';
-      appendMessage('ai', reply);
+    if (res.ok) {
+      const data = await res.json();
+      appendMessage('ai', data.choices?.[0]?.message?.content || 'Réponse vide.');
     } else {
-      // Mode démo si clé non configurée
-      const demoReply = getDemoReply(userMsg);
-      appendMessage('ai', demoReply);
+      // 503 = clé non configurée → mode démo
+      appendMessage('ai', getDemoReply(userMsg));
     }
   } catch (e) {
     document.getElementById('typing-indicator')?.remove();
-    const demoReply = getDemoReply(userMsg);
-    appendMessage('ai', demoReply);
+    appendMessage('ai', getDemoReply(userMsg));
   }
 
   btn.disabled = false;
 }
 
 function getDemoReply(msg) {
-  if (msg.includes('BTTS') || msg.includes('btts')) {
-    return '📊 **Analyse BTTS** : Les matchs avec BTTS ≥ 65% correspondent à des rencontres où les deux équipes affichent ≥ 1.6 buts/match offensivement et < 0.5 clean sheet/match en défense. L\'algorithme identifie Chelsea-Liverpool (68%) et Arsenal-Man City (72%) comme les meilleurs profils BTTS ce week-end. ⚠️ Outil d\'aide à la décision uniquement.';
+  const q = msg.toLowerCase();
+  if (q.includes('btts') || q.includes('les deux')) {
+    return '📊 Analyse BTTS : Les matchs avec BTTS ≥ 65% correspondent à des rencontres où les deux équipes affichent λ ≥ 1.5 but/match. L\'algorithme Poisson calcule P(BTTS) = (1 − e^−λdom) × (1 − e^−λext). Consultez la page analyse pour les valeurs détaillées. ⚠️ Outil d\'aide à la décision uniquement.';
   }
-  if (msg.includes('forme') || msg.includes('Forme')) {
-    return '📈 **Équipes en forme** : En Premier League, Man City (5V sur 5) et Liverpool (4V 1N) présentent les meilleures trajectoires. Le signal algorithmique est renforcé par leur moyenne de buts offensive (>2.0/match). Bayern Munich domine en Bundesliga avec 3.1 buts/match sur les 10 derniers matchs.';
+  if (q.includes('over') || q.includes('buts')) {
+    return '⚡ Over 2.5 buts : La probabilité est calculée par P(total > 2.5) = 1 − P(0) − P(1) − P(2) avec distribution de Poisson. Les matchs avec λ_total > 2.8 ont statistiquement une prob. Over 2.5 supérieure à 60%. ⚠️ Analyse statistique à titre informatif.';
   }
-  if (msg.includes('combiné') || msg.includes('combine')) {
-    return '🎯 **Algorithme combiné 3 sélections** : Pour minimiser le risque, l\'outil préconise des sélections avec signal ≥ 70% et corrélation faible entre les matchs. Suggestion algorithmique : Bayern +2.5G (78%), Liverpool BTTS (68%), Barça victoire (74%). Indice de confiance combiné : ~38%. ⚠️ Ces données sont à titre informatif.';
+  if (q.includes('forme') || q.includes('form')) {
+    return '📈 Forme récente : L\'algorithme analyse les 5 derniers résultats de chaque équipe. Une série WWWWW génère un bonus de +8 pts dans l\'indice de confiance. Les équipes avec ≥ 4 victoires sur 5 présentent un signal renforcé. ⚠️ Analyse statistique uniquement.';
   }
-  return '🤖 **BetVision AI** : Votre question a été analysée. Pour obtenir des données en temps réel, connectez la clé Groq depuis Replit Secrets. En mode démo, je simule des réponses statistiques. L\'algorithme prédictif sera pleinement opérationnel une fois l\'API configurée.';
+  if (q.includes('combiné') || q.includes('combin')) {
+    return '🎯 Combiné algorithmique : La prob. conjointe de 3 sélections indépendantes à 70% est ≈ 34%. L\'algorithme recommande des signaux ≥ 70% avec faible corrélation entre matchs pour limiter le risque. ⚠️ Ces données sont à titre informatif uniquement.';
+  }
+  if (q.includes('vs') || q.includes('analyse')) {
+    const m = currentMatch;
+    if (m) return `🔍 ${m.home} vs ${m.away} : λ_dom = ${m.goalsHome}, λ_ext = ${m.goalsAway}. BTTS ${m.btts}%, Over 2.5 ${m.over25}%, victoire dom. ${m.homeWin ?? '?'}%. Signal global : ${m.confidence}% (${m.confidence >= 80 ? 'élevé' : m.confidence >= 65 ? 'modéré' : 'faible'}). ⚠️ Analyse statistique uniquement.`;
+  }
+  return '🤖 BetVision AI : Pour activer l\'IA en temps réel, configurez la variable GROQ_API_KEY dans Vercel. En mode démonstration, l\'algorithme Poisson reste pleinement opérationnel pour le calcul des probabilités sur tous les matchs chargés.';
 }
 
-// ─── DASHBOARD SIGNALS ───
-function loadTopSignals() {
-  const allMatches = Object.values(MOCK_MATCHES).flat()
-    .filter(m => m.confidence >= 70)
+// ─── DASHBOARD ───
+function loadDashboard() {
+  const all = Object.values(loadedMatchesMap);
+  const src = all.length ? all : Object.values(FALLBACK).flat();
+
+  const avgBTTS  = src.length ? Math.round(src.reduce((s, m) => s + m.btts,   0) / src.length) : '--';
+  const avgOver  = src.length ? Math.round(src.reduce((s, m) => s + m.over25, 0) / src.length) : '--';
+  const highConf = src.filter(m => m.confidence >= 75).length;
+
+  const el = (id) => document.getElementById(id);
+  if (el('kpi-btts'))   el('kpi-btts').textContent   = avgBTTS  + (src.length ? '%' : '');
+  if (el('kpi-over25')) el('kpi-over25').textContent = avgOver  + (src.length ? '%' : '');
+  if (el('kpi-count'))  el('kpi-count').textContent  = src.length;
+  if (el('kpi-high'))   el('kpi-high').textContent   = highConf;
+
+  loadTopSignals(src);
+}
+
+function loadTopSignals(src) {
+  const source = src || (() => {
+    const all = Object.values(loadedMatchesMap);
+    return all.length ? all : Object.values(FALLBACK).flat();
+  })();
+
+  const top = source
+    .filter(m => m.confidence >= 68)
     .sort((a, b) => b.confidence - a.confidence)
-    .slice(0, 3);
+    .slice(0, 4);
 
   const list = document.getElementById('top-signals-list');
-  list.innerHTML = allMatches.map(m => renderMatchCard(m)).join('');
+  if (!list) return;
+
+  if (!top.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-text">Chargez une ligue pour<br>voir les meilleurs signaux</div></div>';
+    return;
+  }
+
+  list.innerHTML = top.map(m => renderMatchCard(m)).join('');
   setTimeout(() => {
     list.querySelectorAll('.confidence-fill').forEach(el => {
       el.style.width = el.dataset.width + '%';
@@ -1063,7 +1094,6 @@ function loadTopSignals() {
 
 // ─── INIT ───
 loadMatches('PL');
-loadTopSignals();
 </script>
 </body>
 </html>
