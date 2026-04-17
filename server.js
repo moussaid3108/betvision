@@ -11,6 +11,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 app.use(express.json());
 
 // ─── API routes ───────────────────────────────────────────
+app.get('/api/config', (_req, res) => {
+  res.json({
+    supabaseUrl: 'https://txifvjkpajnmbnadvcah.supabase.co',
+    supabaseKey: process.env.SUPABASE_ANON_KEY || '',
+  });
+});
+
 app.get('/api/matches', (req, res) => matchesHandler(req, res));
 
 app.options('/api/chat', (req, res) => {
