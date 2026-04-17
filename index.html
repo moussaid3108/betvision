@@ -1207,7 +1207,7 @@ async function signInWithGoogle() {
   if (!supabaseClient) { msg.style.color = 'var(--red)'; msg.textContent = 'Service indisponible.'; return; }
   msg.style.color = 'var(--text-3)';
   msg.textContent = '⏳ Redirection...';
-  const { error } = await supabaseClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: 'http://204.168.194.217:3000' } });
+  const { error } = await supabaseClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: 'http://n7qt05ktkpy7nb6ig1z7p4nf.204.168.194.217.sslip.io' } });
   if (error) { msg.style.color = 'var(--red)'; msg.textContent = error.message; }
 }
 
