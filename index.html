@@ -521,6 +521,21 @@
   }
   .modal-submit:hover { background: #00b377; }
   .modal-msg { font-size: 12px; text-align: center; margin-top: 10px; min-height: 18px; }
+  .user-profile {
+    display: none; align-items: center; gap: 8px;
+  }
+  .user-profile.visible { display: flex; }
+  .user-avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 2px solid #00e5a0; object-fit: cover;
+  }
+  .user-name { font-size: 13px; font-weight: 600; color: var(--text-1); }
+  .btn-signout {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-3); border-radius: 8px; padding: 4px 10px;
+    font-size: 11px; font-weight: 600; cursor: pointer; transition: all .2s;
+  }
+  .btn-signout:hover { border-color: var(--red); color: var(--red); }
 </style>
 </head>
 <body>
@@ -560,7 +575,12 @@
       <div class="logo-sub">Algorithme Prédictif</div>
     </div>
   </div>
-  <button onclick="openAuthModal()" style="background:transparent;border:1px solid #00e5a0;color:#fff;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;">Connexion</button>
+  <button id="btn-connexion" onclick="openAuthModal()" style="background:transparent;border:1px solid #00e5a0;color:#fff;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;">Connexion</button>
+  <div class="user-profile" id="user-profile">
+    <img class="user-avatar" id="user-avatar" src="" alt="">
+    <span class="user-name" id="user-name"></span>
+    <button class="btn-signout" onclick="signOut()">Déconnexion</button>
+  </div>
   <div class="header-badge">v2.0</div>
 </div>
 
@@ -1241,6 +1261,24 @@ const supabaseReady = new Promise(resolve => {
     try {
       const cfg = await fetch('/api/config').then(r => r.json());
       supabaseClient = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey);
+      supabaseClient.auth.onAuthStateChange((_event, session) => {
+        const user = session?.user;
+        const btnCnx   = document.getElementById('btn-connexion');
+        const profile  = document.getElementById('user-profile');
+        const avatar   = document.getElementById('user-avatar');
+        const nameEl   = document.getElementById('user-name');
+        if (user) {
+          const meta = user.user_metadata || {};
+          avatar.src = meta.avatar_url || meta.picture || '';
+          nameEl.textContent = meta.full_name?.split(' ')[0] || meta.name?.split(' ')[0] || '';
+          btnCnx.style.display  = 'none';
+          profile.classList.add('visible');
+          closeAuthModal();
+        } else {
+          btnCnx.style.display  = '';
+          profile.classList.remove('visible');
+        }
+      });
     } catch (e) {
       console.warn('Supabase non initialisé :', e);
     }
@@ -1252,6 +1290,11 @@ const supabaseReady = new Promise(resolve => {
     init();
   }
 });
+
+async function signOut() {
+  if (!supabaseClient) return;
+  await supabaseClient.auth.signOut();
+}
 </script>
 </body>
 </html>
