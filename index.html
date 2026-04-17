@@ -748,6 +748,7 @@
   <div class="drawer-sport" onclick="soonAvailable('Baseball')"><span class="sport-left">⚾ Baseball (MLB)</span></div>
   <div class="drawer-sport" onclick="soonAvailable('Hockey')"><span class="sport-left">🏒 Hockey (NHL)</span></div>
   <div class="drawer-sport" onclick="soonAvailable('MMA')"><span class="sport-left">🥊 MMA / UFC</span></div>
+  <div class="drawer-sport" onclick="showPage('chat');initChat();closeDrawer()" style="border-top:1px solid rgba(255,255,255,0.08);margin-top:4px"><span class="sport-left">💬 Chat communauté</span></div>
 </div>
 
 <!-- AUTH MODAL -->
@@ -966,10 +967,7 @@
   <button class="nav-item" id="nav-ia" onclick="showPage('ia')">
     <span class="nav-icon">🤖</span>IA
   </button>
-  <button class="nav-item" id="nav-chat" onclick="showPage('chat');initChat()">
-    <span class="nav-icon">💬</span>Chat
-  </button>
-  <button class="nav-item" id="nav-dashboard" onclick="showPage('dashboard');loadDashboard()">
+<button class="nav-item" id="nav-dashboard" onclick="showPage('dashboard');loadDashboard()">
     <span class="nav-icon">📊</span>Dashboard
   </button>
 </nav>
