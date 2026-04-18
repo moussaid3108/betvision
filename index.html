@@ -1486,6 +1486,22 @@ async function uploadAvatar(input) {
   const msg = document.getElementById('profile-upload-msg');
   msg.textContent = 'Upload en cours…'; msg.className = 'profile-msg';
   await supabaseReady;
+
+  // 1. Récupérer l'ancienne URL depuis profiles
+  const { data: profile } = await supabaseClient
+    .from('profiles').select('avatar_url').eq('id', currentUser.id).single();
+
+  // 2. Supprimer l'ancien fichier si c'est bien un fichier Storage
+  if (profile?.avatar_url) {
+    const marker = '/avatars/';
+    const idx = profile.avatar_url.indexOf(marker);
+    if (idx !== -1) {
+      const oldPath = profile.avatar_url.slice(idx + marker.length).split('?')[0];
+      await supabaseClient.storage.from('avatars').remove([oldPath]);
+    }
+  }
+
+  // 3. Uploader le nouveau fichier
   const file = input.files[0];
   const ext  = file.name.split('.').pop();
   const path = `${currentUser.id}/avatar.${ext}`;
