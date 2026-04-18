@@ -1491,7 +1491,7 @@ if (tg) {
 let currentLeague = { code: 'PL', name: 'Premier League', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' };
 let currentMatch     = null;
 let activeMatchId    = null;
-let previousView     = 'leagues';
+let previousView     = 'paddock';
 let chatHistory   = [];
 let loadedMatchesMap = {}; // id → match object
 
@@ -1560,17 +1560,18 @@ function showPage(name) {
   document.getElementById('page-' + name).classList.add('active');
   const navEl = document.getElementById('nav-' + name);
   if (navEl) navEl.classList.add('active');
+  if (name === 'paddock') initPaddock();
   window.scrollTo(0, 0);
 }
 
 function exitChatMode() {
-  showPage('leagues');
+  showPage('paddock');
 }
 
 function goBack() {
   activeMatchId = null;
   const dest = previousView;
-  previousView = 'leagues';
+  previousView = 'paddock';
   if (dest === 'favoris') { openFavoris(); } else { showPage(dest); }
 }
 
@@ -1604,7 +1605,7 @@ function openProfile() {
 
 function profileGoBack() {
   const dest = previousView || 'leagues';
-  previousView = 'leagues';
+  previousView = 'paddock';
   if (dest === 'favoris') { openFavoris(); } else { showPage(dest); }
 }
 
@@ -1973,7 +1974,7 @@ function openAnalysis(id) {
     Object.values(FALLBACK).flat().find(m => m.id === id);
   if (!currentMatch) return;
   activeMatchId = id;
-  previousView = 'leagues';
+  previousView = 'paddock';
   renderAnalysis(currentMatch);
   showPage('analysis');
   document.getElementById('nav-paddock').classList.add('active');
