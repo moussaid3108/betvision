@@ -332,10 +332,15 @@
   .signal-desc { font-size: 12px; color: var(--text-2); line-height: 1.4; }
 
   /* ─── IA CHAT ─── */
-  .ia-page { padding: 0 16px 0; }
+  #page-ia { padding: 0; }
+  .ia-page {
+    display: flex; flex-direction: column;
+    height: calc(100vh - 138px);
+  }
   .ia-intro {
+    flex-shrink: 0;
     background: var(--bg-2); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 18px; margin-bottom: 20px;
+    border-radius: var(--radius); padding: 18px; margin: 12px 16px 0;
   }
   .ia-intro-title {
     font-family: 'Barlow Condensed', sans-serif;
@@ -344,8 +349,9 @@
   .ia-intro-sub { font-size: 13px; color: var(--text-2); line-height: 1.5; }
 
   .chat-box {
+    flex: 1; overflow-y: auto;
     display: flex; flex-direction: column; gap: 12px;
-    min-height: 200px; padding-bottom: 80px;
+    padding: 8px 16px 12px;
   }
   .chat-msg {
     max-width: 85%; padding: 12px 14px;
@@ -367,11 +373,10 @@
   .chat-msg.typing { color: var(--text-3); font-style: italic; }
 
   .chat-input-row {
+    flex-shrink: 0;
     display: flex; gap: 8px; align-items: flex-end;
-    position: fixed; bottom: 0; left: 0; right: 0;
     padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
     background: var(--bg-1); border-top: 1px solid var(--border);
-    z-index: 390; transform: translateZ(0);
   }
   .chat-input {
     flex: 1; background: var(--bg-2); border: 1px solid var(--border);
@@ -392,7 +397,8 @@
   .chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
 
   .quick-questions {
-    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px;
+    flex-shrink: 0;
+    display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 16px 8px;
   }
   .quick-q {
     background: var(--bg-3); border: 1px solid var(--border);
