@@ -93,6 +93,131 @@
   .nav-item.active { color: var(--accent); }
   .nav-item.active .nav-icon { transform: scale(1.15); }
 
+  /* ─── PADDOCK ─── */
+  @keyframes pulseBadge {
+    0%,100% { box-shadow: 0 0 0 0 rgba(255,77,106,0.6); }
+    50%      { box-shadow: 0 0 0 6px rgba(255,77,106,0); }
+  }
+  @keyframes paddockFadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+  }
+  #page-paddock { padding: 0; }
+  .paddock-page { padding: 0 0 24px; }
+
+  .paddock-greeting {
+    padding: 18px 16px 6px;
+    animation: paddockFadeIn .4s ease;
+  }
+  .paddock-hello {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 26px; font-weight: 800; color: var(--text-1);
+  }
+  .paddock-date { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+
+  /* Slider */
+  .news-slider-wrap { padding: 14px 16px 0; animation: paddockFadeIn .5s ease; }
+  .news-slider { overflow: hidden; border-radius: var(--radius); position: relative; }
+  .news-track {
+    display: flex;
+    transition: transform .4s cubic-bezier(.4,0,.2,1);
+    will-change: transform;
+  }
+  .news-card {
+    min-width: 100%; padding: 18px 20px 20px;
+    background: linear-gradient(135deg, #0a2e1a 0%, #050608 100%);
+    border: 1px solid rgba(0,229,160,0.15);
+    border-radius: var(--radius);
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .news-card-tag { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--accent); font-weight: 700; }
+  .news-card-title { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 800; color: #fff; line-height: 1.2; }
+  .news-card-sub { font-size: 12px; color: var(--text-2); }
+  .news-dots { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }
+  .news-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--bg-4); transition: background .3s, transform .3s;
+  }
+  .news-dot.active { background: var(--accent); transform: scale(1.3); }
+
+  /* Top matchs */
+  .paddock-section { padding: 20px 16px 0; animation: paddockFadeIn .6s ease; }
+  .paddock-section-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 10px; color: var(--text-1);
+  }
+  .top-match-card {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 12px 14px;
+    margin-bottom: 8px; display: flex; align-items: center;
+    justify-content: space-between; gap: 10px;
+    animation: paddockFadeIn .5s ease;
+  }
+  .top-match-info { flex: 1; min-width: 0; }
+  .top-match-teams { font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .top-match-meta { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+  .top-match-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .badge-conf {
+    background: var(--red); color: #fff; font-size: 9px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 1px;
+    padding: 3px 7px; border-radius: 20px;
+    animation: pulseBadge 1.8s infinite;
+  }
+  .top-match-btn {
+    background: var(--accent-dim); border: 1px solid rgba(0,229,160,0.25);
+    color: var(--accent); font-size: 11px; font-weight: 700;
+    padding: 6px 10px; border-radius: 8px; cursor: pointer;
+    white-space: nowrap; transition: background .2s;
+  }
+  .top-match-btn:active { background: rgba(0,229,160,0.2); }
+
+  /* CTA Premium */
+  .cta-premium {
+    margin: 20px 16px 0;
+    background: linear-gradient(135deg, #00FF88, #00CC66);
+    border-radius: var(--radius); padding: 22px 20px;
+    animation: paddockFadeIn .7s ease;
+  }
+  .cta-premium-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px; font-weight: 800; color: #050608; margin-bottom: 6px;
+  }
+  .cta-premium-desc { font-size: 13px; color: rgba(0,0,0,0.65); line-height: 1.5; margin-bottom: 14px; }
+  .cta-premium-btn {
+    background: #050608; color: #00FF88; border: none;
+    border-radius: 10px; padding: 12px 20px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px; font-weight: 800; letter-spacing: .5px;
+    cursor: pointer; transition: opacity .2s;
+  }
+  .cta-premium-btn:active { opacity: .8; }
+
+  /* Stats rapides */
+  .paddock-stats-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+  .paddock-stat-card {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 12px 10px; text-align: center;
+  }
+  .paddock-stat-val { font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 800; }
+  .paddock-stat-label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+  .paddock-no-auth {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; text-align: center;
+    font-size: 13px; color: var(--text-3);
+  }
+  .paddock-no-auth span { color: var(--accent); cursor: pointer; text-decoration: underline; }
+
+  /* Favoris récents */
+  .paddock-fav-card {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 11px 13px;
+    margin-bottom: 8px; cursor: pointer; transition: border-color .2s;
+  }
+  .paddock-fav-card:active { border-color: rgba(0,229,160,0.3); }
+  .paddock-fav-teams { font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700; }
+  .paddock-fav-meta { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
   /* ─── PAGES ─── */
   .page { display: none; padding: 0 16px; animation: fadeIn .3s ease; }
   .page.active { display: block; }
@@ -1019,8 +1144,56 @@
   </div>
 </div>
 
+<!-- PAGE: PADDOCK -->
+<div class="page active" id="page-paddock">
+  <div class="paddock-page">
+
+    <!-- Greeting -->
+    <div class="paddock-greeting">
+      <div class="paddock-hello" id="paddock-hello">Bienvenue sur BetVision AI ⚡</div>
+      <div class="paddock-date" id="paddock-date"></div>
+    </div>
+
+    <!-- News Slider -->
+    <div class="news-slider-wrap">
+      <div class="news-slider"
+           ontouchstart="newsSwipeStart(event)"
+           ontouchend="newsSwipeEnd(event)">
+        <div class="news-track" id="news-track"></div>
+      </div>
+      <div class="news-dots" id="news-dots"></div>
+    </div>
+
+    <!-- Top analyses -->
+    <div class="paddock-section">
+      <div class="paddock-section-title">🔥 Top analyses du moment</div>
+      <div id="paddock-top-matches"></div>
+    </div>
+
+    <!-- CTA Premium -->
+    <div class="cta-premium">
+      <div class="cta-premium-title">🚀 Passez Premium</div>
+      <div class="cta-premium-desc">Accédez à toutes les ligues, analyses complètes et signaux exclusifs.</div>
+      <button class="cta-premium-btn">Découvrir Premium →</button>
+    </div>
+
+    <!-- Stats rapides -->
+    <div class="paddock-section">
+      <div class="paddock-section-title">📊 Mes Stats Rapides</div>
+      <div id="paddock-stats"></div>
+    </div>
+
+    <!-- Favoris récents -->
+    <div class="paddock-section" id="paddock-fav-section" style="display:none">
+      <div class="paddock-section-title">⭐ Mes Favoris</div>
+      <div id="paddock-fav-list"></div>
+    </div>
+
+  </div>
+</div>
+
 <!-- PAGE: LIGUES -->
-<div class="page active" id="page-leagues">
+<div class="page" id="page-leagues">
   <div class="section-label">Sélectionner une ligue</div>
   <div class="league-grid" id="league-grid">
     <div class="league-card selected" onclick="selectLeague(this,'PL','Premier League','🏴󠁧󠁢󠁥󠁮󠁧󠁿')">
@@ -1292,8 +1465,8 @@
 
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav">
-  <button class="nav-item active" id="nav-leagues" onclick="showPage('leagues')">
-    <span class="nav-icon">🏆</span>Ligues
+  <button class="nav-item active" id="nav-paddock" onclick="showPage('paddock');initPaddock()">
+    <span class="nav-icon">⚡</span>Paddock
   </button>
   <button class="nav-item" id="nav-ia" onclick="showPage('ia')">
     <span class="nav-icon">🤖</span>IA
@@ -1519,6 +1692,193 @@ async function uploadAvatar(input) {
   setTimeout(() => { msg.textContent = ''; }, 3000);
 }
 
+// ─── PADDOCK ───
+const NEWS_ITEMS = [
+  { tag: 'Analyse IA', title: '🔥 PSG vs Real Madrid — Analyse dispo', sub: 'Ligue des Champions · Ce soir 21h00' },
+  { tag: 'NBA Playoffs', title: '⚡ Lakers en feu — Série 3-1', sub: 'Western Conference · Game 5 demain' },
+  { tag: 'Formule 1', title: '🏎️ GP Miami — Verstappen grand favori', sub: 'Qualifications ce samedi 22h00' },
+  { tag: 'Premier League', title: '⚽ Arsenal vs Man City — Choc au sommet', sub: 'Journée 36 · Dimanche 17h30' },
+  { tag: 'Signaux chauds', title: '📈 3 matchs BTTS +80% ce week-end', sub: 'Algorithme Poisson · Haute confiance' },
+  { tag: 'Tennis', title: '🎾 Alcaraz vs Sinner — Finale Rome', sub: 'ATP Masters 1000 · Demain 15h00' },
+];
+
+let newsIndex  = 0;
+let newsTimer  = null;
+let newsTouch  = 0;
+
+function initPaddock() {
+  renderPaddockGreeting();
+  buildNewsSlider();
+  startNewsSlider();
+  renderTopMatches();
+  renderPaddockStats();
+  renderPaddockFavoris();
+}
+
+function renderPaddockGreeting() {
+  const days  = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  const months= ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const now   = new Date();
+  const dateStr = `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+  document.getElementById('paddock-date').textContent = dateStr;
+
+  const hello = document.getElementById('paddock-hello');
+  if (currentUser) {
+    const meta = currentUser.user_metadata || {};
+    const name = meta.full_name?.split(' ')[0] || meta.name?.split(' ')[0] || currentUser.email?.split('@')[0] || '';
+    hello.textContent = `Bonjour ${name} 👋`;
+  } else {
+    hello.textContent = 'Bienvenue sur BetVision AI ⚡';
+  }
+}
+
+function buildNewsSlider() {
+  const track = document.getElementById('news-track');
+  const dots  = document.getElementById('news-dots');
+  if (!track || !dots) return;
+  track.innerHTML = NEWS_ITEMS.map(n => `
+    <div class="news-card">
+      <div class="news-card-tag">${n.tag}</div>
+      <div class="news-card-title">${n.title}</div>
+      <div class="news-card-sub">${n.sub}</div>
+    </div>
+  `).join('');
+  dots.innerHTML = NEWS_ITEMS.map((_, i) =>
+    `<div class="news-dot${i === 0 ? ' active' : ''}" onclick="goToNews(${i})"></div>`
+  ).join('');
+  newsIndex = 0;
+  updateNewsSlider();
+}
+
+function startNewsSlider() {
+  if (newsTimer) clearInterval(newsTimer);
+  newsTimer = setInterval(() => {
+    newsIndex = (newsIndex + 1) % NEWS_ITEMS.length;
+    updateNewsSlider();
+  }, 3000);
+}
+
+function updateNewsSlider() {
+  const track = document.getElementById('news-track');
+  if (track) track.style.transform = `translateX(-${newsIndex * 100}%)`;
+  document.querySelectorAll('.news-dot').forEach((d, i) =>
+    d.classList.toggle('active', i === newsIndex));
+}
+
+function goToNews(i) {
+  newsIndex = i;
+  updateNewsSlider();
+  if (newsTimer) clearInterval(newsTimer);
+  startNewsSlider();
+}
+
+function newsSwipeStart(e) { newsTouch = e.touches[0].clientX; }
+function newsSwipeEnd(e) {
+  const diff = newsTouch - e.changedTouches[0].clientX;
+  if (Math.abs(diff) < 40) return;
+  newsIndex = diff > 0
+    ? (newsIndex + 1) % NEWS_ITEMS.length
+    : (newsIndex - 1 + NEWS_ITEMS.length) % NEWS_ITEMS.length;
+  updateNewsSlider();
+  if (newsTimer) clearInterval(newsTimer);
+  startNewsSlider();
+}
+
+function renderTopMatches() {
+  const container = document.getElementById('paddock-top-matches');
+  if (!container) return;
+  const all = Object.values(loadedMatchesMap).length
+    ? Object.values(loadedMatchesMap)
+    : Object.values(FALLBACK).flat();
+  const top = all
+    .filter(m => m.confidence >= 75)
+    .sort((a, b) => b.confidence - a.confidence)
+    .slice(0, 3);
+  if (!top.length) {
+    container.innerHTML = '<div class="paddock-no-auth">Chargez une ligue depuis le menu pour voir les analyses 🔥</div>';
+    return;
+  }
+  container.innerHTML = top.map(m => `
+    <div class="top-match-card">
+      <div class="top-match-info">
+        <div class="top-match-teams">${m.home} vs ${m.away}</div>
+        <div class="top-match-meta">BTTS ${m.btts}% · Over 2.5 ${m.over25}%</div>
+      </div>
+      <div class="top-match-right">
+        <span class="badge-conf">Haute conf.</span>
+        <button class="top-match-btn" onclick="openAnalysis(${m.id})">Voir →</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function renderPaddockStats() {
+  const container = document.getElementById('paddock-stats');
+  if (!container) return;
+  if (!currentUser) {
+    container.innerHTML = `<div class="paddock-no-auth">
+      <span onclick="openAuthModal()">Connecte-toi</span> pour suivre tes stats de pronostics
+    </div>`;
+    return;
+  }
+  await supabaseReady;
+  const { data } = await supabaseClient
+    .from('pronostics').select('status').eq('user_id', currentUser.id);
+  if (!data || !data.length) {
+    container.innerHTML = '<div class="paddock-no-auth">Aucun pronostic pour l\'instant — <span onclick="openFavoris()">commencer →</span></div>';
+    return;
+  }
+  const validated = data.filter(p => p.status !== 'en_cours');
+  const won       = data.filter(p => p.status === 'gagne').length;
+  const pending   = data.filter(p => p.status === 'en_cours').length;
+  const rate      = validated.length ? Math.round(won / validated.length * 100) : 0;
+
+  const { data: last } = await supabaseClient
+    .from('pronostics').select('status,home_team,away_team')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false })
+    .limit(1).single();
+  const lastStatus = { gagne: '✅', perdu: '❌', en_cours: '🟡' };
+
+  container.innerHTML = `
+    <div class="paddock-stats-grid">
+      <div class="paddock-stat-card">
+        <div class="paddock-stat-val stat-green">${validated.length ? rate + '%' : '—'}</div>
+        <div class="paddock-stat-label">Réussite</div>
+      </div>
+      <div class="paddock-stat-card">
+        <div class="paddock-stat-val stat-gold">${pending}</div>
+        <div class="paddock-stat-label">En cours</div>
+      </div>
+      <div class="paddock-stat-card">
+        <div class="paddock-stat-val">${last ? lastStatus[last.status] || '—' : '—'}</div>
+        <div class="paddock-stat-label">Dernier</div>
+      </div>
+    </div>
+  `;
+}
+
+async function renderPaddockFavoris() {
+  const section   = document.getElementById('paddock-fav-section');
+  const container = document.getElementById('paddock-fav-list');
+  if (!section || !container || !currentUser) return;
+  await supabaseReady;
+  const { data } = await supabaseClient
+    .from('favoris').select('*')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false })
+    .limit(3);
+  if (!data || !data.length) return;
+  section.style.display = 'block';
+  data.forEach(f => { favorisData[f.match_id] = f; });
+  container.innerHTML = data.map(f => `
+    <div class="paddock-fav-card" onclick="openFavoriAnalysis('${f.match_id}')">
+      <div class="paddock-fav-teams">${f.home_team} vs ${f.away_team}</div>
+      <div class="paddock-fav-meta">${f.league} · ${f.match_date}</div>
+    </div>
+  `).join('');
+}
+
 // ─── SÉLECTION LIGUE ───
 function selectLeague(el, code, name, flag) {
   document.querySelectorAll('.league-card').forEach(c => c.classList.remove('selected'));
@@ -1526,6 +1886,8 @@ function selectLeague(el, code, name, flag) {
   currentLeague = { code, name, flag };
   document.getElementById('matches-label').textContent = `Matchs — ${name}`;
   loadMatches(code);
+  showPage('leagues');
+  document.getElementById('nav-paddock').classList.add('active');
 }
 
 async function loadMatches(code) {
@@ -1614,7 +1976,7 @@ function openAnalysis(id) {
   previousView = 'leagues';
   renderAnalysis(currentMatch);
   showPage('analysis');
-  document.getElementById('nav-leagues').classList.add('active');
+  document.getElementById('nav-paddock').classList.add('active');
 }
 
 function renderAnalysis(m) {
@@ -1877,7 +2239,7 @@ function openFavoriAnalysis(matchId) {
   previousView = 'favoris';
   renderAnalysis(currentMatch);
   showPage('analysis');
-  document.getElementById('nav-leagues').classList.add('active');
+  document.getElementById('nav-paddock').classList.add('active');
 }
 
 async function toggleAnalysisFavori(event) {
@@ -2275,6 +2637,7 @@ const supabaseReady = new Promise(resolve => {
       console.warn('Supabase non initialisé :', e);
     }
     resolve();
+    initPaddock();
   };
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
