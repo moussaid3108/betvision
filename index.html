@@ -218,6 +218,38 @@
   .paddock-fav-teams { font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700; }
   .paddock-fav-meta { font-size: 11px; color: var(--text-3); margin-top: 2px; }
 
+  .paddock-manifesto {
+    margin: 20px 16px 8px;
+    background: linear-gradient(160deg, #1a1a2e 0%, #16213e 100%);
+    border: 1px solid #00FF88;
+    border-radius: var(--radius); padding: 24px 20px 20px;
+    text-align: center;
+    animation: paddockFadeIn .8s ease;
+  }
+  .paddock-manifesto-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px; font-weight: 800; color: #fff;
+    margin-bottom: 16px; line-height: 1.2;
+  }
+  .paddock-manifesto-body {
+    font-size: 13px; color: rgba(255,255,255,0.75);
+    line-height: 1.7; text-align: left; margin-bottom: 20px;
+  }
+  .paddock-manifesto-body p { margin-bottom: 12px; }
+  .paddock-manifesto-body ul {
+    list-style: none; padding: 0; margin: 0 0 12px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .paddock-manifesto-body ul li { color: rgba(255,255,255,0.85); }
+  .paddock-manifesto-btn {
+    width: 100%; padding: 14px;
+    background: #00FF88; border: none; border-radius: var(--radius);
+    color: #050608; font-family: 'Barlow Condensed', sans-serif;
+    font-size: 17px; font-weight: 800; letter-spacing: .5px;
+    cursor: pointer; transition: opacity .2s;
+  }
+  .paddock-manifesto-btn:active { opacity: .85; }
+
   /* ─── PAGES ─── */
   .page { display: none; padding: 0 16px; animation: fadeIn .3s ease; }
   .page.active { display: block; }
@@ -1183,10 +1215,26 @@
       <div id="paddock-stats"></div>
     </div>
 
-    <!-- Favoris récents -->
-    <div class="paddock-section" id="paddock-fav-section" style="display:none">
-      <div class="paddock-section-title">⭐ Mes Favoris</div>
-      <div id="paddock-fav-list"></div>
+    <!-- Bloc marketing final -->
+    <div class="paddock-manifesto">
+      <div class="paddock-manifesto-title">🧠 Oublie les cotes. Oublie le feeling.</div>
+      <div class="paddock-manifesto-body">
+        <p>BetVision AI analyse des milliers de stats — forme du moment, historique, confrontations directes, tendances de buts — pour te donner les signaux que les bookmakers ne veulent pas que tu voies.</p>
+        <ul>
+          <li>✅ Analyses statistiques en temps réel</li>
+          <li>✅ Signaux Haute Confiance sur toutes les ligues</li>
+          <li>✅ Suis tes pronostics et mesure ta progression</li>
+          <li>✅ Communauté de passionnés</li>
+        </ul>
+        <p>🤖 Et ton Assistant IA ? C'est ton mentor personnel.<br>
+        Il apprend ton style, retient tes préférences, maîtrise toutes les techniques au monde — value bet, bankroll management, Kelly, Martingale — et évolue avec toi. Plus tu l'utilises, plus il te connaît.<br>
+        C'est pas une IA. C'est TON IA. 🔥</p>
+        <p>Ici, on ne parie pas. On calcule.</p>
+        <p>Mais le dernier mot ? Il t'appartient toujours.<br>
+        Ton instinct, ton sixième sens — c'est toi qui décides.<br>
+        BetVision te donne les armes. Le reste, c'est ton talent.</p>
+      </div>
+      <button class="paddock-manifesto-btn" onclick="currentUser ? toggleDrawer() : openAuthModal()">🚀 Commencer maintenant</button>
     </div>
 
   </div>
@@ -1713,7 +1761,6 @@ function initPaddock() {
   startNewsSlider();
   renderTopMatches();
   renderPaddockStats();
-  renderPaddockFavoris();
 }
 
 function renderPaddockGreeting() {
@@ -1857,27 +1904,6 @@ async function renderPaddockStats() {
       </div>
     </div>
   `;
-}
-
-async function renderPaddockFavoris() {
-  const section   = document.getElementById('paddock-fav-section');
-  const container = document.getElementById('paddock-fav-list');
-  if (!section || !container || !currentUser) return;
-  await supabaseReady;
-  const { data } = await supabaseClient
-    .from('favoris').select('*')
-    .eq('user_id', currentUser.id)
-    .order('created_at', { ascending: false })
-    .limit(3);
-  if (!data || !data.length) return;
-  section.style.display = 'block';
-  data.forEach(f => { favorisData[f.match_id] = f; });
-  container.innerHTML = data.map(f => `
-    <div class="paddock-fav-card" onclick="openFavoriAnalysis('${f.match_id}')">
-      <div class="paddock-fav-teams">${f.home_team} vs ${f.away_team}</div>
-      <div class="paddock-fav-meta">${f.league} · ${f.match_date}</div>
-    </div>
-  `).join('');
 }
 
 // ─── SÉLECTION LIGUE ───
