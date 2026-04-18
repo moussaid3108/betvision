@@ -439,6 +439,64 @@
     z-index: 390; transform: translateZ(0); -webkit-transform: translateZ(0);
   }
 
+  /* ─── PROFIL ─── */
+  .profile-page { padding: 0 16px 32px; }
+  .profile-avatar-wrap {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 28px 0 20px; gap: 12px;
+  }
+  .profile-avatar-img {
+    width: 90px; height: 90px; border-radius: 50%;
+    border: 3px solid var(--accent); object-fit: cover;
+    background: var(--bg-3);
+  }
+  .profile-avatar-placeholder {
+    width: 90px; height: 90px; border-radius: 50%;
+    border: 3px solid var(--accent); background: var(--bg-3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+  }
+  .profile-change-photo {
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text-2);
+    font-size: 12px; font-weight: 600; padding: 7px 14px;
+    cursor: pointer; transition: all .2s;
+  }
+  .profile-change-photo:active { border-color: var(--accent); color: var(--accent); }
+  .profile-section {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; margin-bottom: 12px;
+  }
+  .profile-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--text-3); margin-bottom: 8px;
+  }
+  .profile-input {
+    width: 100%; background: var(--bg-3); border: 1px solid var(--border);
+    border-radius: 8px; padding: 11px 14px; color: var(--text-1);
+    font-size: 14px; font-family: 'Barlow', sans-serif; outline: none;
+    transition: border-color .2s;
+  }
+  .profile-input:focus { border-color: rgba(0,229,160,0.4); }
+  .profile-input[disabled] { color: var(--text-3); cursor: default; }
+  .profile-save-btn {
+    width: 100%; padding: 12px; margin-top: 10px;
+    background: var(--accent); border: none; border-radius: 8px;
+    color: #050608; font-size: 14px; font-weight: 700; cursor: pointer;
+    transition: background .2s;
+  }
+  .profile-save-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .profile-msg { font-size: 12px; text-align: center; margin-top: 8px; min-height: 16px; }
+  .profile-msg.ok  { color: var(--accent); }
+  .profile-msg.err { color: var(--red); }
+  .profile-signout-btn {
+    width: 100%; padding: 13px; background: transparent;
+    border: 1px solid rgba(255,77,106,0.4); border-radius: var(--radius);
+    color: var(--red); font-size: 14px; font-weight: 700;
+    cursor: pointer; margin-top: 8px; transition: all .2s;
+  }
+  .profile-signout-btn:active { background: var(--red-dim); }
+
   /* ─── FAVORIS ─── */
   .fav-btn {
     background: none; border: none; font-size: 17px;
@@ -955,7 +1013,7 @@
   <div class="header-right">
     <div id="header-right-normal" style="display:flex;align-items:center;">
       <button id="btn-connexion" onclick="openAuthModal()" style="background:transparent;border:1px solid #00e5a0;color:#fff;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;">Connexion</button>
-      <img class="user-avatar" id="user-avatar" src="" alt="" style="display:none;width:32px;height:32px;border-radius:50%;border:2px solid #00e5a0;object-fit:cover;cursor:pointer;" onclick="toggleDrawer()">
+      <img class="user-avatar" id="user-avatar" src="" alt="" style="display:none;width:32px;height:32px;border-radius:50%;border:2px solid #00e5a0;object-fit:cover;cursor:pointer;" onclick="openProfile()">
     </div>
     <button id="btn-exit" onclick="exitChatMode()">✕</button>
   </div>
@@ -1036,6 +1094,35 @@
         oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
       <button class="chat-send" id="chat-send" onclick="sendMessage()">➤</button>
     </div>
+  </div>
+</div>
+
+<!-- PAGE: PROFIL -->
+<div class="page" id="page-profile">
+  <div class="profile-page">
+    <button class="back-btn" onclick="profileGoBack()">← Retour</button>
+
+    <div class="profile-avatar-wrap">
+      <img class="profile-avatar-img" id="profile-avatar-img" src="" alt="" style="display:none">
+      <div class="profile-avatar-placeholder" id="profile-avatar-placeholder">👤</div>
+      <button class="profile-change-photo" onclick="document.getElementById('profile-file-input').click()">📷 Changer la photo</button>
+      <input type="file" id="profile-file-input" accept="image/*" style="display:none" onchange="uploadAvatar(this)">
+      <div class="profile-msg" id="profile-upload-msg"></div>
+    </div>
+
+    <div class="profile-section">
+      <div class="profile-label">Pseudo</div>
+      <input class="profile-input" id="profile-username" type="text" placeholder="Votre pseudo…" maxlength="30">
+      <button class="profile-save-btn" id="profile-save-btn" onclick="saveUsername()">Sauvegarder</button>
+      <div class="profile-msg" id="profile-username-msg"></div>
+    </div>
+
+    <div class="profile-section">
+      <div class="profile-label">Email</div>
+      <input class="profile-input" id="profile-email" type="text" disabled>
+    </div>
+
+    <button class="profile-signout-btn" onclick="signOut();profileGoBack()">Déconnexion</button>
   </div>
 </div>
 
@@ -1311,11 +1398,87 @@ function goBack() {
   activeMatchId = null;
   const dest = previousView;
   previousView = 'leagues';
-  if (dest === 'favoris') {
-    openFavoris();
+  if (dest === 'favoris') { openFavoris(); } else { showPage(dest); }
+}
+
+// ─── PROFIL ───
+function openProfile() {
+  const active = document.querySelector('.page.active');
+  previousView = active ? active.id.replace('page-', '') : 'leagues';
+  showPage('profile');
+  loadProfile();
+}
+
+function profileGoBack() {
+  const dest = previousView || 'leagues';
+  previousView = 'leagues';
+  if (dest === 'favoris') { openFavoris(); } else { showPage(dest); }
+}
+
+async function loadProfile() {
+  if (!currentUser) return;
+  await supabaseReady;
+
+  document.getElementById('profile-email').value = currentUser.email || '';
+
+  const { data } = await supabaseClient
+    .from('profiles').select('username, avatar_url').eq('id', currentUser.id).single();
+
+  const meta = currentUser.user_metadata || {};
+  const username = data?.username || meta.full_name?.split(' ')[0] || meta.name?.split(' ')[0] || '';
+  const avatarUrl = data?.avatar_url || meta.avatar_url || meta.picture || '';
+
+  document.getElementById('profile-username').value = username;
+  setProfileAvatar(avatarUrl);
+}
+
+function setProfileAvatar(url) {
+  const img   = document.getElementById('profile-avatar-img');
+  const ph    = document.getElementById('profile-avatar-placeholder');
+  if (url) {
+    img.src = url; img.style.display = 'block'; ph.style.display = 'none';
   } else {
-    showPage(dest);
+    img.style.display = 'none'; ph.style.display = 'flex';
   }
+}
+
+async function saveUsername() {
+  if (!currentUser) return;
+  const btn = document.getElementById('profile-save-btn');
+  const msg = document.getElementById('profile-username-msg');
+  const val = document.getElementById('profile-username').value.trim();
+  if (!val) { msg.textContent = 'Le pseudo ne peut pas être vide.'; msg.className = 'profile-msg err'; return; }
+  btn.disabled = true;
+  await supabaseReady;
+  const { error } = await supabaseClient.from('profiles')
+    .upsert({ id: currentUser.id, username: val, updated_at: new Date().toISOString() });
+  btn.disabled = false;
+  if (error) { msg.textContent = 'Erreur : ' + error.message; msg.className = 'profile-msg err'; return; }
+  msg.textContent = '✓ Pseudo mis à jour'; msg.className = 'profile-msg ok';
+  const drawerName = document.getElementById('drawer-username');
+  if (drawerName) drawerName.textContent = val;
+  setTimeout(() => { msg.textContent = ''; }, 3000);
+}
+
+async function uploadAvatar(input) {
+  if (!currentUser || !input.files[0]) return;
+  const msg = document.getElementById('profile-upload-msg');
+  msg.textContent = 'Upload en cours…'; msg.className = 'profile-msg';
+  await supabaseReady;
+  const file = input.files[0];
+  const ext  = file.name.split('.').pop();
+  const path = `${currentUser.id}/avatar.${ext}`;
+  const { error: upErr } = await supabaseClient.storage.from('avatars').upload(path, file, { upsert: true });
+  if (upErr) { msg.textContent = 'Erreur upload : ' + upErr.message; msg.className = 'profile-msg err'; return; }
+  const { data: urlData } = supabaseClient.storage.from('avatars').getPublicUrl(path);
+  const publicUrl = urlData.publicUrl;
+  await supabaseClient.from('profiles').upsert({ id: currentUser.id, avatar_url: publicUrl, updated_at: new Date().toISOString() });
+  setProfileAvatar(publicUrl);
+  document.getElementById('user-avatar').src = publicUrl;
+  const drawerAv = document.getElementById('drawer-avatar');
+  if (drawerAv) drawerAv.src = publicUrl;
+  msg.textContent = '✓ Photo mise à jour'; msg.className = 'profile-msg ok';
+  setTimeout(() => { msg.textContent = ''; }, 3000);
 }
 
 // ─── SÉLECTION LIGUE ───
