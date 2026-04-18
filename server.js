@@ -20,7 +20,7 @@ app.get('/api/config', (_req, res) => {
 
 app.get('/api/matches', (req, res) => matchesHandler(req, res));
 
-// ─── helpers Poisson (dupliqués pour /api/today) ──────────
+// ─── helpers Poisson ──────────────────────────────────────
 function poissonP(lambda, k) {
   let f = 1; for (let i = 2; i <= k; i++) f *= i;
   return Math.pow(lambda, k) * Math.exp(-lambda) / f;
@@ -45,66 +45,46 @@ function matchScore(lH, lA) {
   };
 }
 
+// ─── SportAPI (Sofascore) ─────────────────────────────────
+const SPORT_HOST = 'sportapi7.p.rapidapi.com';
+const SPORT_BASE = `https://${SPORT_HOST}`;
+const LEAGUES = {
+  17:  { name: 'Premier League',   lH: 1.45, lA: 1.10 },
+  34:  { name: 'Ligue 1',          lH: 1.35, lA: 1.05 },
+  8:   { name: 'La Liga',          lH: 1.40, lA: 1.10 },
+  23:  { name: 'Serie A',          lH: 1.30, lA: 1.00 },
+  35:  { name: 'Bundesliga',       lH: 1.55, lA: 1.20 },
+  7:   { name: 'Champions League', lH: 1.25, lA: 1.00 },
+};
+
 app.get('/api/today', async (req, res) => {
-  const KEY    = process.env.RAPIDAPI_KEY || '47025106d4msh3f5ff29ba28372ap1938b7jsnd189477d3b6a';
-  const HOST   = 'api-football-v1.p.rapidapi.com';
-  const SEASON = '2025';
-  const LEAGUES = { 39: 'Premier League', 61: 'Ligue 1', 140: 'La Liga', 135: 'Serie A', 78: 'Bundesliga', 2: 'Champions League' };
-  const today  = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
-  const hdr    = { 'x-rapidapi-host': HOST, 'x-rapidapi-key': KEY };
-  const apiFetch = p => fetch(`https://${HOST}${p}`, { headers: hdr });
+  const KEY   = process.env.RAPIDAPI_KEY || '47025106d4msh3f5ff29ba28372ap1938b7jsnd189477d3b6a';
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
+  const hdr   = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
 
   try {
-    // 1. Fixtures du jour pour chaque ligue majeure (en parallèle)
-    const fixtureResponses = await Promise.all(
-      Object.keys(LEAGUES).map(id =>
-        apiFetch(`/fixtures?league=${id}&season=${SEASON}&date=${today}&timezone=Europe/Paris`).then(r => r.json())
-      )
-    );
+    const data = await fetch(`${SPORT_BASE}/api/v1/sport/football/scheduled-events/${today}`, { headers: hdr }).then(r => r.json());
 
-    // 2. Collecter les fixtures + leagues uniques
-    const allFixtures = [];
-    const leagueIds   = new Set();
-    fixtureResponses.forEach(data => {
-      (data?.response || []).forEach(f => {
-        allFixtures.push(f);
-        leagueIds.add(f.league?.id);
-      });
+    const events = (data?.events || []).filter(e => {
+      const tid = e?.tournament?.uniqueTournament?.id;
+      return tid && LEAGUES[tid];
     });
 
-    if (!allFixtures.length) return res.json({ matches: [] });
+    if (!events.length) return res.json({ matches: [] });
 
-    // 3. Standings pour calculer lambdas (en parallèle)
-    const standingsData = await Promise.all(
-      [...leagueIds].map(id =>
-        apiFetch(`/standings?league=${id}&season=${SEASON}`).then(r => r.json())
-      )
-    );
-    const teamStats = {};
-    standingsData.forEach(sd => {
-      const groups = sd?.response?.[0]?.league?.standings || [];
-      groups.flat().forEach(e => { if (e?.team?.id) teamStats[e.team.id] = e; });
-    });
-
-    // 4. Calcul Poisson + tri
-    const matches = allFixtures.map((item, idx) => {
-      const fix  = item.fixture || {};
-      const teams = item.teams  || {};
-      const hId  = teams.home?.id, aId = teams.away?.id;
-      const hE   = teamStats[hId]?.home || {};
-      const aE   = teamStats[aId]?.away || {};
-      const hP   = hE.played || 1, aP = aE.played || 1;
-      const lH   = Math.max(0.5, ((hE.goals?.for ?? 1.4) / hP + (aE.goals?.against ?? 1.1) / aP) / 2);
-      const lA   = Math.max(0.3, ((aE.goals?.for ?? 1.0) / aP + (hE.goals?.against ?? 1.1) / hP) / 2);
-      const stats = matchScore(lH, lA);
-      const d = new Date(fix.date || '');
+    const matches = events.map((e, idx) => {
+      const tid    = e.tournament?.uniqueTournament?.id;
+      const league = LEAGUES[tid] || { name: e.tournament?.name || 'Ligue', lH: 1.35, lA: 1.05 };
+      const { lH, lA } = league;
+      const stats  = matchScore(lH, lA);
+      const d      = e.startTimestamp ? new Date(e.startTimestamp * 1000) : null;
       return {
-        id:          fix.id || idx,
-        home:        teams.home?.name || '?',
-        away:        teams.away?.name || '?',
-        competition: item.league?.name || LEAGUES[item.league?.id] || 'Ligue',
-        time:        isNaN(d) ? '--:--' : d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-        date:        isNaN(d) ? 'Aujourd\'hui' : d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short' }),
+        id:          e.id || idx,
+        home:        e.homeTeam?.name || '?',
+        away:        e.awayTeam?.name || '?',
+        competition: league.name,
+        time:        d ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }) : '--:--',
+        date:        d ? d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'Europe/Paris' }) : "Aujourd'hui",
         ...stats,
         goalsHome: +lH.toFixed(1), goalsAway: +lA.toFixed(1),
         formHome: ['?','?','?','?','?'], formAway: ['?','?','?','?','?'],
@@ -122,19 +102,26 @@ app.get('/api/today', async (req, res) => {
 app.get('/api/fixture', async (req, res) => {
   const { id } = req.query;
   if (!id) return res.status(400).json({ error: 'Missing id' });
-  const KEY  = process.env.RAPIDAPI_KEY || '47025106d4msh3f5ff29ba28372ap1938b7jsnd189477d3b6a';
-  const HOST = 'api-football-v1.p.rapidapi.com';
+  const KEY = process.env.RAPIDAPI_KEY || '47025106d4msh3f5ff29ba28372ap1938b7jsnd189477d3b6a';
+  const hdr = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
   try {
-    const r = await fetch(`https://${HOST}/fixtures?id=${id}`, {
-      headers: { 'x-rapidapi-host': HOST, 'x-rapidapi-key': KEY }
-    });
-    const data = await r.json();
-    const f = data?.response?.[0];
-    if (!f) return res.json({ status: null });
+    const data = await fetch(`${SPORT_BASE}/api/v1/event/${id}`, { headers: hdr }).then(r => r.json());
+    const ev = data?.event;
+    if (!ev) return res.json({ status: null });
+    const type = ev.status?.type;
+    const desc = ev.status?.description || '';
+    let statusShort = 'NS';
+    if (type === 'finished')    statusShort = 'FT';
+    else if (type === 'inprogress') {
+      if (/halftime|half.time/i.test(desc)) statusShort = 'HT';
+      else if (/2nd/i.test(desc))           statusShort = '2H';
+      else                                  statusShort = '1H';
+    } else if (type === 'postponed') statusShort = 'PST';
+    else if (type === 'canceled')    statusShort = 'CANC';
     res.json({
-      status:     f.fixture?.status?.short,
-      homeGoals:  f.goals?.home,
-      awayGoals:  f.goals?.away,
+      status:    statusShort,
+      homeGoals: ev.homeScore?.current ?? null,
+      awayGoals: ev.awayScore?.current ?? null,
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
