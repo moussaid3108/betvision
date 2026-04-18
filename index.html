@@ -1443,8 +1443,9 @@ async function loadProfile() {
     .from('profiles').select('username, avatar_url').eq('id', currentUser.id).single();
 
   const meta = currentUser.user_metadata || {};
-  const username = data?.username || meta.full_name?.split(' ')[0] || meta.name?.split(' ')[0] || '';
-  const avatarUrl = data?.avatar_url || meta.avatar_url || meta.picture || '';
+  const username   = data?.username   || meta.full_name?.split(' ')[0] || meta.name?.split(' ')[0] || '';
+  const rawAvatar  = data?.avatar_url || meta.avatar_url || meta.picture || '';
+  const avatarUrl  = data?.avatar_url ? rawAvatar + '?t=' + Date.now() : rawAvatar;
 
   document.getElementById('profile-username').value = username;
   setProfileAvatar(avatarUrl);
