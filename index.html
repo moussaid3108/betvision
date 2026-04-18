@@ -46,11 +46,13 @@
   .header {
     position: sticky; top: 0; z-index: 100;
     background: linear-gradient(180deg, var(--bg-0) 60%, transparent);
-    padding: 16px 20px 12px;
-    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    display: grid; grid-template-columns: 44px 1fr 44px;
+    align-items: center;
   }
+  .header-right { display: flex; justify-content: flex-end; align-items: center; }
   .logo {
-    display: flex; align-items: center; gap: 10px;
+    display: flex; align-items: center; gap: 8px; justify-content: center;
   }
   .logo-icon {
     width: 36px; height: 36px;
@@ -67,15 +69,6 @@
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   }
   .logo-sub { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 2px; margin-top: -2px; }
-  .header-badge {
-    background: var(--accent-dim);
-    border: 1px solid rgba(0,229,160,0.25);
-    color: var(--accent);
-    font-size: 10px; font-weight: 600;
-    padding: 4px 10px; border-radius: 20px;
-    text-transform: uppercase; letter-spacing: 1px;
-  }
-
   /* ─── BOTTOM NAV ─── */
   .bottom-nav {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 400;
@@ -749,6 +742,17 @@
   <div class="drawer-sport" onclick="soonAvailable('Hockey')"><span class="sport-left">🏒 Hockey (NHL)</span></div>
   <div class="drawer-sport" onclick="soonAvailable('MMA')"><span class="sport-left">🥊 MMA / UFC</span></div>
   <div class="drawer-sport" onclick="showPage('chat');initChat();closeDrawer()" style="border-top:1px solid rgba(255,255,255,0.08);margin-top:4px"><span class="sport-left">💬 Chat communauté</span></div>
+
+  <div id="drawer-user-block" style="display:none;margin-top:auto;padding:16px 18px;border-top:1px solid rgba(255,255,255,0.07);">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <img id="drawer-avatar" src="" alt="" style="width:36px;height:36px;border-radius:50%;border:2px solid #00e5a0;object-fit:cover;">
+      <span id="drawer-username" style="font-size:14px;font-weight:600;color:var(--text-1);"></span>
+    </div>
+    <button onclick="signOut();closeDrawer()" style="width:100%;padding:9px;background:transparent;border:1px solid rgba(255,77,106,0.4);border-radius:8px;color:#ff4d6a;font-size:13px;font-weight:600;cursor:pointer;">Déconnexion</button>
+  </div>
+  <div id="drawer-login-block" style="padding:16px 18px;border-top:1px solid rgba(255,255,255,0.07);margin-top:auto;">
+    <button onclick="openAuthModal();closeDrawer()" style="width:100%;padding:9px;background:transparent;border:1px solid #00e5a0;border-radius:8px;color:#00e5a0;font-size:13px;font-weight:600;cursor:pointer;">Se connecter</button>
+  </div>
 </div>
 
 <!-- AUTH MODAL -->
@@ -789,13 +793,10 @@
       <div class="logo-sub">Algorithme Prédictif</div>
     </div>
   </div>
-  <button id="btn-connexion" onclick="openAuthModal()" style="background:transparent;border:1px solid #00e5a0;color:#fff;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;">Connexion</button>
-  <div class="user-profile" id="user-profile">
-    <img class="user-avatar" id="user-avatar" src="" alt="">
-    <span class="user-name" id="user-name"></span>
-    <button class="btn-signout" onclick="signOut()">Déconnexion</button>
+  <div class="header-right">
+    <button id="btn-connexion" onclick="openAuthModal()" style="background:transparent;border:1px solid #00e5a0;color:#fff;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;">Connexion</button>
+    <img class="user-avatar" id="user-avatar" src="" alt="" style="display:none;width:32px;height:32px;border-radius:50%;border:2px solid #00e5a0;object-fit:cover;cursor:pointer;" onclick="toggleDrawer()">
   </div>
-  <div class="header-badge">v2.0</div>
 </div>
 
 <!-- PAGE: LIGUES -->
@@ -1505,20 +1506,29 @@ const supabaseReady = new Promise(resolve => {
         const user = session?.user;
         currentUser = user || null;
         updateChatInputVisibility();
-        const btnCnx   = document.getElementById('btn-connexion');
-        const profile  = document.getElementById('user-profile');
-        const avatar   = document.getElementById('user-avatar');
-        const nameEl   = document.getElementById('user-name');
+        const btnCnx      = document.getElementById('btn-connexion');
+        const avatar      = document.getElementById('user-avatar');
+        const drawerUser  = document.getElementById('drawer-user-block');
+        const drawerLogin = document.getElementById('drawer-login-block');
+        const drawerAv    = document.getElementById('drawer-avatar');
+        const drawerName  = document.getElementById('drawer-username');
         if (user) {
           const meta = user.user_metadata || {};
-          avatar.src = meta.avatar_url || meta.picture || '';
-          nameEl.textContent = meta.full_name?.split(' ')[0] || meta.name?.split(' ')[0] || '';
-          btnCnx.style.display  = 'none';
-          profile.classList.add('visible');
+          const avatarUrl = meta.avatar_url || meta.picture || '';
+          const name = meta.full_name?.split(' ')[0] || meta.name?.split(' ')[0] || user.email?.split('@')[0] || '';
+          avatar.src = avatarUrl;
+          avatar.style.display = 'block';
+          btnCnx.style.display = 'none';
+          if (drawerAv) drawerAv.src = avatarUrl;
+          if (drawerName) drawerName.textContent = name;
+          if (drawerUser) drawerUser.style.display = 'block';
+          if (drawerLogin) drawerLogin.style.display = 'none';
           closeAuthModal();
         } else {
-          btnCnx.style.display  = '';
-          profile.classList.remove('visible');
+          avatar.style.display = 'none';
+          btnCnx.style.display = '';
+          if (drawerUser) drawerUser.style.display = 'none';
+          if (drawerLogin) drawerLogin.style.display = 'block';
         }
       });
     } catch (e) {
