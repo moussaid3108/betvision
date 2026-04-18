@@ -462,6 +462,12 @@
     -webkit-tap-highlight-color: transparent;
   }
   .fav-remove:active { background: var(--red-dim); }
+  .analysis-fav-btn {
+    position: absolute; top: 14px; right: 14px;
+    background: none; border: none; font-size: 24px;
+    cursor: pointer; z-index: 2; padding: 2px;
+    -webkit-tap-highlight-color: transparent; line-height: 1;
+  }
 
   /* ─── PRONOSTICS ─── */
   .pronos-page { padding: 0 16px 20px; }
@@ -1405,6 +1411,7 @@ function renderAnalysis(m) {
 
   const content = `
     <div class="analysis-hero">
+      <button class="analysis-fav-btn" id="analysis-fav-btn" onclick="toggleAnalysisFavori(event)">${userFavoris.has(String(m.id)) ? '⭐' : '☆'}</button>
       <div class="hero-league">${m.competition}</div>
       <div class="hero-teams">
         <div class="hero-team">
@@ -1549,7 +1556,8 @@ function askAIAboutMatch() {
 }
 
 // ─── FAVORIS ───
-let userFavoris = new Set();
+let userFavoris  = new Set();
+let favorisData  = {};
 
 async function loadFavoris() {
   await supabaseReady;
@@ -1615,15 +1623,45 @@ async function renderFavorisPage() {
     return;
   }
 
+  data.forEach(f => { favorisData[f.match_id] = f; });
+
   list.innerHTML = data.map(f => `
     <div class="fav-card" id="fav-card-${f.match_id}">
-      <div class="fav-card-info">
+      <div class="fav-card-info" style="cursor:pointer" onclick="openFavoriAnalysis('${f.match_id}')">
         <div class="fav-teams">${f.home_team} vs ${f.away_team}</div>
         <div class="fav-meta">${f.league} · ${f.match_date}</div>
       </div>
       <button class="fav-remove" onclick="removeFavori('${f.match_id}')">Retirer ✕</button>
     </div>
   `).join('');
+}
+
+function openFavoriAnalysis(matchId) {
+  const m = loadedMatchesMap[matchId] ||
+    Object.values(FALLBACK).flat().find(x => String(x.id) === String(matchId));
+  if (m) {
+    currentMatch = m;
+  } else {
+    const f = favorisData[matchId];
+    if (!f) return;
+    const parts = (f.match_date || '').split(' ');
+    currentMatch = {
+      id: matchId, home: f.home_team, away: f.away_team,
+      competition: f.league,
+      date: parts[0] || '', time: parts[1] || '--:--',
+      formHome: ['?','?','?','?','?'], formAway: ['?','?','?','?','?'],
+    };
+  }
+  renderAnalysis(currentMatch);
+  showPage('analysis');
+  document.getElementById('nav-leagues').classList.add('active');
+}
+
+async function toggleAnalysisFavori(event) {
+  if (!currentMatch) return;
+  await toggleFavori(String(currentMatch.id), event);
+  const btn = document.getElementById('analysis-fav-btn');
+  if (btn) btn.textContent = userFavoris.has(String(currentMatch.id)) ? '⭐' : '☆';
 }
 
 async function removeFavori(matchId) {
