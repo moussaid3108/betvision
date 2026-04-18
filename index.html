@@ -1473,10 +1473,11 @@ async function uploadAvatar(input) {
   const { data: urlData } = supabaseClient.storage.from('avatars').getPublicUrl(path);
   const publicUrl = urlData.publicUrl;
   await supabaseClient.from('profiles').upsert({ id: currentUser.id, avatar_url: publicUrl });
-  setProfileAvatar(publicUrl);
-  document.getElementById('user-avatar').src = publicUrl;
+  const busted = publicUrl + '?t=' + Date.now();
+  setProfileAvatar(busted);
+  document.getElementById('user-avatar').src = busted;
   const drawerAv = document.getElementById('drawer-avatar');
-  if (drawerAv) drawerAv.src = publicUrl;
+  if (drawerAv) drawerAv.src = busted;
   msg.textContent = '✓ Photo mise à jour'; msg.className = 'profile-msg ok';
   setTimeout(() => { msg.textContent = ''; }, 3000);
 }
