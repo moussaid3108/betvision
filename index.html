@@ -332,7 +332,7 @@
   .signal-desc { font-size: 12px; color: var(--text-2); line-height: 1.4; }
 
   /* ─── IA CHAT ─── */
-  .ia-page { padding: 0 16px 20px; }
+  .ia-page { padding: 0 16px 0; }
   .ia-intro {
     background: var(--bg-2); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 18px; margin-bottom: 20px;
@@ -344,8 +344,8 @@
   .ia-intro-sub { font-size: 13px; color: var(--text-2); line-height: 1.5; }
 
   .chat-box {
-    display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;
-    min-height: 200px;
+    display: flex; flex-direction: column; gap: 12px;
+    min-height: 200px; padding-bottom: 80px;
   }
   .chat-msg {
     max-width: 85%; padding: 12px 14px;
@@ -368,6 +368,10 @@
 
   .chat-input-row {
     display: flex; gap: 8px; align-items: flex-end;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    background: var(--bg-1); border-top: 1px solid var(--border);
+    z-index: 390; transform: translateZ(0);
   }
   .chat-input {
     flex: 1; background: var(--bg-2); border: 1px solid var(--border);
