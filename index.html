@@ -1006,7 +1006,7 @@
 <!-- PAGE: ANALYSE -->
 <div class="page" id="page-analysis">
   <div class="analysis-page">
-    <button class="back-btn" onclick="activeMatchId=null;showPage('leagues')">← Retour</button>
+    <button class="back-btn" onclick="goBack()">← Retour</button>
     <div id="analysis-content"></div>
   </div>
 </div>
@@ -1231,6 +1231,7 @@ if (tg) {
 let currentLeague = { code: 'PL', name: 'Premier League', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' };
 let currentMatch     = null;
 let activeMatchId    = null;
+let previousView     = 'leagues';
 let chatHistory   = [];
 let loadedMatchesMap = {}; // id → match object
 
@@ -1304,6 +1305,17 @@ function showPage(name) {
 
 function exitChatMode() {
   showPage('leagues');
+}
+
+function goBack() {
+  activeMatchId = null;
+  const dest = previousView;
+  previousView = 'leagues';
+  if (dest === 'favoris') {
+    openFavoris();
+  } else {
+    showPage(dest);
+  }
 }
 
 // ─── SÉLECTION LIGUE ───
@@ -1398,6 +1410,7 @@ function openAnalysis(id) {
     Object.values(FALLBACK).flat().find(m => m.id === id);
   if (!currentMatch) return;
   activeMatchId = id;
+  previousView = 'leagues';
   renderAnalysis(currentMatch);
   showPage('analysis');
   document.getElementById('nav-leagues').classList.add('active');
@@ -1660,6 +1673,7 @@ function openFavoriAnalysis(matchId) {
       formHome: ['?','?','?','?','?'], formAway: ['?','?','?','?','?'],
     };
   }
+  previousView = 'favoris';
   renderAnalysis(currentMatch);
   showPage('analysis');
   document.getElementById('nav-leagues').classList.add('active');
