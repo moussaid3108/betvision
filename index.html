@@ -439,6 +439,30 @@
     z-index: 390; transform: translateZ(0); -webkit-transform: translateZ(0);
   }
 
+  /* ─── FAVORIS ─── */
+  .fav-btn {
+    background: none; border: none; font-size: 17px;
+    cursor: pointer; padding: 2px 0 2px 6px; line-height: 1; flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .favoris-page { padding: 0 16px 20px; }
+  .fav-card {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px; margin-bottom: 10px;
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  }
+  .fav-card-info { flex: 1; min-width: 0; }
+  .fav-teams { font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .fav-meta { font-size: 11px; color: var(--text-3); }
+  .fav-remove {
+    background: none; border: 1px solid rgba(255,77,106,0.3);
+    border-radius: 8px; color: var(--red);
+    font-size: 11px; font-weight: 600; padding: 5px 9px;
+    cursor: pointer; flex-shrink: 0; transition: all .2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .fav-remove:active { background: var(--red-dim); }
+
   /* ─── PRONOSTICS ─── */
   .pronos-page { padding: 0 16px 20px; }
   .pronos-kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
@@ -868,6 +892,7 @@
   <div class="drawer-sport" onclick="soonAvailable('MMA')"><span class="sport-left">🥊 MMA / UFC</span></div>
   <div class="drawer-sport" onclick="showPage('chat');initChat();closeDrawer()" style="border-top:1px solid rgba(255,255,255,0.08);margin-top:4px"><span class="sport-left">💬 Chat communauté</span></div>
   <div class="drawer-sport" onclick="openPronos();closeDrawer()"><span class="sport-left">📊 Mes Pronostics</span></div>
+  <div class="drawer-sport" onclick="openFavoris();closeDrawer()"><span class="sport-left">⭐ Favoris</span></div>
 
   <div id="drawer-user-block" style="display:none;margin-top:auto;padding:16px 18px;border-top:1px solid rgba(255,255,255,0.07);">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
@@ -1003,6 +1028,21 @@
         oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
       <button class="chat-send" id="chat-send" onclick="sendMessage()">➤</button>
     </div>
+  </div>
+</div>
+
+<!-- PAGE: FAVORIS -->
+<div class="page" id="page-favoris">
+  <div class="favoris-page">
+    <div class="section-label">Mes Favoris</div>
+    <div id="favoris-not-connected" style="display:none">
+      <div class="empty-state">
+        <div class="empty-icon">🔒</div>
+        <div class="empty-text">Connecte-toi pour voir<br>tes favoris</div>
+      </div>
+      <button onclick="openAuthModal()" style="width:100%;padding:13px;margin-top:12px;background:transparent;border:1px solid #00e5a0;border-radius:var(--radius);color:#00e5a0;font-size:14px;font-weight:700;cursor:pointer;">Se connecter</button>
+    </div>
+    <div id="favoris-list"></div>
   </div>
 </div>
 
@@ -1321,7 +1361,10 @@ function renderMatchCard(m) {
   return `<div class="match-card" onclick="openAnalysis(${m.id})">
     <div class="match-card-header">
       <span class="match-date">${m.date} • ${m.time}</span>
-      <span class="match-competition">${m.competition}</span>
+      <div style="display:flex;align-items:center;gap:4px;">
+        <span class="match-competition">${m.competition}</span>
+        <button class="fav-btn" id="fav-${m.id}" onclick="toggleFavori('${m.id}',event)">${userFavoris.has(String(m.id)) ? '⭐' : '☆'}</button>
+      </div>
     </div>
     <div class="match-teams">
       <div class="team-block"><div class="team-name">${m.home}</div></div>
@@ -1503,6 +1546,98 @@ function askAIAboutMatch() {
     document.getElementById('chat-input').value = q;
     sendMessage();
   }, 400);
+}
+
+// ─── FAVORIS ───
+let userFavoris = new Set();
+
+async function loadFavoris() {
+  await supabaseReady;
+  if (!currentUser) { userFavoris = new Set(); return; }
+  const { data } = await supabaseClient.from('favoris').select('match_id').eq('user_id', currentUser.id);
+  userFavoris = new Set((data || []).map(f => f.match_id));
+  userFavoris.forEach(id => {
+    const btn = document.getElementById('fav-' + id);
+    if (btn) btn.textContent = '⭐';
+  });
+}
+
+async function toggleFavori(matchId, event) {
+  event.stopPropagation();
+  if (!currentUser) { openAuthModal(); return; }
+  await supabaseReady;
+  const btn = document.getElementById('fav-' + matchId);
+  if (userFavoris.has(String(matchId))) {
+    await supabaseClient.from('favoris').delete().eq('user_id', currentUser.id).eq('match_id', matchId);
+    userFavoris.delete(String(matchId));
+    if (btn) btn.textContent = '☆';
+  } else {
+    const m = loadedMatchesMap[matchId] || Object.values(FALLBACK).flat().find(x => String(x.id) === String(matchId));
+    if (!m) return;
+    await supabaseClient.from('favoris').insert({
+      user_id:    currentUser.id,
+      match_id:   String(matchId),
+      home_team:  m.home,
+      away_team:  m.away,
+      league:     m.competition,
+      match_date: `${m.date} ${m.time}`,
+    });
+    userFavoris.add(String(matchId));
+    if (btn) btn.textContent = '⭐';
+  }
+}
+
+function openFavoris() {
+  showPage('favoris');
+  renderFavorisPage();
+}
+
+async function renderFavorisPage() {
+  await supabaseReady;
+  const notConn = document.getElementById('favoris-not-connected');
+  const list    = document.getElementById('favoris-list');
+  if (!currentUser) {
+    notConn.style.display = 'block';
+    list.style.display    = 'none';
+    return;
+  }
+  notConn.style.display = 'none';
+  list.style.display    = 'block';
+  list.innerHTML = '<div class="spinner"></div>';
+
+  const { data, error } = await supabaseClient
+    .from('favoris').select('*')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false });
+
+  if (error || !data || !data.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">⭐</div><div class="empty-text">Aucun favori<br>pour l\'instant</div></div>';
+    return;
+  }
+
+  list.innerHTML = data.map(f => `
+    <div class="fav-card" id="fav-card-${f.match_id}">
+      <div class="fav-card-info">
+        <div class="fav-teams">${f.home_team} vs ${f.away_team}</div>
+        <div class="fav-meta">${f.league} · ${f.match_date}</div>
+      </div>
+      <button class="fav-remove" onclick="removeFavori('${f.match_id}')">Retirer ✕</button>
+    </div>
+  `).join('');
+}
+
+async function removeFavori(matchId) {
+  await supabaseReady;
+  await supabaseClient.from('favoris').delete().eq('user_id', currentUser.id).eq('match_id', matchId);
+  userFavoris.delete(String(matchId));
+  const starBtn = document.getElementById('fav-' + matchId);
+  if (starBtn) starBtn.textContent = '☆';
+  const card = document.getElementById('fav-card-' + matchId);
+  if (card) card.remove();
+  const list = document.getElementById('favoris-list');
+  if (list && !list.querySelector('.fav-card')) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">⭐</div><div class="empty-text">Aucun favori<br>pour l\'instant</div></div>';
+  }
 }
 
 // ─── PRONOSTICS ───
@@ -1854,6 +1989,7 @@ const supabaseReady = new Promise(resolve => {
         const user = session?.user;
         currentUser = user || null;
         updateChatInputVisibility();
+        loadFavoris();
         const btnCnx      = document.getElementById('btn-connexion');
         const avatar      = document.getElementById('user-avatar');
         const drawerUser  = document.getElementById('drawer-user-block');
