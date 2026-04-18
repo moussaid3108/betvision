@@ -1198,7 +1198,7 @@
 
     <!-- Top analyses -->
     <div class="paddock-section">
-      <div class="paddock-section-title">🔥 Top analyses du moment</div>
+      <div class="paddock-section-title">⚡ Top analyses du jour</div>
       <div id="paddock-top-matches"></div>
     </div>
 
@@ -1832,32 +1832,34 @@ function newsSwipeEnd(e) {
   startNewsSlider();
 }
 
-function renderTopMatches() {
+async function renderTopMatches() {
   const container = document.getElementById('paddock-top-matches');
   if (!container) return;
-  const all = Object.values(loadedMatchesMap).length
-    ? Object.values(loadedMatchesMap)
-    : Object.values(FALLBACK).flat();
-  const top = all
-    .filter(m => m.confidence >= 75)
-    .sort((a, b) => b.confidence - a.confidence)
-    .slice(0, 3);
-  if (!top.length) {
-    container.innerHTML = '<div class="paddock-no-auth">Chargez une ligue depuis le menu pour voir les analyses 🔥</div>';
-    return;
+  container.innerHTML = '<div class="spinner"></div>';
+  try {
+    const data = await fetch('/api/today').then(r => r.json());
+    const top  = (data.matches || []).slice(0, 2);
+    if (!top.length) {
+      container.innerHTML = '<div class="paddock-no-auth">Aucun match aujourd\'hui — revenez demain 🔜</div>';
+      return;
+    }
+    top.forEach(m => { loadedMatchesMap[m.id] = m; });
+    container.innerHTML = top.map(m => `
+      <div class="top-match-card">
+        <div class="top-match-info">
+          <div class="top-match-teams">${m.home} vs ${m.away}</div>
+          <div class="top-match-meta">${m.competition} · ${m.time}</div>
+          <div class="top-match-meta">BTTS ${m.btts}% · Over 2.5 ${m.over25}% · Conf. ${m.confidence}%</div>
+        </div>
+        <div class="top-match-right" style="flex-direction:column;align-items:flex-end;gap:6px;">
+          <span class="badge-conf" style="background:#00b377;animation:none;">🎁 GRATUIT</span>
+          <button class="top-match-btn" onclick="openAnalysis(${m.id})">Voir →</button>
+        </div>
+      </div>
+    `).join('');
+  } catch {
+    container.innerHTML = '<div class="paddock-no-auth">Aucun match aujourd\'hui — revenez demain 🔜</div>';
   }
-  container.innerHTML = top.map(m => `
-    <div class="top-match-card">
-      <div class="top-match-info">
-        <div class="top-match-teams">${m.home} vs ${m.away}</div>
-        <div class="top-match-meta">BTTS ${m.btts}% · Over 2.5 ${m.over25}%</div>
-      </div>
-      <div class="top-match-right">
-        <span class="badge-conf">Haute conf.</span>
-        <button class="top-match-btn" onclick="openAnalysis(${m.id})">Voir →</button>
-      </div>
-    </div>
-  `).join('');
 }
 
 async function renderPaddockStats() {
