@@ -1006,7 +1006,7 @@
 <!-- PAGE: ANALYSE -->
 <div class="page" id="page-analysis">
   <div class="analysis-page">
-    <button class="back-btn" onclick="showPage('leagues')">← Retour</button>
+    <button class="back-btn" onclick="activeMatchId=null;showPage('leagues')">← Retour</button>
     <div id="analysis-content"></div>
   </div>
 </div>
@@ -1229,7 +1229,8 @@ if (tg) {
 
 // ─── STATE ───
 let currentLeague = { code: 'PL', name: 'Premier League', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' };
-let currentMatch  = null;
+let currentMatch     = null;
+let activeMatchId    = null;
 let chatHistory   = [];
 let loadedMatchesMap = {}; // id → match object
 
@@ -1388,10 +1389,15 @@ function renderMatchCard(m) {
 
 // ─── ANALYSE MATCH ───
 function openAnalysis(id) {
-  // Chercher dans les matchs chargés dynamiquement, puis dans le fallback
+  if (activeMatchId === id) {
+    activeMatchId = null;
+    showPage('leagues');
+    return;
+  }
   currentMatch = loadedMatchesMap[id] ||
     Object.values(FALLBACK).flat().find(m => m.id === id);
   if (!currentMatch) return;
+  activeMatchId = id;
   renderAnalysis(currentMatch);
   showPage('analysis');
   document.getElementById('nav-leagues').classList.add('active');
