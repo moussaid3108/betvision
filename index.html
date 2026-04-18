@@ -1451,7 +1451,7 @@ async function saveUsername() {
   btn.disabled = true;
   await supabaseReady;
   const { error } = await supabaseClient.from('profiles')
-    .upsert({ id: currentUser.id, username: val, updated_at: new Date().toISOString() });
+    .upsert({ id: currentUser.id, username: val });
   btn.disabled = false;
   if (error) { msg.textContent = 'Erreur : ' + error.message; msg.className = 'profile-msg err'; return; }
   msg.textContent = '✓ Pseudo mis à jour'; msg.className = 'profile-msg ok';
@@ -1472,7 +1472,7 @@ async function uploadAvatar(input) {
   if (upErr) { msg.textContent = 'Erreur upload : ' + upErr.message; msg.className = 'profile-msg err'; return; }
   const { data: urlData } = supabaseClient.storage.from('avatars').getPublicUrl(path);
   const publicUrl = urlData.publicUrl;
-  await supabaseClient.from('profiles').upsert({ id: currentUser.id, avatar_url: publicUrl, updated_at: new Date().toISOString() });
+  await supabaseClient.from('profiles').upsert({ id: currentUser.id, avatar_url: publicUrl });
   setProfileAvatar(publicUrl);
   document.getElementById('user-avatar').src = publicUrl;
   const drawerAv = document.getElementById('drawer-avatar');
