@@ -129,7 +129,13 @@
     border: 1px solid rgba(0,229,160,0.15);
     border-radius: var(--radius);
     display: flex; flex-direction: column; gap: 6px;
+    position: relative; overflow: hidden; min-height: 120px;
   }
+  .news-card-bg {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; opacity: 0.18; filter: grayscale(20%); pointer-events: none;
+  }
+  .news-card-body { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 6px; }
   .news-card-tag { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--accent); font-weight: 700; }
   .news-card-title { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 800; color: #fff; line-height: 1.2; }
   .news-card-sub { font-size: 12px; color: var(--text-2); }
@@ -1781,28 +1787,41 @@ function renderPaddockGreeting() {
   }
 }
 
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const mins = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
+  if (mins < 60) return `il y a ${mins} min`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `il y a ${hrs}h`;
+  return `il y a ${Math.floor(hrs / 24)}j`;
+}
+
 async function buildNewsSlider() {
   const track = document.getElementById('news-track');
   const dots  = document.getElementById('news-dots');
   if (!track || !dots) return;
-  let items = NEWS_ITEMS.map(n => ({ tag: n.tag, title: n.title, sub: n.sub, url: null }));
+  let items = NEWS_ITEMS.map(n => ({ source: n.tag, title: n.title, meta: n.sub, image: null, url: null }));
   try {
     const data = await fetch('/api/news').then(r => r.json());
     if (Array.isArray(data) && data.length) {
       items = data.map(a => ({
-        tag:   a.source || 'Football',
-        title: a.title  || '',
-        sub:   a.description || (a.publishedAt ? new Date(a.publishedAt).toLocaleDateString('fr-FR') : ''),
-        url:   a.url || null,
+        source: a.source || 'Football',
+        title:  a.title  || '',
+        meta:   [a.source, timeAgo(a.publishedAt)].filter(Boolean).join(' · '),
+        image:  a.image  || null,
+        url:    a.url    || null,
       }));
     }
   } catch {}
   newsCount = items.length;
   track.innerHTML = items.map(n => `
     <div class="news-card"${n.url ? ` onclick="window.open('${n.url}','_blank')" style="cursor:pointer"` : ''}>
-      <div class="news-card-tag">${n.tag}</div>
-      <div class="news-card-title">${n.title}</div>
-      <div class="news-card-sub">${n.sub}</div>
+      ${n.image ? `<img class="news-card-bg" src="${n.image}" loading="lazy" onerror="this.style.display='none'">` : ''}
+      <div class="news-card-body">
+        <div class="news-card-tag">${n.source}</div>
+        <div class="news-card-title">${n.title}</div>
+        <div class="news-card-sub">${n.meta}</div>
+      </div>
     </div>
   `).join('');
   dots.innerHTML = items.map((_, i) =>
