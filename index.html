@@ -1403,17 +1403,19 @@ function goBack() {
 
 // ─── PROFIL ───
 async function applyUserProfile(user) {
+  await supabaseReady;
   const meta = user.user_metadata || {};
   const fallbackAvatar = meta.avatar_url || meta.picture || '';
   const fallbackName   = meta.full_name?.split(' ')[0] || meta.name?.split(' ')[0] || user.email?.split('@')[0] || '';
 
   const { data } = await supabaseClient.from('profiles').select('username, avatar_url').eq('id', user.id).single();
 
-  const avatarUrl = data?.avatar_url || fallbackAvatar;
+  const rawAvatar = data?.avatar_url || fallbackAvatar;
+  const avatarUrl = data?.avatar_url ? rawAvatar + '?t=' + Date.now() : rawAvatar;
   const name      = data?.username   || fallbackName;
 
-  const avatar   = document.getElementById('user-avatar');
-  const drawerAv = document.getElementById('drawer-avatar');
+  const avatar     = document.getElementById('user-avatar');
+  const drawerAv   = document.getElementById('drawer-avatar');
   const drawerName = document.getElementById('drawer-username');
   if (avatar)     { avatar.src = avatarUrl; }
   if (drawerAv)   { drawerAv.src = avatarUrl; }
