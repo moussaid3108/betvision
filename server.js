@@ -20,6 +20,28 @@ app.get('/api/config', (_req, res) => {
 
 app.get('/api/matches', (req, res) => matchesHandler(req, res));
 
+app.get('/api/fixture', async (req, res) => {
+  const { id } = req.query;
+  if (!id) return res.status(400).json({ error: 'Missing id' });
+  const KEY  = process.env.RAPIDAPI_KEY || '47025106d4msh3f5ff29ba28372ap1938b7jsnd189477d3b6a';
+  const HOST = 'api-football-v1.p.rapidapi.com';
+  try {
+    const r = await fetch(`https://${HOST}/fixtures?id=${id}`, {
+      headers: { 'x-rapidapi-host': HOST, 'x-rapidapi-key': KEY }
+    });
+    const data = await r.json();
+    const f = data?.response?.[0];
+    if (!f) return res.json({ status: null });
+    res.json({
+      status:     f.fixture?.status?.short,
+      homeGoals:  f.goals?.home,
+      awayGoals:  f.goals?.away,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.options('/api/chat', (req, res) => {
   res.setHeader('Access-Control-Allow-Origin',  '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');

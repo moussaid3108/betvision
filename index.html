@@ -439,6 +439,90 @@
     z-index: 390; transform: translateZ(0); -webkit-transform: translateZ(0);
   }
 
+  /* ─── PRONOSTICS ─── */
+  .pronos-page { padding: 0 16px 20px; }
+  .pronos-kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
+  .pronos-kpi {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; text-align: center;
+  }
+  .pronos-kpi-value {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 32px; font-weight: 800; line-height: 1;
+  }
+  .pronos-kpi-label { font-size: 11px; color: var(--text-2); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 4px; }
+  .pronos-filters { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .pronos-filter {
+    background: var(--bg-3); border: 1px solid var(--border);
+    border-radius: 20px; padding: 6px 14px;
+    font-size: 12px; color: var(--text-2); cursor: pointer; transition: all .2s;
+  }
+  .pronos-filter.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(0,229,160,0.3); }
+  .prono-card {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px; margin-bottom: 10px;
+  }
+  .prono-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+  .prono-teams { font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 700; }
+  .prono-status { font-size: 13px; font-weight: 600; flex-shrink: 0; margin-left: 8px; }
+  .prono-status.en_cours { color: var(--gold); }
+  .prono-status.gagne    { color: var(--accent); }
+  .prono-status.perdu    { color: var(--red); }
+  .prono-meta { font-size: 11px; color: var(--text-3); margin-bottom: 8px; }
+  .prono-choice {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent-dim); border: 1px solid rgba(0,229,160,0.2);
+    border-radius: 8px; padding: 5px 10px;
+    font-size: 12px; color: var(--accent); font-weight: 600;
+  }
+
+  /* ─── MODAL PRONOSTIC ─── */
+  .prono-overlay {
+    display: none; position: fixed; inset: 0; z-index: 900;
+    background: rgba(0,0,0,0.75); align-items: flex-end;
+  }
+  .prono-overlay.open { display: flex; }
+  .prono-sheet {
+    background: var(--bg-1); border-radius: 20px 20px 0 0;
+    border-top: 1px solid var(--border);
+    padding: 24px 20px calc(28px + env(safe-area-inset-bottom));
+    width: 100%; position: relative;
+    animation: slideUp .3s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: none; } }
+  .prono-sheet-close {
+    position: absolute; top: 16px; right: 18px;
+    background: none; border: none; color: var(--text-3);
+    font-size: 22px; cursor: pointer; line-height: 1;
+  }
+  .prono-sheet-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 20px; font-weight: 800; margin-bottom: 4px;
+  }
+  .prono-sheet-match { font-size: 13px; color: var(--text-2); margin-bottom: 20px; }
+  .prono-group-label {
+    font-size: 10px; text-transform: uppercase;
+    letter-spacing: 1.5px; color: var(--text-3); margin-bottom: 8px;
+  }
+  .prono-options { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .prono-option {
+    padding: 9px 16px; background: var(--bg-3);
+    border: 1px solid var(--border); border-radius: 10px;
+    font-size: 13px; color: var(--text-2); cursor: pointer; transition: all .2s;
+  }
+  .prono-option.selected {
+    background: var(--accent-dim); border-color: rgba(0,229,160,0.4);
+    color: var(--accent); font-weight: 600;
+  }
+  .prono-confirm-btn {
+    width: 100%; padding: 14px; background: var(--accent); border: none;
+    border-radius: var(--radius); color: #050608;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 1px; cursor: pointer; margin-top: 4px; transition: background .2s;
+  }
+  .prono-confirm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
   /* ─── DASHBOARD ─── */
   .dashboard-page { padding: 0 16px 20px; }
   .kpi-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
@@ -783,6 +867,7 @@
   <div class="drawer-sport" onclick="soonAvailable('Hockey')"><span class="sport-left">🏒 Hockey (NHL)</span></div>
   <div class="drawer-sport" onclick="soonAvailable('MMA')"><span class="sport-left">🥊 MMA / UFC</span></div>
   <div class="drawer-sport" onclick="showPage('chat');initChat();closeDrawer()" style="border-top:1px solid rgba(255,255,255,0.08);margin-top:4px"><span class="sport-left">💬 Chat communauté</span></div>
+  <div class="drawer-sport" onclick="openPronos();closeDrawer()"><span class="sport-left">📊 Mes Pronostics</span></div>
 
   <div id="drawer-user-block" style="display:none;margin-top:auto;padding:16px 18px;border-top:1px solid rgba(255,255,255,0.07);">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
@@ -918,6 +1003,72 @@
         oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
       <button class="chat-send" id="chat-send" onclick="sendMessage()">➤</button>
     </div>
+  </div>
+</div>
+
+<!-- PAGE: PRONOSTICS -->
+<div class="page" id="page-pronos">
+  <div class="pronos-page">
+    <div class="section-label">Mes Pronostics</div>
+
+    <div id="pronos-not-connected" style="display:none">
+      <div class="empty-state">
+        <div class="empty-icon">🔒</div>
+        <div class="empty-text">Connecte-toi pour suivre<br>tes pronostics</div>
+      </div>
+      <button onclick="openAuthModal()" style="width:100%;padding:13px;margin-top:12px;background:transparent;border:1px solid #00e5a0;border-radius:var(--radius);color:#00e5a0;font-size:14px;font-weight:700;cursor:pointer;">Se connecter</button>
+    </div>
+
+    <div id="pronos-content">
+      <div class="pronos-kpi-row">
+        <div class="pronos-kpi">
+          <div class="pronos-kpi-value stat-green" id="pronos-rate">—</div>
+          <div class="pronos-kpi-label">Taux de réussite</div>
+        </div>
+        <div class="pronos-kpi">
+          <div class="pronos-kpi-value stat-gold" id="pronos-pending">—</div>
+          <div class="pronos-kpi-label">En cours</div>
+        </div>
+      </div>
+      <div class="pronos-filters">
+        <div class="pronos-filter active" onclick="loadPronos('tous',this)">Tous</div>
+        <div class="pronos-filter" onclick="loadPronos('en_cours',this)">En cours</div>
+        <div class="pronos-filter" onclick="loadPronos('gagne',this)">Gagnés</div>
+        <div class="pronos-filter" onclick="loadPronos('perdu',this)">Perdus</div>
+      </div>
+      <div id="pronos-list"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PRONOSTIC -->
+<div id="prono-overlay" class="prono-overlay" onclick="if(event.target===this)closePronoModal()">
+  <div class="prono-sheet">
+    <button class="prono-sheet-close" onclick="closePronoModal()">✕</button>
+    <div class="prono-sheet-title">🎯 Suivre ce pronostic</div>
+    <div class="prono-sheet-match" id="prono-sheet-match"></div>
+
+    <div class="prono-group-label">BTTS</div>
+    <div class="prono-options" id="prono-grp-btts">
+      <div class="prono-option" onclick="selectProno('btts','oui',this)">⚽ Oui</div>
+      <div class="prono-option" onclick="selectProno('btts','non',this)">🚫 Non</div>
+    </div>
+
+    <div class="prono-group-label">Buts</div>
+    <div class="prono-options" id="prono-grp-goals">
+      <div class="prono-option" onclick="selectProno('goals','+1.5',this)">+1.5G</div>
+      <div class="prono-option" onclick="selectProno('goals','+2.5',this)">+2.5G</div>
+      <div class="prono-option" onclick="selectProno('goals','+3.5',this)">+3.5G</div>
+    </div>
+
+    <div class="prono-group-label">Résultat</div>
+    <div class="prono-options" id="prono-grp-result">
+      <div class="prono-option" id="prono-opt-dom" onclick="selectProno('result','dom',this)">Dom.</div>
+      <div class="prono-option" onclick="selectProno('result','nul',this)">Nul</div>
+      <div class="prono-option" id="prono-opt-ext" onclick="selectProno('result','ext',this)">Ext.</div>
+    </div>
+
+    <button class="prono-confirm-btn" id="prono-confirm-btn" onclick="confirmProno()" disabled>Confirmer</button>
   </div>
 </div>
 
@@ -1326,8 +1477,11 @@ function renderAnalysis(m) {
       </div>
     </div>
 
-    <button style="width:100%;padding:14px;background:var(--accent-dim);border:1px solid rgba(0,229,160,0.3);border-radius:var(--radius);color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px;cursor:pointer;" onclick="askAIAboutMatch()">
+    <button style="width:100%;padding:14px;background:var(--accent-dim);border:1px solid rgba(0,229,160,0.3);border-radius:var(--radius);color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px;cursor:pointer;margin-bottom:10px;" onclick="askAIAboutMatch()">
       🤖 Analyser avec l'IA
+    </button>
+    <button style="width:100%;padding:14px;background:var(--gold-dim);border:1px solid rgba(245,200,66,0.3);border-radius:var(--radius);color:var(--gold);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px;cursor:pointer;" onclick="openPronoModal()">
+      🎯 Suivre ce pronostic
     </button>
   `;
 
@@ -1349,6 +1503,146 @@ function askAIAboutMatch() {
     document.getElementById('chat-input').value = q;
     sendMessage();
   }, 400);
+}
+
+// ─── PRONOSTICS ───
+let selectedProno = { type: null, value: null };
+
+function openPronos() {
+  showPage('pronos');
+  loadPronos('tous');
+}
+
+function openPronoModal() {
+  if (!currentUser) { openAuthModal(); return; }
+  const m = currentMatch;
+  if (!m) return;
+  selectedProno = { type: null, value: null };
+  document.querySelectorAll('.prono-option').forEach(o => o.classList.remove('selected'));
+  document.getElementById('prono-confirm-btn').disabled = true;
+  document.getElementById('prono-sheet-match').textContent = `${m.home} vs ${m.away} — ${m.competition} · ${m.date}`;
+  document.getElementById('prono-opt-dom').textContent = `🏠 ${m.home}`;
+  document.getElementById('prono-opt-ext').textContent = `✈️ ${m.away}`;
+  document.getElementById('prono-overlay').classList.add('open');
+}
+
+function closePronoModal() {
+  document.getElementById('prono-overlay').classList.remove('open');
+}
+
+function selectProno(type, value, el) {
+  const grpMap = { btts: 'prono-grp-btts', goals: 'prono-grp-goals', result: 'prono-grp-result' };
+  document.getElementById(grpMap[type]).querySelectorAll('.prono-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedProno = { type, value };
+  document.getElementById('prono-confirm-btn').disabled = false;
+}
+
+async function confirmProno() {
+  if (!currentUser || !selectedProno.type || !currentMatch) return;
+  const btn = document.getElementById('prono-confirm-btn');
+  btn.disabled = true; btn.textContent = 'Enregistrement…';
+  const m = currentMatch;
+  await supabaseReady;
+  const { error } = await supabaseClient.from('pronostics').insert({
+    user_id:          currentUser.id,
+    match_id:         String(m.id),
+    home_team:        m.home,
+    away_team:        m.away,
+    league:           m.competition,
+    match_date:       `${m.date} ${m.time}`,
+    pronostic_type:   selectedProno.type,
+    pronostic_value:  selectedProno.value,
+    status:           'en_cours',
+  });
+  btn.textContent = 'Confirmer';
+  if (error) { btn.disabled = false; alert('Erreur : ' + error.message); return; }
+  closePronoModal();
+}
+
+async function loadPronos(filter, el) {
+  if (el) {
+    document.querySelectorAll('.pronos-filter').forEach(f => f.classList.remove('active'));
+    el.classList.add('active');
+  }
+  await supabaseReady;
+  if (!currentUser) {
+    document.getElementById('pronos-not-connected').style.display = 'block';
+    document.getElementById('pronos-content').style.display = 'none';
+    return;
+  }
+  document.getElementById('pronos-not-connected').style.display = 'none';
+  document.getElementById('pronos-content').style.display = 'block';
+
+  const list = document.getElementById('pronos-list');
+  list.innerHTML = '<div class="spinner"></div>';
+
+  await checkPronoResults();
+
+  let q = supabaseClient.from('pronostics').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+  if (filter !== 'tous') q = q.eq('status', filter);
+  const { data, error } = await q;
+
+  if (error) { list.innerHTML = '<div class="empty-state"><div class="empty-text">Erreur de chargement</div></div>'; return; }
+
+  const { data: all } = await supabaseClient.from('pronostics').select('status').eq('user_id', currentUser.id);
+  if (all) {
+    const validated = all.filter(p => p.status !== 'en_cours');
+    const won       = all.filter(p => p.status === 'gagne');
+    const pending   = all.filter(p => p.status === 'en_cours');
+    document.getElementById('pronos-rate').textContent    = validated.length ? Math.round(won.length / validated.length * 100) + '%' : '—';
+    document.getElementById('pronos-pending').textContent = pending.length;
+  }
+
+  if (!data || !data.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🎯</div><div class="empty-text">Aucun pronostic<br>pour ce filtre</div></div>';
+    return;
+  }
+
+  const statusLabel = { en_cours: '🟡 En cours', gagne: '✅ Gagné', perdu: '❌ Perdu' };
+  const typeLabel   = { btts: 'BTTS', goals: 'Buts', result: 'Résultat' };
+  const valueLabel  = { oui: 'Oui', non: 'Non', '+1.5': '+1.5G', '+2.5': '+2.5G', '+3.5': '+3.5G', dom: 'Domicile', nul: 'Nul', ext: 'Extérieur' };
+
+  list.innerHTML = data.map(p => `
+    <div class="prono-card">
+      <div class="prono-card-header">
+        <div class="prono-teams">${p.home_team} vs ${p.away_team}</div>
+        <div class="prono-status ${p.status}">${statusLabel[p.status] || p.status}</div>
+      </div>
+      <div class="prono-meta">${p.league} · ${p.match_date}</div>
+      <div class="prono-choice">🎯 ${typeLabel[p.pronostic_type]} — ${valueLabel[p.pronostic_value] || p.pronostic_value}</div>
+    </div>
+  `).join('');
+}
+
+async function checkPronoResults() {
+  if (!currentUser) return;
+  await supabaseReady;
+  const { data: pending } = await supabaseClient
+    .from('pronostics').select('*')
+    .eq('user_id', currentUser.id)
+    .eq('status', 'en_cours');
+  if (!pending || !pending.length) return;
+
+  await Promise.all(pending.map(async p => {
+    try {
+      const r = await fetch(`/api/fixture?id=${p.match_id}`);
+      const d = await r.json();
+      if (!['FT', 'AET', 'PEN'].includes(d.status) || d.homeGoals == null) return;
+      const h = d.homeGoals, a = d.awayGoals;
+      let won = false;
+      if (p.pronostic_type === 'btts') {
+        won = p.pronostic_value === 'oui' ? (h > 0 && a > 0) : (h === 0 || a === 0);
+      } else if (p.pronostic_type === 'goals') {
+        won = (h + a) > parseFloat(p.pronostic_value);
+      } else {
+        if (p.pronostic_value === 'dom') won = h > a;
+        else if (p.pronostic_value === 'nul') won = h === a;
+        else won = h < a;
+      }
+      await supabaseClient.from('pronostics').update({ status: won ? 'gagne' : 'perdu' }).eq('id', p.id);
+    } catch { /* silently ignore */ }
+  }));
 }
 
 // ─── IA CHAT ───
