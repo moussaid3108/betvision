@@ -1754,6 +1754,7 @@ const NEWS_ITEMS = [
 let newsIndex  = 0;
 let newsTimer  = null;
 let newsTouch  = 0;
+let newsCount  = NEWS_ITEMS.length;
 
 function initPaddock() {
   renderPaddockGreeting();
@@ -1780,18 +1781,31 @@ function renderPaddockGreeting() {
   }
 }
 
-function buildNewsSlider() {
+async function buildNewsSlider() {
   const track = document.getElementById('news-track');
   const dots  = document.getElementById('news-dots');
   if (!track || !dots) return;
-  track.innerHTML = NEWS_ITEMS.map(n => `
-    <div class="news-card">
+  let items = NEWS_ITEMS.map(n => ({ tag: n.tag, title: n.title, sub: n.sub, url: null }));
+  try {
+    const data = await fetch('/api/news').then(r => r.json());
+    if (Array.isArray(data) && data.length) {
+      items = data.map(a => ({
+        tag:   a.source || 'Football',
+        title: a.title  || '',
+        sub:   a.description || (a.publishedAt ? new Date(a.publishedAt).toLocaleDateString('fr-FR') : ''),
+        url:   a.url || null,
+      }));
+    }
+  } catch {}
+  newsCount = items.length;
+  track.innerHTML = items.map(n => `
+    <div class="news-card"${n.url ? ` onclick="window.open('${n.url}','_blank')" style="cursor:pointer"` : ''}>
       <div class="news-card-tag">${n.tag}</div>
       <div class="news-card-title">${n.title}</div>
       <div class="news-card-sub">${n.sub}</div>
     </div>
   `).join('');
-  dots.innerHTML = NEWS_ITEMS.map((_, i) =>
+  dots.innerHTML = items.map((_, i) =>
     `<div class="news-dot${i === 0 ? ' active' : ''}" onclick="goToNews(${i})"></div>`
   ).join('');
   newsIndex = 0;
@@ -1801,7 +1815,7 @@ function buildNewsSlider() {
 function startNewsSlider() {
   if (newsTimer) clearInterval(newsTimer);
   newsTimer = setInterval(() => {
-    newsIndex = (newsIndex + 1) % NEWS_ITEMS.length;
+    newsIndex = (newsIndex + 1) % newsCount;
     updateNewsSlider();
   }, 3000);
 }
@@ -1825,8 +1839,8 @@ function newsSwipeEnd(e) {
   const diff = newsTouch - e.changedTouches[0].clientX;
   if (Math.abs(diff) < 40) return;
   newsIndex = diff > 0
-    ? (newsIndex + 1) % NEWS_ITEMS.length
-    : (newsIndex - 1 + NEWS_ITEMS.length) % NEWS_ITEMS.length;
+    ? (newsIndex + 1) % newsCount
+    : (newsIndex - 1 + newsCount) % newsCount;
   updateNewsSlider();
   if (newsTimer) clearInterval(newsTimer);
   startNewsSlider();
@@ -2469,36 +2483,25 @@ async function callAI(userMsg) {
   document.getElementById('chat-box').appendChild(typing);
   document.getElementById('chat-box').scrollTop = 9999;
 
-  const messages = [
-    {
-      role: 'system',
-      content: `Tu es BetVision AI, expert en analyse statistique et algorithmique du football.
-Tu fournis des analyses basées sur des données réelles : forme récente, distribution de Poisson, stats dom./ext.
-Tu n'utilises JAMAIS "pronos" ou "paris". Tu parles d'"analyse statistique", "algorithme prédictif", "signal de confiance".
-Tu réponds en français, de façon concise et structurée avec des émojis. Maximum 4 paragraphes.
-Tu rappelles toujours que tes analyses sont des outils statistiques et non des conseils financiers.`
-    },
-    ...chatHistory.slice(-8).map(h => ({ role: h.role, content: h.content })),
-    { role: 'user', content: userMsg }
-  ];
-
   try {
-    const res = await fetch('/api/chat', {
+    const res = await fetch('/api/ai-chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages })
+      body: JSON.stringify({
+        message: userMsg,
+        history: chatHistory.slice(-8).map(h => ({ role: h.role, content: h.content })),
+      }),
     });
 
     document.getElementById('typing-indicator')?.remove();
 
     if (res.ok) {
       const data = await res.json();
-      appendMessage('ai', data.choices?.[0]?.message?.content || 'Réponse vide.');
+      appendMessage('ai', data.reply || 'Réponse vide.');
     } else {
-      // 503 = clé non configurée → mode démo
       appendMessage('ai', getDemoReply(userMsg));
     }
-  } catch (e) {
+  } catch {
     document.getElementById('typing-indicator')?.remove();
     appendMessage('ai', getDemoReply(userMsg));
   }
@@ -2524,7 +2527,7 @@ function getDemoReply(msg) {
     const m = currentMatch;
     if (m) return `🔍 ${m.home} vs ${m.away} : λ_dom = ${m.goalsHome}, λ_ext = ${m.goalsAway}. BTTS ${m.btts}%, Over 2.5 ${m.over25}%, victoire dom. ${m.homeWin ?? '?'}%. Signal global : ${m.confidence}% (${m.confidence >= 80 ? 'élevé' : m.confidence >= 65 ? 'modéré' : 'faible'}). ⚠️ Analyse statistique uniquement.`;
   }
-  return '🤖 BetVision AI : Pour activer l\'IA en temps réel, configurez la variable GROQ_API_KEY dans Vercel. En mode démonstration, l\'algorithme Poisson reste pleinement opérationnel pour le calcul des probabilités sur tous les matchs chargés.';
+  return '🤖 BetVision AI : Posez-moi une question sur un match chargé (BTTS, Over 2.5, forme, combiné) pour obtenir une analyse statistique détaillée. ⚠️ Outil d\'aide à la décision uniquement.';
 }
 
 // ─── DASHBOARD ───

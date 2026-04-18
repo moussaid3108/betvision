@@ -128,6 +128,68 @@ app.get('/api/fixture', async (req, res) => {
   }
 });
 
+// ─── Groq AI chat ─────────────────────────────────────────
+app.post('/api/ai-chat', async (req, res) => {
+  const { message, history = [] } = req.body;
+  if (!message) return res.status(400).json({ error: 'Missing message' });
+  const KEY = process.env.GROQ_API_KEY;
+  if (!KEY) return res.status(500).json({ error: 'AI unavailable' });
+  try {
+    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${KEY}` },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: "Tu es BetVision AI, assistant d'analyse statistique football. Utilise uniquement les termes: analyse statistique, algorithme prédictif, outil d'aide à la décision. Jamais: pronos, paris. Réponds en français, concis." },
+          ...history,
+          { role: 'user', content: message },
+        ],
+        temperature: 0.7,
+        max_tokens: 500,
+      }),
+    });
+    if (!r.ok) return res.status(500).json({ error: 'AI unavailable' });
+    const data = await r.json();
+    res.json({ reply: data.choices?.[0]?.message?.content || '' });
+  } catch {
+    res.status(500).json({ error: 'AI unavailable' });
+  }
+});
+
+// ─── NewsAPI proxy avec cache 1h ──────────────────────────
+let newsCache = { data: null, ts: 0 };
+app.get('/api/news', async (req, res) => {
+  const KEY  = process.env.NEWS_API_KEY;
+  const now  = Date.now();
+  const hour = new Date().getHours();
+  const age  = now - newsCache.ts;
+  if (newsCache.data && (hour < 8 || age < 3_600_000)) return res.json(newsCache.data);
+  if (!KEY) {
+    if (newsCache.data) return res.json(newsCache.data);
+    return res.status(500).json({ error: 'NEWS_API_KEY not configured' });
+  }
+  try {
+    const r = await fetch('https://newsapi.org/v2/everything?q=football&language=fr&sortBy=publishedAt&pageSize=10', {
+      headers: { 'X-Api-Key': KEY },
+    });
+    const data = await r.json();
+    const articles = (data.articles || []).map(a => ({
+      title:       a.title,
+      description: a.description,
+      url:         a.url,
+      image:       a.urlToImage,
+      source:      a.source?.name,
+      publishedAt: a.publishedAt,
+    }));
+    newsCache = { data: articles, ts: now };
+    res.json(articles);
+  } catch {
+    if (newsCache.data) return res.json(newsCache.data);
+    res.status(500).json({ error: 'News unavailable' });
+  }
+});
+
 app.options('/api/chat', (req, res) => {
   res.setHeader('Access-Control-Allow-Origin',  '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
