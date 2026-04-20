@@ -1168,31 +1168,31 @@
   <div class="drawer-submenu" id="submenu-football">
     <div class="submenu-section">
       <div class="submenu-title">Divisions 1</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇫🇷 Ligue 1</div>
-      <div class="submenu-item" onclick="closeDrawer()">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇩🇪 Bundesliga</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇮🇹 Serie A</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇪🇸 La Liga</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇵🇹 Liga Portugal</div>
+      <div class="submenu-item" onclick="openLeagueView('football',34,'Ligue 1');closeDrawer()">🇫🇷 Ligue 1</div>
+      <div class="submenu-item" onclick="openLeagueView('football',17,'Premier League');closeDrawer()">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</div>
+      <div class="submenu-item" onclick="openLeagueView('football',35,'Bundesliga');closeDrawer()">🇩🇪 Bundesliga</div>
+      <div class="submenu-item" onclick="openLeagueView('football',23,'Serie A');closeDrawer()">🇮🇹 Serie A</div>
+      <div class="submenu-item" onclick="openLeagueView('football',8,'La Liga');closeDrawer()">🇪🇸 La Liga</div>
+      <div class="submenu-item" onclick="openLeagueView('football',238,'Liga Portugal');closeDrawer()">🇵🇹 Liga Portugal</div>
     </div>
     <div class="submenu-section">
       <div class="submenu-title">Divisions 2</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇫🇷 Ligue 2</div>
-      <div class="submenu-item" onclick="closeDrawer()">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Championship</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇩🇪 2.Bundesliga</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇮🇹 Serie B</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇪🇸 Segunda Division</div>
+      <div class="submenu-item" onclick="openLeagueView('football',182,'Ligue 2');closeDrawer()">🇫🇷 Ligue 2</div>
+      <div class="submenu-item" onclick="openLeagueView('football',18,'Championship');closeDrawer()">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Championship</div>
+      <div class="submenu-item" onclick="openLeagueView('football',44,'2. Bundesliga');closeDrawer()">🇩🇪 2.Bundesliga</div>
+      <div class="submenu-item" onclick="openLeagueView('football',53,'Serie B');closeDrawer()">🇮🇹 Serie B</div>
+      <div class="submenu-item" onclick="openLeagueView('football',54,'Segunda División');closeDrawer()">🇪🇸 Segunda Division</div>
       <div class="submenu-item" onclick="closeDrawer()">🇵🇹 Liga Portugal 2</div>
     </div>
     <div class="submenu-section">
       <div class="submenu-title">Compétitions</div>
-      <div class="submenu-item red" onclick="closeDrawer()">⭐ Ligue des Champions</div>
-      <div class="submenu-item" onclick="closeDrawer()">🟠 Europa League</div>
+      <div class="submenu-item red" onclick="openLeagueView('football',7,'Ligue des Champions');closeDrawer()">⭐ Ligue des Champions</div>
+      <div class="submenu-item" onclick="openLeagueView('football',679,'Europa League');closeDrawer()">🟠 Europa League</div>
       <div class="submenu-item" onclick="closeDrawer()">🔵 Conference League</div>
     </div>
     <div class="submenu-section">
       <div class="submenu-title">Compétition</div>
-      <div class="submenu-item gold" onclick="closeDrawer()">🌍 Coupe du Monde</div>
+      <div class="submenu-item gold" onclick="openLeagueView('football',16,'Coupe du Monde');closeDrawer()">🌍 Coupe du Monde</div>
     </div>
     <div class="submenu-section">
       <div class="submenu-title">Tournois continentaux</div>
@@ -1200,23 +1200,23 @@
     </div>
     <div class="submenu-section" style="padding-bottom:12px">
       <div class="submenu-title">Coupes nationales</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇫🇷 Coupe de France</div>
-      <div class="submenu-item" onclick="closeDrawer()">🏴󠁧󠁢󠁥󠁮󠁧󠁿 FA Cup</div>
+      <div class="submenu-item" onclick="openLeagueView('football',335,'Coupe de France');closeDrawer()">🇫🇷 Coupe de France</div>
+      <div class="submenu-item" onclick="openLeagueView('football',19,'FA Cup');closeDrawer()">🏴󠁧󠁢󠁥󠁮󠁧󠁿 FA Cup</div>
       <div class="submenu-item" onclick="closeDrawer()">🇩🇪 DFB-Pokal</div>
       <div class="submenu-item" onclick="closeDrawer()">🇮🇹 Coppa Italia</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇪🇸 Copa del Rey</div>
+      <div class="submenu-item" onclick="openLeagueView('football',329,'Copa del Rey');closeDrawer()">🇪🇸 Copa del Rey</div>
       <div class="submenu-item" onclick="closeDrawer()">🇵🇹 Taça de Portugal</div>
       <div class="submenu-item" onclick="closeDrawer()">🇲🇽 Liga MX</div>
     </div>
   </div>
 
-  <div class="drawer-sport" onclick="soonAvailable('NBA')"><span class="sport-left">🏀 NBA</span></div>
-  <div class="drawer-sport" onclick="soonAvailable('Tennis')"><span class="sport-left">🎾 Tennis</span></div>
-  <div class="drawer-sport" onclick="soonAvailable('F1')"><span class="sport-left">🏎️ F1</span></div>
-  <div class="drawer-sport" onclick="soonAvailable('Rugby')"><span class="sport-left">🏉 Rugby</span></div>
-  <div class="drawer-sport" onclick="soonAvailable('Baseball')"><span class="sport-left">⚾ Baseball (MLB)</span></div>
-  <div class="drawer-sport" onclick="soonAvailable('Hockey')"><span class="sport-left">🏒 Hockey (NHL)</span></div>
-  <div class="drawer-sport" onclick="soonAvailable('MMA')"><span class="sport-left">🥊 MMA / UFC</span></div>
+  <div class="drawer-sport" onclick="openLeagueView('basketball',132,'NBA');closeDrawer()"><span class="sport-left">🏀 NBA</span></div>
+  <div class="drawer-sport" onclick="openLeagueView('tennis',2480,'Tennis');closeDrawer()"><span class="sport-left">🎾 Tennis</span></div>
+  <div class="drawer-sport" onclick="openLeagueView('motorsport',40,'Formule 1');closeDrawer()"><span class="sport-left">🏎️ F1</span></div>
+  <div class="drawer-sport" onclick="openLeagueView('rugby',151,'Top 14');closeDrawer()"><span class="sport-left">🏉 Rugby</span></div>
+  <div class="drawer-sport" onclick="openLeagueView('baseball',109,'MLB');closeDrawer()"><span class="sport-left">⚾ Baseball (MLB)</span></div>
+  <div class="drawer-sport" onclick="openLeagueView('icehockey',234,'NHL');closeDrawer()"><span class="sport-left">🏒 Hockey (NHL)</span></div>
+  <div class="drawer-sport" onclick="openLeagueView('mma',19906,'MMA / UFC');closeDrawer()"><span class="sport-left">🥊 MMA / UFC</span></div>
   <div class="drawer-sport" onclick="showPage('chat');initChat();closeDrawer()" style="border-top:1px solid rgba(255,255,255,0.08);margin-top:4px"><span class="sport-left">💬 Chat communauté</span></div>
   <div class="drawer-sport" onclick="openPronos();closeDrawer()"><span class="sport-left">📊 Mes Pronostics</span></div>
   <div class="drawer-sport" onclick="openFavoris();closeDrawer()"><span class="sport-left">⭐ Favoris</span></div>
@@ -1614,9 +1614,6 @@
 <div class="img-overlay" id="img-overlay" onclick="closeImgOverlay()">
   <img id="img-overlay-el" src="" alt="">
 </div>
-
-<!-- TEMPORAIRE — à supprimer à l'étape C -->
-<button id="test-league-btn" onclick="openLeagueView('football', 34, 'Ligue 1')" style="position:fixed;bottom:80px;right:20px;z-index:9999;background:#ff6b00;border:none;color:#fff;border-radius:12px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.45);">🧪 Test Ligue 1</button>
 
 <!-- PAGE: LIGUE MATCHES (gérée indépendamment, z-index:50 overlay) -->
 <div id="page-leaguematches" style="display:none">
@@ -3018,6 +3015,19 @@ function renderLeagueMatches(matches, journee, tournamentName) {
   }
 
   list.innerHTML = matches.map(m => {
+    if (m.status !== 'canceled') {
+      loadedMatchesMap[m.id] = {
+        id: m.id,
+        home: m.homeTeam, away: m.awayTeam,
+        competition: m.tournament,
+        date: m.startDate, time: m.startTime,
+        formHome: ['?','?','?','?','?'], formAway: ['?','?','?','?','?'],
+        btts: 0, over25: 0, over15: 0,
+        homeWin: 0, draw: 0, awayWin: 0,
+        goalsHome: 0, goalsAway: 0, cleanHome: 0, cleanAway: 0,
+        confidence: 50,
+      };
+    }
     let badgeHtml = '';
     if      (m.status === 'live')      badgeHtml = '<span class="lm-badge live">LIVE</span>';
     else if (m.status === 'finished')  badgeHtml = '<span class="lm-badge finished">Terminé</span>';
@@ -3036,7 +3046,8 @@ function renderLeagueMatches(matches, journee, tournamentName) {
       ? `<img class="lm-logo" src="${url}" alt="" onerror="this.style.display='none'">`
       : `<div class="lm-logo" style="background:var(--bg-4);border-radius:6px;"></div>`;
 
-    return `<div class="lm-card status-${m.status}" onclick="alert('Match ID: ' + ${JSON.stringify(m.id)})">
+    const clickAttr = m.status !== 'canceled' ? `onclick="openAnalysis(${JSON.stringify(m.id)})"` : '';
+    return `<div class="lm-card status-${m.status}" ${clickAttr}>
       <div class="lm-card-top">
         ${badgeHtml || '<span></span>'}
         <div class="lm-date">${escapeHtml(m.startDate || '')} ${escapeHtml(m.startTime || '')}</div>
