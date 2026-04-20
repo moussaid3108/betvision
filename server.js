@@ -58,7 +58,8 @@ const LEAGUES = {
 };
 
 app.get('/api/today', async (req, res) => {
-  const KEY   = process.env.RAPIDAPI_KEY || '47025106d4msh3f5ff29ba28372ap1938b7jsnd189477d3b6a';
+  const KEY = process.env.RAPIDAPI_KEY;
+  if (!KEY) return res.status(500).json({ error: 'RAPIDAPI_KEY not configured', matches: [] });
   const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
   const hdr   = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
 
@@ -102,7 +103,8 @@ app.get('/api/today', async (req, res) => {
 app.get('/api/fixture', async (req, res) => {
   const { id } = req.query;
   if (!id) return res.status(400).json({ error: 'Missing id' });
-  const KEY = process.env.RAPIDAPI_KEY || '47025106d4msh3f5ff29ba28372ap1938b7jsnd189477d3b6a';
+  const KEY = process.env.RAPIDAPI_KEY;
+  if (!KEY) return res.status(500).json({ error: 'RAPIDAPI_KEY not configured' });
   const hdr = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
   try {
     const data = await fetch(`${SPORT_BASE}/api/v1/event/${id}`, { headers: hdr }).then(r => r.json());
@@ -197,6 +199,202 @@ app.options('/api/chat', (req, res) => {
   res.status(200).end();
 });
 app.post('/api/chat', (req, res) => chatHandler(req, res));
+
+// ─── /api/league-matches + /api/live-scores ──────────────
+
+const leagueRoundsCache = new Map(); // `${sport}:${tid}` → {rounds, sortedRounds, currentRound, ts}
+const leagueCache       = new Map(); // `${sport}:${tid}:${journee}` → {data, ts}
+const liveScoreCache    = new Map(); // `${matchId}` → {data, ts}
+
+async function getLeagueRounds(sport, tournamentId, KEY) {
+  const cacheKey = `${sport}:${tournamentId}`;
+  const cached = leagueRoundsCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < 1_800_000) return cached;
+
+  const today = new Date();
+  const hdr   = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
+
+  // Fetch 23 dates: -11 to +11 days — covers prev + current + next round
+  const offsets = Array.from({ length: 23 }, (_, i) => i - 11);
+  const results = await Promise.all(
+    offsets.map(offset => {
+      const d = new Date(today);
+      d.setDate(d.getDate() + offset);
+      const dateStr = d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
+      return fetch(`${SPORT_BASE}/api/v1/sport/${sport}/scheduled-events/${dateStr}`, { headers: hdr })
+        .then(r => r.ok ? r.json() : { events: [] })
+        .catch(() => ({ events: [] }));
+    })
+  );
+
+  // Deduplicate events for this tournament
+  const eventsMap = new Map();
+  results.forEach(data => {
+    (data?.events || []).forEach(e => {
+      if (Number(e?.tournament?.uniqueTournament?.id) === tournamentId && e.id) {
+        eventsMap.set(e.id, e);
+      }
+    });
+  });
+
+  // Group by round number
+  const rounds = new Map();
+  eventsMap.forEach(e => {
+    const round = e.roundInfo?.round;
+    if (round != null) {
+      if (!rounds.has(round)) rounds.set(round, []);
+      rounds.get(round).push(e);
+    }
+  });
+
+  const sortedRounds = [...rounds.keys()].sort((a, b) => a - b);
+
+  // Current round = first round where not all non-cancelled events are finished
+  let currentRound = sortedRounds[sortedRounds.length - 1] ?? null;
+  for (const r of sortedRounds) {
+    const events    = rounds.get(r);
+    const meaningful = events.filter(e => e.status?.type !== 'canceled');
+    if (!meaningful.length) continue;
+    if (!meaningful.every(e => e.status?.type === 'finished')) {
+      currentRound = r;
+      break;
+    }
+  }
+
+  const result = { rounds, sortedRounds, currentRound, ts: Date.now() };
+  leagueRoundsCache.set(cacheKey, result);
+  return result;
+}
+
+function mapEventStatus(type) {
+  if (type === 'finished')    return 'finished';
+  if (type === 'inprogress')  return 'live';
+  if (type === 'postponed')   return 'postponed';
+  if (type === 'canceled')    return 'canceled';
+  return 'scheduled';
+}
+
+function mapEventToMatch(e) {
+  const d = e.startTimestamp ? new Date(e.startTimestamp * 1000) : null;
+  return {
+    id:        e.id,
+    homeTeam:  e.homeTeam?.name || '?',
+    awayTeam:  e.awayTeam?.name || '?',
+    homeLogo:  e.homeTeam?.id ? `https://api.sofascore.app/api/v1/team/${e.homeTeam.id}/image` : null,
+    awayLogo:  e.awayTeam?.id ? `https://api.sofascore.app/api/v1/team/${e.awayTeam.id}/image` : null,
+    startTime: d ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }) : '--:--',
+    startDate: d ? d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'Europe/Paris' }) : 'TBD',
+    status:    mapEventStatus(e.status?.type),
+    score:     (e.homeScore?.current != null && e.awayScore?.current != null)
+                 ? { home: e.homeScore.current, away: e.awayScore.current }
+                 : null,
+    tournament: e.tournament?.name || '',
+  };
+}
+
+const LEAGUE_TTL = { current: 1_800_000, previous: 86_400_000, next: 43_200_000 };
+
+app.get('/api/league-matches', async (req, res) => {
+  const sport      = req.query.sport || 'football';
+  const tournament = parseInt(req.query.tournament);
+  const journee    = req.query.journee || 'current';
+
+  if (!req.query.tournament || isNaN(tournament))
+    return res.status(400).json({ error: 'Missing or invalid tournament' });
+
+  const KEY = process.env.RAPIDAPI_KEY;
+  if (!KEY) return res.status(500).json({ error: 'RAPIDAPI_KEY not configured' });
+
+  const cacheKey = `${sport}:${tournament}:${journee}`;
+  const ttl      = LEAGUE_TTL[journee] ?? 1_800_000;
+  const cached   = leagueCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < ttl) return res.json(cached.data);
+
+  try {
+    const { rounds, sortedRounds, currentRound } = await getLeagueRounds(sport, tournament, KEY);
+
+    if (!sortedRounds.length || currentRound == null)
+      return res.json({ journee: 0, matches: [], journeeInfo: { current: 0, previous: 0, next: 0 } });
+
+    const currentIdx    = sortedRounds.indexOf(currentRound);
+    const previousRound = currentIdx > 0 ? sortedRounds[currentIdx - 1] : null;
+    const nextRound     = currentIdx < sortedRounds.length - 1 ? sortedRounds[currentIdx + 1] : null;
+    const targetRound   = { current: currentRound, previous: previousRound, next: nextRound }[journee];
+
+    if (targetRound == null)
+      return res.json({
+        journee: 0, matches: [],
+        journeeInfo: { current: currentRound, previous: previousRound ?? 0, next: nextRound ?? 0 },
+      });
+
+    const matches = (rounds.get(targetRound) || [])
+      .sort((a, b) => (a.startTimestamp || 0) - (b.startTimestamp || 0))
+      .map(mapEventToMatch);
+
+    const result = {
+      journee: targetRound,
+      matches,
+      journeeInfo: {
+        current:  currentRound,
+        previous: previousRound ?? currentRound - 1,
+        next:     nextRound     ?? currentRound + 1,
+      },
+    };
+
+    leagueCache.set(cacheKey, { data: result, ts: Date.now() });
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/live-scores', async (req, res) => {
+  const { matchIds } = req.query;
+  if (!matchIds) return res.status(400).json({ error: 'Missing matchIds' });
+
+  const KEY = process.env.RAPIDAPI_KEY;
+  if (!KEY) return res.status(500).json({ error: 'RAPIDAPI_KEY not configured' });
+
+  const ids = matchIds.split(',').map(id => id.trim()).filter(Boolean);
+  if (!ids.length) return res.status(400).json({ error: 'No valid matchIds' });
+
+  const hdr = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
+  const now = Date.now();
+
+  const results = await Promise.all(ids.map(async id => {
+    const cached = liveScoreCache.get(id);
+    if (cached && now - cached.ts < 60_000) return cached.data;
+
+    try {
+      const data = await fetch(`${SPORT_BASE}/api/v1/event/${id}`, { headers: hdr })
+        .then(r => r.ok ? r.json() : null)
+        .catch(() => null);
+
+      const ev = data?.event;
+      if (!ev) return null;
+
+      const desc  = ev.status?.description || '';
+      const mMin  = desc.match(/(\d+)['′]/);
+      const minute = mMin ? parseInt(mMin[1]) : (ev.time?.played ?? null);
+
+      const result = {
+        id,
+        score:  (ev.homeScore?.current != null && ev.awayScore?.current != null)
+                  ? { home: ev.homeScore.current, away: ev.awayScore.current }
+                  : null,
+        status: mapEventStatus(ev.status?.type),
+        minute,
+      };
+
+      liveScoreCache.set(id, { data: result, ts: now });
+      return result;
+    } catch {
+      return null;
+    }
+  }));
+
+  res.json(results.filter(Boolean));
+});
 
 // ─── Fichiers statiques (index.html, etc.) ────────────────
 app.use(express.static(__dirname));
