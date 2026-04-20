@@ -1051,6 +1051,65 @@
   }
   .img-overlay.open { display: flex; }
   .img-overlay img { max-width: 95%; max-height: 90vh; border-radius: 8px; }
+
+  /* ─── FICHE LIGUE ─── */
+  .lm-header { padding: 14px 16px 8px; display: flex; flex-direction: column; gap: 4px; }
+  .lm-header-top { display: flex; align-items: center; gap: 10px; }
+  .lm-title { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 800; color: var(--text-1); }
+  .lm-round-label { font-size: 12px; color: var(--text-2); padding-left: 2px; }
+  .journey-nav { display: flex; gap: 8px; padding: 4px 16px 12px; }
+  .journey-btn {
+    flex: 1; padding: 8px 4px; background: var(--bg-2);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text-2); font-size: 12px; font-weight: 600; cursor: pointer;
+    transition: all .2s;
+  }
+  .journey-btn.active { background: var(--accent-dim); border-color: rgba(0,229,160,0.4); color: var(--accent); }
+  .journey-btn:disabled { opacity: 0.35; cursor: default; }
+  .lm-list { padding: 0 16px 24px; display: flex; flex-direction: column; gap: 10px; }
+  .lm-card {
+    padding: 14px; background: var(--bg-1);
+    border-radius: var(--radius); border: 1px solid var(--border);
+    cursor: pointer; transition: border-color .2s, opacity .2s;
+  }
+  .lm-card:active { background: var(--bg-2); }
+  .lm-card.status-live {
+    border-color: rgba(0,229,160,0.5);
+    animation: lmPulse 2s ease-in-out infinite;
+  }
+  @keyframes lmPulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(0,229,160,0.15); }
+    50%      { box-shadow: 0 0 0 8px rgba(0,229,160,0); }
+  }
+  .lm-card.status-finished { opacity: 0.65; }
+  .lm-card.status-canceled { opacity: 0.35; cursor: default; }
+  .lm-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .lm-card-date { font-size: 11px; color: var(--text-3); }
+  .lm-badge {
+    font-size: 10px; font-weight: 700; padding: 2px 8px;
+    border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .lm-badge.live    { background: rgba(255,77,106,0.18); color: var(--red); }
+  .lm-badge.finished{ background: var(--bg-3); color: var(--text-3); }
+  .lm-badge.postponed{ background: rgba(245,200,66,0.15); color: var(--gold); }
+  .lm-badge.canceled { background: rgba(255,77,106,0.12); color: var(--red); }
+  .lm-teams-row { display: flex; align-items: center; gap: 6px; }
+  .lm-team { flex: 1; display: flex; align-items: center; gap: 7px; }
+  .lm-team.away { flex-direction: row-reverse; text-align: right; }
+  .lm-logo {
+    width: 28px; height: 28px; object-fit: contain; flex-shrink: 0;
+    border-radius: 4px; background: var(--bg-3);
+  }
+  .lm-team-name { font-size: 13px; font-weight: 600; color: var(--text-1); flex: 1; }
+  .lm-away-name { text-align: right; }
+  .lm-score-wrap { text-align: center; min-width: 58px; flex-shrink: 0; }
+  .lm-score {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px; font-weight: 800; color: var(--text-1);
+    line-height: 1;
+  }
+  .lm-score.live-score { color: var(--accent); }
+  .lm-time { font-size: 12px; color: var(--text-3); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -1070,45 +1129,40 @@
   <div class="drawer-submenu" id="submenu-football">
     <div class="submenu-section">
       <div class="submenu-title">Divisions 1</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇫🇷 Ligue 1</div>
-      <div class="submenu-item" onclick="closeDrawer()">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇩🇪 Bundesliga</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇮🇹 Serie A</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇪🇸 La Liga</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇵🇹 Liga Portugal</div>
+      <div class="submenu-item" onclick="openLeagueView('football',34,'Ligue 1','🇫🇷')">🇫🇷 Ligue 1</div>
+      <div class="submenu-item" onclick="openLeagueView('football',17,'Premier League','🏴󠁧󠁢󠁥󠁮󠁧󠁿')">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</div>
+      <div class="submenu-item" onclick="openLeagueView('football',35,'Bundesliga','🇩🇪')">🇩🇪 Bundesliga</div>
+      <div class="submenu-item" onclick="openLeagueView('football',23,'Serie A','🇮🇹')">🇮🇹 Serie A</div>
+      <div class="submenu-item" onclick="openLeagueView('football',8,'La Liga','🇪🇸')">🇪🇸 La Liga</div>
+      <div class="submenu-item" onclick="openLeagueView('football',238,'Liga Portugal','🇵🇹')">🇵🇹 Liga Portugal</div>
     </div>
     <div class="submenu-section">
       <div class="submenu-title">Divisions 2</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇫🇷 Ligue 2</div>
-      <div class="submenu-item" onclick="closeDrawer()">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Championship</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇩🇪 2.Bundesliga</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇮🇹 Serie B</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇪🇸 Segunda Division</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇵🇹 Liga Portugal 2</div>
+      <div class="submenu-item" onclick="openLeagueView('football',182,'Ligue 2','🇫🇷')">🇫🇷 Ligue 2</div>
+      <div class="submenu-item" onclick="openLeagueView('football',18,'Championship','🏴󠁧󠁢󠁥󠁮󠁧󠁿')">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Championship</div>
+      <div class="submenu-item" onclick="openLeagueView('football',44,'2. Bundesliga','🇩🇪')">🇩🇪 2. Bundesliga</div>
+      <div class="submenu-item" onclick="openLeagueView('football',53,'Serie B','🇮🇹')">🇮🇹 Serie B</div>
+      <div class="submenu-item" onclick="openLeagueView('football',54,'Segunda División','🇪🇸')">🇪🇸 Segunda División</div>
+      <div class="submenu-item" onclick="openLeagueView('football',239,'Liga Portugal 2','🇵🇹')">🇵🇹 Liga Portugal 2</div>
     </div>
     <div class="submenu-section">
       <div class="submenu-title">Compétitions</div>
-      <div class="submenu-item red" onclick="closeDrawer()">⭐ Ligue des Champions</div>
-      <div class="submenu-item" onclick="closeDrawer()">🟠 Europa League</div>
-      <div class="submenu-item" onclick="closeDrawer()">🔵 Conference League</div>
+      <div class="submenu-item red" onclick="openLeagueView('football',7,'Ligue des Champions','⭐')">⭐ Ligue des Champions</div>
+      <div class="submenu-item" onclick="openLeagueView('football',679,'Europa League','🟠')">🟠 Europa League</div>
+      <div class="submenu-item" onclick="openLeagueView('football',17015,'Conference League','🔵')">🔵 Conference League</div>
     </div>
     <div class="submenu-section">
-      <div class="submenu-title">Compétition</div>
-      <div class="submenu-item gold" onclick="closeDrawer()">🌍 Coupe du Monde</div>
-    </div>
-    <div class="submenu-section">
-      <div class="submenu-title">Tournois continentaux</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇪🇺 Euro</div>
+      <div class="submenu-title">Compétitions internationales</div>
+      <div class="submenu-item gold" onclick="openLeagueView('football',6,'Coupe du Monde','🌍')">🌍 Coupe du Monde</div>
+      <div class="submenu-item" onclick="openLeagueView('football',1,'Euro','🇪🇺')">🇪🇺 Euro</div>
     </div>
     <div class="submenu-section" style="padding-bottom:12px">
       <div class="submenu-title">Coupes nationales</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇫🇷 Coupe de France</div>
-      <div class="submenu-item" onclick="closeDrawer()">🏴󠁧󠁢󠁥󠁮󠁧󠁿 FA Cup</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇩🇪 DFB-Pokal</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇮🇹 Coppa Italia</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇪🇸 Copa del Rey</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇵🇹 Taça de Portugal</div>
-      <div class="submenu-item" onclick="closeDrawer()">🇲🇽 Liga MX</div>
+      <div class="submenu-item" onclick="openLeagueView('football',297,'Coupe de France','🇫🇷')">🇫🇷 Coupe de France</div>
+      <div class="submenu-item" onclick="openLeagueView('football',21,'FA Cup','🏴󠁧󠁢󠁥󠁮󠁧󠁿')">🏴󠁧󠁢󠁥󠁮󠁧󠁿 FA Cup</div>
+      <div class="submenu-item" onclick="openLeagueView('football',37,'DFB-Pokal','🇩🇪')">🇩🇪 DFB-Pokal</div>
+      <div class="submenu-item" onclick="openLeagueView('football',36,'Coppa Italia','🇮🇹')">🇮🇹 Coppa Italia</div>
+      <div class="submenu-item" onclick="openLeagueView('football',329,'Copa del Rey','🇪🇸')">🇪🇸 Copa del Rey</div>
     </div>
   </div>
 
@@ -1285,6 +1339,29 @@
   <div class="section-label" id="matches-label">Matchs — Premier League</div>
   <div class="match-list" id="match-list">
     <div class="spinner"></div>
+  </div>
+</div>
+
+<!-- PAGE: FICHE LIGUE -->
+<div class="page" id="page-leaguematches">
+  <div>
+    <div class="lm-header">
+      <div class="lm-header-top">
+        <button class="back-btn" onclick="closeLeagueView()" style="flex-shrink:0">← Retour</button>
+        <div class="lm-title">
+          <span id="lm-flag"></span>&nbsp;<span id="lm-name"></span>
+        </div>
+      </div>
+      <div class="lm-round-label" id="lm-round">Journée —</div>
+    </div>
+    <div class="journey-nav">
+      <button class="journey-btn" id="lm-prev-btn" onclick="loadLeagueMatches('previous')">← Préc.</button>
+      <button class="journey-btn active" id="lm-curr-btn" onclick="loadLeagueMatches('current')">En cours</button>
+      <button class="journey-btn" id="lm-next-btn" onclick="loadLeagueMatches('next')">Suiv. →</button>
+    </div>
+    <div class="lm-list" id="lm-list">
+      <div class="spinner"></div>
+    </div>
   </div>
 </div>
 
@@ -1546,8 +1623,25 @@ let currentLeague = { code: 'PL', name: 'Premier League', flag: '🏴󠁧󠁢�
 let currentMatch     = null;
 let activeMatchId    = null;
 let previousView     = 'paddock';
-let chatHistory   = [];
-let loadedMatchesMap = {}; // id → match object
+let chatHistory      = [];
+let loadedMatchesMap = {};
+
+// ─── LEAGUE VIEW STATE ───
+let currentLeagueView   = null; // { sport, tournament, name, flag }
+let leagueViewJournee   = 'current';
+let leagueMatchesCache  = new Map(); // "sport:tid:journee" → data
+let livePollingInterval = null;
+let lastAIPromptIndex   = -1;
+
+// ─── LEAGUE ↔ SPORTAPI ID MAP ───
+const LEAGUE_TID = {
+  PL:  { sport: 'football', tid: 17 },
+  FL1: { sport: 'football', tid: 34 },
+  PD:  { sport: 'football', tid: 8  },
+  SA:  { sport: 'football', tid: 23 },
+  BL1: { sport: 'football', tid: 35 },
+  CL:  { sport: 'football', tid: 7  },
+};
 
 // ─── DONNÉES DE SECOURS (si API indisponible) ───
 const FALLBACK = {
@@ -1603,6 +1697,7 @@ const FALLBACK = {
 
 // ─── NAVIGATION ───
 function showPage(name) {
+  if (name !== 'leaguematches') stopLivePolling();
   const chatPages = ['ia', 'chat'];
   if (chatPages.includes(name)) {
     document.body.classList.add('fullchat');
@@ -1626,7 +1721,9 @@ function goBack() {
   activeMatchId = null;
   const dest = previousView;
   previousView = 'paddock';
-  if (dest === 'favoris') { openFavoris(); } else { showPage(dest); }
+  if (dest === 'favoris') { openFavoris(); }
+  else if (dest === 'leaguematches') { showPage('leaguematches'); }
+  else { showPage(dest); }
 }
 
 // ─── PROFIL ───
@@ -1941,58 +2038,13 @@ async function renderPaddockStats() {
   `;
 }
 
-// ─── SÉLECTION LIGUE ───
+// ─── SÉLECTION LIGUE (page-leagues grid) ───
 function selectLeague(el, code, name, flag) {
   document.querySelectorAll('.league-card').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
   currentLeague = { code, name, flag };
-  document.getElementById('matches-label').textContent = `Matchs — ${name}`;
-  loadMatches(code);
-  showPage('leagues');
-  document.getElementById('nav-paddock').classList.add('active');
-}
-
-async function loadMatches(code) {
-  const list = document.getElementById('match-list');
-  list.innerHTML = '<div class="spinner"></div>';
-
-  try {
-    const res = await fetch(`/api/matches?league=${code}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-
-    let matches = data?.matches || [];
-
-    // Fallback si l'API ne retourne rien
-    if (!matches.length) matches = FALLBACK[code] || [];
-
-    if (!matches.length) {
-      list.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-text">Aucun match à venir<br>pour cette ligue</div></div>';
-      return;
-    }
-
-    // Stocker dans la map globale (clé = id)
-    matches.forEach(m => { loadedMatchesMap[m.id] = m; });
-
-    list.innerHTML = matches.map(m => renderMatchCard(m)).join('');
-    setTimeout(() => {
-      list.querySelectorAll('.confidence-fill').forEach(el => {
-        el.style.width = el.dataset.width + '%';
-      });
-    }, 100);
-
-  } catch (e) {
-    const matches = FALLBACK[code] || [];
-    matches.forEach(m => { loadedMatchesMap[m.id] = m; });
-    list.innerHTML = matches.length
-      ? matches.map(m => renderMatchCard(m)).join('')
-      : '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Erreur de chargement.<br>Données de secours affichées.</div></div>';
-    setTimeout(() => {
-      list.querySelectorAll('.confidence-fill').forEach(el => {
-        el.style.width = el.dataset.width + '%';
-      });
-    }, 100);
-  }
+  const m = LEAGUE_TID[code];
+  if (m) openLeagueView(m.sport, m.tid, name, flag);
 }
 
 function renderMatchCard(m) {
@@ -2028,14 +2080,14 @@ function renderMatchCard(m) {
 function openAnalysis(id) {
   if (activeMatchId === id) {
     activeMatchId = null;
-    showPage('leagues');
+    showPage(previousView || 'paddock');
     return;
   }
   currentMatch = loadedMatchesMap[id] ||
     Object.values(FALLBACK).flat().find(m => m.id === id);
   if (!currentMatch) return;
   activeMatchId = id;
-  previousView = 'paddock';
+  if (!previousView || previousView === 'analysis') previousView = 'paddock';
   renderAnalysis(currentMatch);
   showPage('analysis');
   document.getElementById('nav-paddock').classList.add('active');
@@ -2176,7 +2228,7 @@ function renderAnalysis(m) {
     <button style="width:100%;padding:14px;background:var(--accent-dim);border:1px solid rgba(0,229,160,0.3);border-radius:var(--radius);color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px;cursor:pointer;margin-bottom:10px;" onclick="askAIAboutMatch()">
       🤖 Analyser avec l'IA
     </button>
-    <button style="width:100%;padding:14px;background:var(--gold-dim);border:1px solid rgba(245,200,66,0.3);border-radius:var(--radius);color:var(--gold);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px;cursor:pointer;" onclick="openPronoModal()">
+    <button id="analysis-prono-btn" style="width:100%;padding:14px;background:var(--gold-dim);border:1px solid rgba(245,200,66,0.3);border-radius:var(--radius);color:var(--gold);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px;cursor:pointer;" onclick="followPronoDirectly(this)">
       🎯 Suivre ce pronostic
     </button>
   `;
@@ -2190,15 +2242,218 @@ function renderAnalysis(m) {
   }, 100);
 }
 
+const AI_MATCH_TEMPLATES = [
+  "Analyse ce match en détail : {home} vs {away} ({competition}, {date}). Que dit l'algorithme prédictif ?",
+  "Quelles sont les tendances statistiques clés sur {home} vs {away} ?",
+  "Donne-moi ton outil d'aide à la décision sur {home} vs {away}, focus indicateurs de performance.",
+  "{home} vs {away} : quel scénario algorithmique est le plus probable selon toi ?",
+  "Explique-moi les forces et faiblesses de {home} et {away} avant ce match.",
+];
+
 function askAIAboutMatch() {
+  if (!currentMatch) return;
+  const m = currentMatch;
+  let idx;
+  do { idx = Math.floor(Math.random() * AI_MATCH_TEMPLATES.length); }
+  while (idx === lastAIPromptIndex && AI_MATCH_TEMPLATES.length > 1);
+  lastAIPromptIndex = idx;
+  const q = AI_MATCH_TEMPLATES[idx]
+    .replace('{home}', m.home).replace('{away}', m.away)
+    .replace('{competition}', m.competition || '').replace('{date}', m.date || '');
+  previousView = 'analysis';
   showPage('ia');
   document.getElementById('nav-ia').classList.add('active');
-  const m = currentMatch;
-  const q = `Analyse complète pour ${m.home} vs ${m.away} : victoire dom. ${m.homeWin ?? '?'}%, nul ${m.draw ?? '?'}%, BTTS ${m.btts}%, Over 2.5 ${m.over25}%, signal global ${m.confidence}%. Que recommande l'algorithme ?`;
   setTimeout(() => {
     document.getElementById('chat-input').value = q;
     sendMessage();
-  }, 400);
+  }, 350);
+}
+
+// ─── LEAGUE VIEW ─────────────────────────────────────────
+function openLeagueView(sport, tournament, name, flag) {
+  currentLeagueView = { sport, tournament, name, flag };
+  leagueViewJournee = 'current';
+  document.getElementById('lm-flag').textContent = flag;
+  document.getElementById('lm-name').textContent = name;
+  const active = document.querySelector('.page.active');
+  const from   = active ? active.id.replace('page-', '') : 'paddock';
+  previousView  = from === 'leaguematches' ? previousView : from;
+  showPage('leaguematches');
+  document.getElementById('nav-paddock').classList.add('active');
+  loadLeagueMatches('current');
+  setupLMPullToRefresh();
+  closeDrawer();
+}
+
+function closeLeagueView() {
+  stopLivePolling();
+  goBack();
+}
+
+async function loadLeagueMatches(journee) {
+  leagueViewJournee = journee || 'current';
+  const { sport, tournament } = currentLeagueView;
+  const list = document.getElementById('lm-list');
+  list.innerHTML = '<div class="spinner"></div>';
+
+  ['prev','curr','next'].forEach(k => document.getElementById(`lm-${k}-btn`)?.classList.remove('active'));
+  const btnMap = { previous: 'lm-prev-btn', current: 'lm-curr-btn', next: 'lm-next-btn' };
+  document.getElementById(btnMap[leagueViewJournee])?.classList.add('active');
+
+  const cacheKey = `${sport}:${tournament}:${leagueViewJournee}`;
+  const local = leagueMatchesCache.get(cacheKey);
+  if (local) { renderLeagueMatches(local); return; }
+
+  try {
+    const data = await fetch(`/api/league-matches?sport=${sport}&tournament=${tournament}&journee=${leagueViewJournee}`).then(r => r.json());
+    if (data.error) throw new Error(data.error);
+    leagueMatchesCache.set(cacheKey, data);
+    renderLeagueMatches(data);
+  } catch {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Erreur de chargement.<br>Vérifiez votre connexion.</div></div>';
+  }
+}
+
+function renderLeagueMatches(data) {
+  const list = document.getElementById('lm-list');
+  const { journee, matches = [], journeeInfo = {} } = data;
+
+  document.getElementById('lm-round').textContent = journee ? `Journée ${journee}` : 'Matchs';
+  document.getElementById('lm-prev-btn').disabled = journeeInfo.previous == null;
+  document.getElementById('lm-next-btn').disabled = journeeInfo.next    == null;
+
+  if (!matches.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-text">Aucun match trouvé<br>pour cette journée</div></div>';
+    return;
+  }
+
+  matches.forEach(m => {
+    loadedMatchesMap[m.id] = {
+      id: m.id, home: m.homeTeam, away: m.awayTeam,
+      competition: currentLeagueView.name,
+      date: m.startDate, time: m.startTime,
+      btts: 65, over25: 60, over15: 80,
+      homeWin: 45, draw: 27, awayWin: 28, confidence: 65,
+      formHome: ['?','?','?','?','?'], formAway: ['?','?','?','?','?'],
+      goalsHome: 1.4, goalsAway: 1.1, cleanHome: 0.35, cleanAway: 0.40,
+    };
+  });
+
+  list.innerHTML = matches.map(renderLMCard).join('');
+
+  const liveIds = matches.filter(m => m.status === 'live').map(m => String(m.id));
+  if (liveIds.length) startLivePolling(liveIds);
+  else stopLivePolling();
+}
+
+function renderLMCard(m) {
+  const isCanceled = m.status === 'canceled';
+  const isLive     = m.status === 'live';
+  const isFinished = m.status === 'finished';
+  const isPost     = m.status === 'postponed';
+
+  const badge = isLive     ? '<span class="lm-badge live">● LIVE</span>'
+              : isFinished ? '<span class="lm-badge finished">Terminé</span>'
+              : isPost     ? '<span class="lm-badge postponed">Reporté</span>'
+              : isCanceled ? '<span class="lm-badge canceled">Annulé</span>'
+              : '';
+
+  const mid = (m.score && (isLive || isFinished))
+    ? `<div class="lm-score-wrap"><div class="lm-score${isLive ? ' live-score' : ''}" id="score-${m.id}">${m.score.home} - ${m.score.away}</div></div>`
+    : `<div class="lm-score-wrap"><div class="lm-time">${m.startTime}</div></div>`;
+
+  const hLogo = m.homeLogo ? `<img class="lm-logo" src="${m.homeLogo}" loading="lazy" onerror="this.style.display='none'">` : '';
+  const aLogo = m.awayLogo ? `<img class="lm-logo" src="${m.awayLogo}" loading="lazy" onerror="this.style.display='none'">` : '';
+  const click = isCanceled ? '' : `onclick="openAnalysisFromLeague(${m.id})"`;
+
+  return `
+  <div class="lm-card status-${m.status}" id="lm-card-${m.id}" ${click}>
+    <div class="lm-card-top">
+      <span class="lm-card-date">${m.startDate}</span>
+      ${badge}
+    </div>
+    <div class="lm-teams-row">
+      <div class="lm-team">${hLogo}<div class="lm-team-name">${m.homeTeam}</div></div>
+      ${mid}
+      <div class="lm-team away"><div class="lm-team-name lm-away-name">${m.awayTeam}</div>${aLogo}</div>
+    </div>
+  </div>`;
+}
+
+function openAnalysisFromLeague(id) {
+  const m = loadedMatchesMap[id];
+  if (!m) return;
+  currentMatch  = m;
+  activeMatchId = id;
+  previousView  = 'leaguematches';
+  renderAnalysis(m);
+  showPage('analysis');
+  document.getElementById('nav-paddock').classList.add('active');
+}
+
+function startLivePolling(liveIds) {
+  stopLivePolling();
+  livePollingInterval = setInterval(async () => {
+    if (document.querySelector('.page.active')?.id !== 'page-leaguematches') { stopLivePolling(); return; }
+    try {
+      const results = await fetch(`/api/live-scores?matchIds=${liveIds.join(',')}`).then(r => r.json());
+      results.forEach(({ id, score, status }) => {
+        const scoreEl = document.getElementById(`score-${id}`);
+        if (scoreEl && score) scoreEl.textContent = `${score.home} - ${score.away}`;
+        const card = document.getElementById(`lm-card-${id}`);
+        if (card && status === 'finished') {
+          card.classList.replace('status-live', 'status-finished');
+          card.querySelector('.lm-badge')?.remove();
+          card.querySelector('.lm-card-top')?.insertAdjacentHTML('beforeend', '<span class="lm-badge finished">Terminé</span>');
+        }
+      });
+    } catch {}
+  }, 5 * 60 * 1000);
+}
+
+function stopLivePolling() {
+  if (livePollingInterval) { clearInterval(livePollingInterval); livePollingInterval = null; }
+}
+
+function setupLMPullToRefresh() {
+  const page = document.getElementById('page-leaguematches');
+  let startY = 0;
+  page.ontouchstart = e => { startY = e.touches[0].clientY; };
+  page.ontouchend   = e => {
+    if (e.changedTouches[0].clientY - startY > 80 && page.scrollTop <= 0) {
+      const key = `${currentLeagueView.sport}:${currentLeagueView.tournament}:${leagueViewJournee}`;
+      leagueMatchesCache.delete(key);
+      loadLeagueMatches(leagueViewJournee);
+    }
+  };
+}
+
+async function followPronoDirectly(btn) {
+  if (!currentUser) { openAuthModal(); return; }
+  if (!currentMatch) return;
+  const m = currentMatch;
+  btn.disabled = true;
+  btn.textContent = 'Enregistrement…';
+  await supabaseReady;
+  const signal_strength = m.confidence >= 80 ? 'fort' : m.confidence >= 65 ? 'moyen' : 'faible';
+  const { error } = await supabaseClient.from('pronostics').insert({
+    user_id:           currentUser.id,
+    match_id:          String(m.id),
+    home_team:         m.home,
+    away_team:         m.away,
+    league:            m.competition || '',
+    match_date:        `${m.date || ''} ${m.time || ''}`.trim(),
+    pronostic_type:    'algorithme',
+    pronostic_value:   `BTTS ${m.btts ?? '--'}% · Over2.5 ${m.over25 ?? '--'}%`,
+    status:            'en_cours',
+  });
+  if (error) {
+    btn.disabled = false;
+    btn.textContent = '🎯 Suivre ce pronostic';
+  } else {
+    btn.textContent = '✓ Pronostic suivi';
+    btn.style.opacity = '0.55';
+  }
 }
 
 // ─── FAVORIS ───
