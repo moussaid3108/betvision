@@ -1615,6 +1615,9 @@
   <img id="img-overlay-el" src="" alt="">
 </div>
 
+<!-- TEMPORAIRE — à supprimer à l'étape C -->
+<button id="test-league-btn" onclick="openLeagueView('football', 34, 'Ligue 1')" style="position:fixed;bottom:80px;right:20px;z-index:9999;background:#ff6b00;border:none;color:#fff;border-radius:12px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.45);">🧪 Test Ligue 1</button>
+
 <!-- PAGE: LIGUE MATCHES (gérée indépendamment, z-index:50 overlay) -->
 <div id="page-leaguematches" style="display:none">
   <div class="lm-header">
@@ -2982,22 +2985,11 @@ function closeImgOverlay() {
 }
 
 // ─── LEAGUE MATCHES VIEW ─────────────────────────────────
-let _lmSport      = null;
-let _lmTournament = null;
-let _lmName       = null;
-let _lmActiveDay  = 'current';
-let _lmCache      = { previous: null, current: null, next: null };
+let leagueCache = { previous: null, current: null, next: null, sport: null, tournament: null, tournamentName: null };
 
 async function openLeagueView(sport, tournament, tournamentName) {
-  _lmSport      = sport;
-  _lmTournament = tournament;
-  _lmName       = tournamentName;
-  _lmActiveDay  = 'current';
-  _lmCache      = { previous: null, current: null, next: null };
+  leagueCache = { previous: null, current: null, next: null, sport, tournament, tournamentName };
 
-  // Masquer les pages existantes, afficher la nôtre en overlay
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-leaguematches').style.display = 'block';
   document.getElementById('lm-title').textContent = tournamentName;
   document.getElementById('lm-round').textContent = 'Journée —';
@@ -3008,7 +3000,7 @@ async function openLeagueView(sport, tournament, tournamentName) {
   try {
     const res  = await fetch(`/api/league-matches?sport=${encodeURIComponent(sport)}&tournament=${encodeURIComponent(tournament)}&journee=current`);
     const data = await res.json();
-    _lmCache.current = data;
+    leagueCache.current = data;
     renderLeagueMatches(data.matches || [], data.journee, tournamentName);
   } catch {
     document.getElementById('lm-list').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Erreur de chargement</div></div>';
@@ -3044,10 +3036,10 @@ function renderLeagueMatches(matches, journee, tournamentName) {
       ? `<img class="lm-logo" src="${url}" alt="" onerror="this.style.display='none'">`
       : `<div class="lm-logo" style="background:var(--bg-4);border-radius:6px;"></div>`;
 
-    return `<div class="lm-card status-${m.status}" onclick="console.log('lm-match-id:', ${JSON.stringify(m.id)})">
+    return `<div class="lm-card status-${m.status}" onclick="alert('Match ID: ' + ${JSON.stringify(m.id)})">
       <div class="lm-card-top">
         ${badgeHtml || '<span></span>'}
-        <div class="lm-date">${escapeHtml(m.startDate || '')}</div>
+        <div class="lm-date">${escapeHtml(m.startDate || '')} ${escapeHtml(m.startTime || '')}</div>
       </div>
       <div class="lm-teams-row">
         <div class="lm-team">
@@ -3066,29 +3058,23 @@ function renderLeagueMatches(matches, journee, tournamentName) {
 
 function closeLeagueView() {
   document.getElementById('page-leaguematches').style.display = 'none';
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('page-paddock').classList.add('active');
-  document.getElementById('nav-paddock').classList.add('active');
-  window.scrollTo(0, 0);
 }
 
 async function navigateToDay(direction) {
-  _lmActiveDay = direction;
   _lmSetActiveNavBtn(direction);
 
-  if (_lmCache[direction]) {
-    const d = _lmCache[direction];
-    renderLeagueMatches(d.matches || [], d.journee, _lmName);
+  if (leagueCache[direction]) {
+    const d = leagueCache[direction];
+    renderLeagueMatches(d.matches || [], d.journee, leagueCache.tournamentName);
     return;
   }
 
   document.getElementById('lm-list').innerHTML = '<div class="spinner"></div>';
   try {
-    const res  = await fetch(`/api/league-matches?sport=${encodeURIComponent(_lmSport)}&tournament=${encodeURIComponent(_lmTournament)}&journee=${direction}`);
+    const res  = await fetch(`/api/league-matches?sport=${encodeURIComponent(leagueCache.sport)}&tournament=${encodeURIComponent(leagueCache.tournament)}&journee=${direction}`);
     const data = await res.json();
-    _lmCache[direction] = data;
-    renderLeagueMatches(data.matches || [], data.journee, _lmName);
+    leagueCache[direction] = data;
+    renderLeagueMatches(data.matches || [], data.journee, leagueCache.tournamentName);
   } catch {
     document.getElementById('lm-list').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Erreur de chargement</div></div>';
   }
@@ -3100,8 +3086,6 @@ function _lmSetActiveNavBtn(direction) {
     if (btn) btn.classList.toggle('active', d === direction);
   });
 }
-
-// TEST CONSOLE : openLeagueView('football', 34, 'Ligue 1')
 </script>
 </body>
 </html>
