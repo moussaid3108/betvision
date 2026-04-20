@@ -2142,6 +2142,9 @@ function renderMatchCard(m) {
 
 // ─── ANALYSE MATCH ───
 function openAnalysis(id) {
+  if (document.getElementById('page-leaguematches').style.display === 'block') {
+    closeLeagueView();
+  }
   if (activeMatchId === id) {
     activeMatchId = null;
     showPage('leagues');
