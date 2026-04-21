@@ -1095,10 +1095,10 @@
     background: var(--accent-dim); border-color: rgba(0,229,160,0.35); color: var(--accent);
   }
   .lm-nav-btn:active { opacity: .7; }
-  .lm-list { padding: 10px 16px; display: flex; flex-direction: column; gap: 6px; }
+  .lm-list { padding: 10px 16px; display: flex; flex-direction: column; gap: 8px; }
   .lm-card {
     background: var(--bg-2); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 6px 12px;
+    border-radius: var(--radius); padding: 10px 14px 12px;
     cursor: pointer; transition: transform .15s, border-color .2s;
     position: relative; overflow: hidden;
   }
@@ -1113,9 +1113,6 @@
   }
   .lm-card.status-finished { opacity: 0.7; }
   .lm-card.status-canceled { opacity: 0.4; }
-  .lm-card-top {
-    display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;
-  }
   .lm-badge {
     display: inline-flex; align-items: center; gap: 5px;
     border-radius: 20px; padding: 3px 9px;
@@ -1132,20 +1129,18 @@
   .lm-badge.postponed { background: rgba(245,200,66,0.12); color: var(--gold); border: 1px solid rgba(245,200,66,0.25); }
   .lm-badge.canceled  { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,77,106,0.2); }
   .lm-date { font-size: 10px; color: var(--text-3); font-weight: 500; }
+  .lm-badge-wrap { text-align: center; margin-bottom: 6px; }
   .lm-teams-row {
-    display: flex; align-items: center; justify-content: space-between; gap: 4px;
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
   }
-  .lm-team { flex: 1; display: flex; flex-direction: row; align-items: center; gap: 8px; }
-  .lm-team:last-child { flex-direction: row-reverse; }
-  .lm-logo { width: 40px; height: 40px; object-fit: contain; border-radius: 5px; flex-shrink: 0; }
-  .lm-logo-init { display: flex; align-items: center; justify-content: center; background: var(--bg-4); border-radius: 6px; font-size: 11px; font-weight: 800; color: var(--text-2); letter-spacing: 0.5px; }
+  .lm-team { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .lm-logo { width: 48px; height: 48px; object-fit: contain; border-radius: 6px; flex-shrink: 0; }
+  .lm-logo-init { display: flex; align-items: center; justify-content: center; background: var(--bg-4); border-radius: 6px; font-size: 12px; font-weight: 800; color: var(--text-2); letter-spacing: 0.5px; }
   .lm-team-name {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 15px; font-weight: 800; line-height: 1.2;
+    font-size: 15px; font-weight: 800; text-align: center; line-height: 1.2;
     color: var(--text-1);
   }
-  .lm-team:first-child .lm-team-name { text-align: left; }
-  .lm-team:last-child .lm-team-name { text-align: right; }
   .lm-score-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 0 8px; }
   .lm-score {
     font-family: 'Barlow Condensed', sans-serif;
@@ -1156,14 +1151,17 @@
   .lm-center-date { display: none; }
   .lm-card-date {
     text-align: center; font-size: 13px; font-weight: 700;
-    color: var(--accent); letter-spacing: 0.5px;
-    margin-bottom: 2px;
+    color: var(--accent); letter-spacing: 0.5px; margin-bottom: 8px;
   }
   .lm-fav-btn {
-    background: none; border: none; font-size: 20px; cursor: pointer;
-    color: #888; padding: 2px 0 2px 4px; line-height: 1;
-    -webkit-tap-highlight-color: transparent; flex-shrink: 0;
+    position: absolute; top: 8px; right: 10px;
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 1.5px solid var(--accent);
+    background: none; display: flex; align-items: center; justify-content: center;
+    font-size: 15px; cursor: pointer; color: #888; line-height: 1;
+    -webkit-tap-highlight-color: transparent;
   }
+  .lm-fav-btn.is-fav { color: #f5c842; border-color: #f5c842; }
 </style>
 </head>
 <body>
@@ -2292,7 +2290,7 @@ async function loadFavoris() {
   userFavoris = new Set((data || []).map(f => f.match_id));
   userFavoris.forEach(id => {
     const btn = document.getElementById('fav-' + id);
-    if (btn) btn.textContent = '⭐';
+    if (btn) btn.classList.add('is-fav');
   });
 }
 
@@ -2304,7 +2302,7 @@ async function toggleFavori(matchId, event) {
   if (userFavoris.has(String(matchId))) {
     await supabaseClient.from('favoris').delete().eq('user_id', currentUser.id).eq('match_id', matchId);
     userFavoris.delete(String(matchId));
-    if (btn) btn.textContent = '☆';
+    if (btn) btn.classList.remove('is-fav');
   } else {
     const m = loadedMatchesMap[matchId];
     if (!m) return;
@@ -2317,7 +2315,7 @@ async function toggleFavori(matchId, event) {
       match_date: `${m.date} ${m.time}`,
     });
     userFavoris.add(String(matchId));
-    if (btn) btn.textContent = '⭐';
+    if (btn) btn.classList.add('is-fav');
   }
 }
 
@@ -3015,15 +3013,13 @@ function renderLeagueMatches(matches, journee, tournamentName) {
     const favId   = String(m.id);
     const isFav   = typeof userFavoris !== 'undefined' && userFavoris.has(favId);
     const favBtn  = m.status !== 'canceled'
-      ? `<button class="lm-fav-btn" id="fav-${favId}" onclick="toggleFavori('${favId}',event)">${isFav ? '⭐' : '☆'}</button>`
+      ? `<button class="lm-fav-btn${isFav ? ' is-fav' : ''}" id="fav-${favId}" onclick="toggleFavori('${favId}',event)">★</button>`
       : '';
     const clickAttr = m.status !== 'canceled' ? `onclick="openAnalysis(${JSON.stringify(m.id)})"` : '';
     return `<div class="lm-card status-${m.status}" ${clickAttr}>
       <div class="lm-card-date">${escapeHtml(m.startDate || '')}</div>
-      <div class="lm-card-top">
-        ${badgeHtml || '<span></span>'}
-        ${favBtn}
-      </div>
+      ${favBtn}
+      ${badgeHtml ? `<div class="lm-badge-wrap">${badgeHtml}</div>` : ''}
       <div class="lm-teams-row">
         <div class="lm-team">
           ${logoHtml(m.homeLogo, m.homeTeam)}
