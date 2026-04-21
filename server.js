@@ -246,17 +246,22 @@ async function getLeagueRounds(sport, tournamentId, KEY) {
   });
 
   const sortedRounds = [...rounds.keys()].sort((a, b) => a - b);
+  const nowTs = Math.floor(Date.now() / 1000);
 
-  // Journée en cours = première journée pas entièrement terminée
+  // Journée en cours = première journée avec au moins 1 match live ou programmé dans le futur
+  // Un match "reporté" avec timestamp passé ne compte PAS comme futur
   let currentRound = sortedRounds[sortedRounds.length - 1] ?? null;
   for (const r of sortedRounds) {
-    const events     = rounds.get(r);
-    const meaningful = events.filter(e => e.status?.type !== 'canceled');
-    if (!meaningful.length) continue;
-    if (!meaningful.every(e => e.status?.type === 'finished')) {
-      currentRound = r;
-      break;
-    }
+    const events = rounds.get(r);
+    const hasActive = events.some(e => {
+      const type = e.status?.type;
+      const ts   = e.startTimestamp || 0;
+      if (type === 'inprogress') return true;
+      if (type === 'finished' || type === 'canceled') return false;
+      if (type === 'postponed') return ts > nowTs; // reporté ET replanifié dans le futur
+      return ts > nowTs - 3600; // programmé avec 1h de grâce
+    });
+    if (hasActive) { currentRound = r; break; }
   }
 
   const result = { rounds, sortedRounds, currentRound, ts: Date.now() };
