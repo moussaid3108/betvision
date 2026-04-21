@@ -262,14 +262,46 @@ async function getLeagueRounds(sport, tournamentId, KEY) {
   return result;
 }
 
-// Récupère TOUS les matchs d'une journée via l'endpoint dédié Sofascore
-async function fetchRoundEvents(tournamentId, seasonId, round, KEY) {
+// Récupère TOUS les matchs d'une journée — endpoint dédié puis fallback scan dates
+async function fetchRoundEvents(sport, tournamentId, seasonId, round, KEY) {
   const hdr = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
-  const url = `${SPORT_BASE}/api/v1/unique-tournament/${tournamentId}/season/${seasonId}/events/round/${round}`;
-  const data = await fetch(url, { headers: hdr })
-    .then(r => r.ok ? r.json() : { events: [] })
-    .catch(() => ({ events: [] }));
-  return (data?.events || []).sort((a, b) => (a.startTimestamp || 0) - (b.startTimestamp || 0));
+
+  // Essai 1 : endpoint Sofascore par journée (1 requête, couvre les matchs en retard)
+  if (seasonId) {
+    try {
+      const url = `${SPORT_BASE}/api/v1/unique-tournament/${tournamentId}/season/${seasonId}/events/round/${round}`;
+      const data = await fetch(url, { headers: hdr }).then(r => r.ok ? r.json() : null).catch(() => null);
+      if ((data?.events?.length ?? 0) >= 1) {
+        return data.events.sort((a, b) => (a.startTimestamp || 0) - (b.startTimestamp || 0));
+      }
+    } catch {}
+  }
+
+  // Fallback : scan -90 à +30 jours pour attraper les matchs en retard
+  const today = new Date();
+  const offsets = Array.from({ length: 121 }, (_, i) => i - 90);
+  const results = await Promise.all(
+    offsets.map(offset => {
+      const d = new Date(today);
+      d.setDate(d.getDate() + offset);
+      const dateStr = d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
+      return fetch(`${SPORT_BASE}/api/v1/sport/${sport}/scheduled-events/${dateStr}`, { headers: hdr })
+        .then(r => r.ok ? r.json() : { events: [] })
+        .catch(() => ({ events: [] }));
+    })
+  );
+
+  const eventsMap = new Map();
+  results.forEach(data => {
+    (data?.events || []).forEach(e => {
+      if (Number(e?.tournament?.uniqueTournament?.id) === tournamentId &&
+          e.id && e.roundInfo?.round === round) {
+        eventsMap.set(e.id, e);
+      }
+    });
+  });
+
+  return [...eventsMap.values()].sort((a, b) => (a.startTimestamp || 0) - (b.startTimestamp || 0));
 }
 
 function mapEventStatus(type) {
@@ -332,7 +364,7 @@ app.get('/api/league-matches', async (req, res) => {
   try {
     const { currentRound, seasonId } = await getLeagueRounds(sport, tournament, KEY);
 
-    if (currentRound == null || !seasonId)
+    if (currentRound == null)
       return res.json({ journee: 0, matches: [], journeeInfo: { current: 0, previous: 0, next: 0 } });
 
     // Navigation par numéro de journée — pas par fenêtre de dates
@@ -346,8 +378,8 @@ app.get('/api/league-matches', async (req, res) => {
         journeeInfo: { current: currentRound, previous: previousRound ?? 0, next: nextRound },
       });
 
-    // Fetch tous les matchs de la journée via l'endpoint dédié
-    const events  = await fetchRoundEvents(tournament, seasonId, targetRound, KEY);
+    // Fetch tous les matchs de la journée (endpoint dédié + fallback scan dates)
+    const events  = await fetchRoundEvents(sport, tournament, seasonId, targetRound, KEY);
     const matches = events.map(mapEventToMatch);
 
     const result = {
