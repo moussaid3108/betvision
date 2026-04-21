@@ -1719,6 +1719,7 @@ const FALLBACK = {
 
 // ─── NAVIGATION ───
 function showPage(name) {
+  document.getElementById('page-leaguematches').style.display = 'none';
   const chatPages = ['ia', 'chat'];
   if (chatPages.includes(name)) {
     document.body.classList.add('fullchat');
