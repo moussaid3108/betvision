@@ -214,8 +214,8 @@ async function getLeagueRounds(sport, tournamentId, KEY) {
   const today = new Date();
   const hdr   = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
 
-  // Scan -60 à +30 jours : couvre les matchs en retard + journées à venir
-  const offsets = Array.from({ length: 91 }, (_, i) => i - 60);
+  // Scan -14 à +30 jours : aujourd'hui ± fenêtre raisonnée, pas de plongée dans le passé
+  const offsets = Array.from({ length: 45 }, (_, i) => i - 14);
   const results = await Promise.all(
     offsets.map(offset => {
       const d = new Date(today);
@@ -343,7 +343,10 @@ app.get('/api/league-matches', async (req, res) => {
         journeeInfo: { current: currentRound, previous: previousRound ?? 0, next: nextRound ?? 0 },
       });
 
+    // Pour "current" : seulement les matchs d'aujourd'hui ou à venir
+    const todayStart = Math.floor(new Date().setHours(0, 0, 0, 0) / 1000);
     const matches = (rounds.get(targetRound) || [])
+      .filter(e => journee !== 'current' || (e.startTimestamp || 0) >= todayStart)
       .sort((a, b) => (a.startTimestamp || 0) - (b.startTimestamp || 0))
       .map(mapEventToMatch);
 
