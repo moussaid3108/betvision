@@ -1665,57 +1665,6 @@ let previousView     = 'paddock';
 let chatHistory   = [];
 let loadedMatchesMap = {}; // id → match object
 
-// ─── DONNÉES DE SECOURS (si API indisponible) ───
-const FALLBACK = {
-  PL: [
-    { id:1, home:'Arsenal', away:'Man City', date:'TBD', time:'--:--', competition:'Premier League',
-      btts:72, over25:65, over15:84, homeWin:42, draw:28, awayWin:30, confidence:78,
-      formHome:['W','W','D','W','L'], formAway:['W','W','W','D','W'],
-      goalsHome:2.1, goalsAway:1.8, cleanHome:0.30, cleanAway:0.40 },
-    { id:2, home:'Chelsea', away:'Liverpool', date:'TBD', time:'--:--', competition:'Premier League',
-      btts:68, over25:71, over15:88, homeWin:35, draw:26, awayWin:39, confidence:82,
-      formHome:['W','D','W','L','W'], formAway:['W','W','W','W','D'],
-      goalsHome:1.9, goalsAway:2.3, cleanHome:0.40, cleanAway:0.30 },
-    { id:3, home:'Tottenham', away:'Newcastle', date:'TBD', time:'--:--', competition:'Premier League',
-      btts:61, over25:58, over15:79, homeWin:44, draw:27, awayWin:29, confidence:65,
-      formHome:['D','W','D','W','W'], formAway:['L','W','W','D','W'],
-      goalsHome:1.6, goalsAway:1.5, cleanHome:0.50, cleanAway:0.50 },
-  ],
-  FL1: [
-    { id:5, home:'PSG', away:'Monaco', date:'TBD', time:'--:--', competition:'Ligue 1',
-      btts:64, over25:60, over15:82, homeWin:55, draw:24, awayWin:21, confidence:74,
-      formHome:['W','W','W','W','W'], formAway:['W','D','W','L','W'],
-      goalsHome:2.8, goalsAway:1.6, cleanHome:0.20, cleanAway:0.40 },
-    { id:6, home:'Marseille', away:'Lyon', date:'TBD', time:'--:--', competition:'Ligue 1',
-      btts:70, over25:67, over15:85, homeWin:40, draw:28, awayWin:32, confidence:76,
-      formHome:['W','D','W','W','D'], formAway:['D','W','L','W','W'],
-      goalsHome:1.9, goalsAway:1.7, cleanHome:0.40, cleanAway:0.40 },
-  ],
-  PD: [
-    { id:7, home:'Barcelona', away:'Real Madrid', date:'TBD', time:'--:--', competition:'La Liga',
-      btts:66, over25:63, over15:86, homeWin:44, draw:25, awayWin:31, confidence:80,
-      formHome:['W','W','D','W','W'], formAway:['W','W','W','W','D'],
-      goalsHome:2.5, goalsAway:2.2, cleanHome:0.30, cleanAway:0.30 },
-  ],
-  SA: [
-    { id:9, home:'Inter', away:'Juventus', date:'TBD', time:'--:--', competition:'Serie A',
-      btts:58, over25:54, over15:77, homeWin:42, draw:30, awayWin:28, confidence:68,
-      formHome:['W','W','W','D','W'], formAway:['W','D','W','W','L'],
-      goalsHome:1.8, goalsAway:1.3, cleanHome:0.30, cleanAway:0.50 },
-  ],
-  BL1: [
-    { id:10, home:'Bayern', away:'Dortmund', date:'TBD', time:'--:--', competition:'Bundesliga',
-      btts:73, over25:78, over15:91, homeWin:60, draw:20, awayWin:20, confidence:85,
-      formHome:['W','W','W','W','W'], formAway:['W','W','D','W','W'],
-      goalsHome:3.1, goalsAway:2.4, cleanHome:0.20, cleanAway:0.20 },
-  ],
-  CL: [
-    { id:11, home:'Real Madrid', away:'PSG', date:'TBD', time:'--:--', competition:'Champions League',
-      btts:69, over25:65, over15:87, homeWin:45, draw:26, awayWin:29, confidence:79,
-      formHome:['W','W','W','W','D'], formAway:['W','W','W','W','W'],
-      goalsHome:2.4, goalsAway:2.1, cleanHome:0.30, cleanAway:0.30 },
-  ],
-};
 
 // ─── NAVIGATION ───
 function showPage(name) {
@@ -2082,9 +2031,6 @@ async function loadMatches(code) {
 
     let matches = data?.matches || [];
 
-    // Fallback si l'API ne retourne rien
-    if (!matches.length) matches = FALLBACK[code] || [];
-
     if (!matches.length) {
       list.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-text">Aucun match à venir<br>pour cette ligue</div></div>';
       return;
@@ -2101,8 +2047,7 @@ async function loadMatches(code) {
     }, 100);
 
   } catch (e) {
-    const matches = FALLBACK[code] || [];
-    matches.forEach(m => { loadedMatchesMap[m.id] = m; });
+    const matches = [];
     list.innerHTML = matches.length
       ? matches.map(m => renderMatchCard(m)).join('')
       : '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Erreur de chargement.<br>Données de secours affichées.</div></div>';
@@ -2152,8 +2097,7 @@ function openAnalysis(id) {
     showPage('leagues');
     return;
   }
-  currentMatch = loadedMatchesMap[id] ||
-    Object.values(FALLBACK).flat().find(m => m.id === id);
+  currentMatch = loadedMatchesMap[id];
   if (!currentMatch) return;
   activeMatchId = id;
   previousView = fromLeague ? 'leaguematches' : 'paddock';
@@ -2347,7 +2291,7 @@ async function toggleFavori(matchId, event) {
     userFavoris.delete(String(matchId));
     if (btn) btn.textContent = '☆';
   } else {
-    const m = loadedMatchesMap[matchId] || Object.values(FALLBACK).flat().find(x => String(x.id) === String(matchId));
+    const m = loadedMatchesMap[matchId];
     if (!m) return;
     await supabaseClient.from('favoris').insert({
       user_id:    currentUser.id,
@@ -2404,8 +2348,7 @@ async function renderFavorisPage() {
 }
 
 function openFavoriAnalysis(matchId) {
-  const m = loadedMatchesMap[matchId] ||
-    Object.values(FALLBACK).flat().find(x => String(x.id) === String(matchId));
+  const m = loadedMatchesMap[matchId];
   if (m) {
     currentMatch = m;
   } else {
@@ -2673,7 +2616,7 @@ function getDemoReply(msg) {
 // ─── DASHBOARD ───
 function loadDashboard() {
   const all = Object.values(loadedMatchesMap);
-  const src = all.length ? all : Object.values(FALLBACK).flat();
+  const src = all;
 
   const avgBTTS  = src.length ? Math.round(src.reduce((s, m) => s + m.btts,   0) / src.length) : '--';
   const avgOver  = src.length ? Math.round(src.reduce((s, m) => s + m.over25, 0) / src.length) : '--';
@@ -2689,10 +2632,7 @@ function loadDashboard() {
 }
 
 function loadTopSignals(src) {
-  const source = src || (() => {
-    const all = Object.values(loadedMatchesMap);
-    return all.length ? all : Object.values(FALLBACK).flat();
-  })();
+  const source = src || Object.values(loadedMatchesMap);
 
   const top = source
     .filter(m => m.confidence >= 68)
