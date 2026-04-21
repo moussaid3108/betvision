@@ -1135,20 +1135,26 @@
   .lm-teams-row {
     display: flex; align-items: center; justify-content: space-between; gap: 6px;
   }
-  .lm-team { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
-  .lm-logo { width: 36px; height: 36px; object-fit: contain; border-radius: 4px; }
+  .lm-team { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .lm-logo { width: 52px; height: 52px; object-fit: contain; border-radius: 6px; }
   .lm-team-name {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 13px; font-weight: 700; text-align: center; line-height: 1.2;
+    font-size: 16px; font-weight: 800; text-align: center; line-height: 1.2;
     color: var(--text-1);
   }
-  .lm-score-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 0 10px; }
+  .lm-score-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 0 8px; }
   .lm-score {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 28px; font-weight: 800; color: var(--text-1); line-height: 1;
+    font-size: 30px; font-weight: 800; color: var(--text-1); line-height: 1;
   }
   .lm-score.live-score { color: var(--accent); }
-  .lm-time { font-size: 14px; font-weight: 600; color: var(--text-2); }
+  .lm-time { font-size: 22px; font-weight: 700; color: var(--text-1); font-family: 'Barlow Condensed', sans-serif; }
+  .lm-center-date { font-size: 10px; color: var(--text-3); font-weight: 500; text-align: center; }
+  .lm-fav-btn {
+    background: none; border: none; font-size: 20px; cursor: pointer;
+    color: #888; padding: 2px 0 2px 4px; line-height: 1;
+    -webkit-tap-highlight-color: transparent; flex-shrink: 0;
+  }
 </style>
 </head>
 <body>
@@ -2982,20 +2988,25 @@ function renderLeagueMatches(matches, journee, tournamentName) {
     let centerHtml;
     if (m.score && (m.status === 'live' || m.status === 'finished')) {
       const cls = m.status === 'live' ? 'lm-score live-score' : 'lm-score';
-      centerHtml = `<div class="lm-score-wrap"><div class="${cls}">${m.score.home} - ${m.score.away}</div></div>`;
+      centerHtml = `<div class="lm-score-wrap"><div class="${cls}">${m.score.home} - ${m.score.away}</div><div class="lm-center-date">${escapeHtml(m.startDate || '')}</div></div>`;
     } else {
-      centerHtml = `<div class="lm-score-wrap"><div class="lm-time">${m.startTime || '--:--'}</div></div>`;
+      centerHtml = `<div class="lm-score-wrap"><div class="lm-time">${m.startTime || '--:--'}</div><div class="lm-center-date">${escapeHtml(m.startDate || '')}</div></div>`;
     }
 
     const logoHtml = (url) => url
       ? `<img class="lm-logo" src="${url}" alt="" onerror="this.style.display='none'">`
-      : `<div class="lm-logo" style="background:var(--bg-4);border-radius:6px;"></div>`;
+      : `<div class="lm-logo" style="background:var(--bg-4);border-radius:8px;"></div>`;
 
+    const favId   = String(m.id);
+    const isFav   = typeof userFavoris !== 'undefined' && userFavoris.has(favId);
+    const favBtn  = m.status !== 'canceled'
+      ? `<button class="lm-fav-btn" id="fav-${favId}" onclick="toggleFavori('${favId}',event)">${isFav ? '⭐' : '☆'}</button>`
+      : '';
     const clickAttr = m.status !== 'canceled' ? `onclick="openAnalysis(${JSON.stringify(m.id)})"` : '';
     return `<div class="lm-card status-${m.status}" ${clickAttr}>
       <div class="lm-card-top">
         ${badgeHtml || '<span></span>'}
-        <div class="lm-date">${escapeHtml(m.startDate || '')} ${escapeHtml(m.startTime || '')}</div>
+        ${favBtn}
       </div>
       <div class="lm-teams-row">
         <div class="lm-team">
