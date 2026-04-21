@@ -1742,7 +1742,9 @@ function goBack() {
   activeMatchId = null;
   const dest = previousView;
   previousView = 'paddock';
-  if (dest === 'favoris') { openFavoris(); } else { showPage(dest); }
+  if (dest === 'favoris') { openFavoris(); }
+  else if (dest === 'leaguematches') { document.getElementById('page-leaguematches').style.display = 'block'; }
+  else { showPage(dest); }
 }
 
 // ─── PROFIL ───
@@ -2142,9 +2144,8 @@ function renderMatchCard(m) {
 
 // ─── ANALYSE MATCH ───
 function openAnalysis(id) {
-  if (document.getElementById('page-leaguematches').style.display === 'block') {
-    closeLeagueView();
-  }
+  const fromLeague = document.getElementById('page-leaguematches').style.display === 'block';
+  if (fromLeague) closeLeagueView();
   if (activeMatchId === id) {
     activeMatchId = null;
     showPage('leagues');
@@ -2154,7 +2155,7 @@ function openAnalysis(id) {
     Object.values(FALLBACK).flat().find(m => m.id === id);
   if (!currentMatch) return;
   activeMatchId = id;
-  previousView = 'paddock';
+  previousView = fromLeague ? 'leaguematches' : 'paddock';
   renderAnalysis(currentMatch);
   showPage('analysis');
   document.getElementById('nav-paddock').classList.add('active');
