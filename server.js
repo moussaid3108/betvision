@@ -280,8 +280,8 @@ function mapEventToMatch(e) {
     id:        e.id,
     homeTeam:  e.homeTeam?.name || '?',
     awayTeam:  e.awayTeam?.name || '?',
-    homeLogo:  e.homeTeam?.id ? `https://api.sofascore.app/api/v1/team/${e.homeTeam.id}/image` : null,
-    awayLogo:  e.awayTeam?.id ? `https://api.sofascore.app/api/v1/team/${e.awayTeam.id}/image` : null,
+    homeLogo:  e.homeTeam?.id ? `/api/team-logo?id=${e.homeTeam.id}` : null,
+    awayLogo:  e.awayTeam?.id ? `/api/team-logo?id=${e.awayTeam.id}` : null,
     startTime: d ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }) : '--:--',
     startDate: d ? d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'Europe/Paris' }) : 'TBD',
     status:    mapEventStatus(e.status?.type),
@@ -291,6 +291,19 @@ function mapEventToMatch(e) {
     tournament: e.tournament?.name || '',
   };
 }
+
+app.get('/api/team-logo', async (req, res) => {
+  const { id } = req.query;
+  if (!id || !/^\d+$/.test(id)) return res.status(400).end();
+  try {
+    const r = await fetch(`https://api.sofascore.app/api/v1/team/${id}/image`);
+    if (!r.ok) return res.status(404).end();
+    res.set('Content-Type', r.headers.get('content-type') || 'image/png');
+    res.set('Cache-Control', 'public, max-age=86400');
+    const buf = await r.arrayBuffer();
+    res.send(Buffer.from(buf));
+  } catch { res.status(502).end(); }
+});
 
 const LEAGUE_TTL = { current: 1_800_000, previous: 86_400_000, next: 43_200_000 };
 
