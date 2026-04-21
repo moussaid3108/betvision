@@ -214,7 +214,7 @@ async function getLeagueRounds(sport, tournamentId, KEY) {
   const today = new Date();
   const hdr   = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
 
-  // Fetch 23 dates: -11 to +11 days — covers prev + current + next round
+  // Fetch 23 dates: -11 to +11 — pour détecter la journée en cours
   const offsets = Array.from({ length: 23 }, (_, i) => i - 11);
   const results = await Promise.all(
     offsets.map(offset => {
@@ -227,32 +227,28 @@ async function getLeagueRounds(sport, tournamentId, KEY) {
     })
   );
 
-  // Deduplicate events for this tournament
-  const eventsMap = new Map();
+  // Collecter les events du tournoi + extraire seasonId
+  let seasonId = null;
+  const roundsWindow = new Map();
   results.forEach(data => {
     (data?.events || []).forEach(e => {
       if (Number(e?.tournament?.uniqueTournament?.id) === tournamentId && e.id) {
-        eventsMap.set(e.id, e);
+        if (!seasonId && e.season?.id) seasonId = e.season.id;
+        const round = e.roundInfo?.round;
+        if (round != null) {
+          if (!roundsWindow.has(round)) roundsWindow.set(round, []);
+          roundsWindow.get(round).push(e);
+        }
       }
     });
   });
 
-  // Group by round number
-  const rounds = new Map();
-  eventsMap.forEach(e => {
-    const round = e.roundInfo?.round;
-    if (round != null) {
-      if (!rounds.has(round)) rounds.set(round, []);
-      rounds.get(round).push(e);
-    }
-  });
+  const sortedRounds = [...roundsWindow.keys()].sort((a, b) => a - b);
 
-  const sortedRounds = [...rounds.keys()].sort((a, b) => a - b);
-
-  // Current round = first round where not all non-cancelled events are finished
+  // Journée en cours = première journée où tous les matchs ne sont PAS terminés
   let currentRound = sortedRounds[sortedRounds.length - 1] ?? null;
   for (const r of sortedRounds) {
-    const events    = rounds.get(r);
+    const events     = roundsWindow.get(r);
     const meaningful = events.filter(e => e.status?.type !== 'canceled');
     if (!meaningful.length) continue;
     if (!meaningful.every(e => e.status?.type === 'finished')) {
@@ -261,9 +257,19 @@ async function getLeagueRounds(sport, tournamentId, KEY) {
     }
   }
 
-  const result = { rounds, sortedRounds, currentRound, ts: Date.now() };
+  const result = { currentRound, seasonId, ts: Date.now() };
   leagueRoundsCache.set(cacheKey, result);
   return result;
+}
+
+// Récupère TOUS les matchs d'une journée via l'endpoint dédié Sofascore
+async function fetchRoundEvents(tournamentId, seasonId, round, KEY) {
+  const hdr = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
+  const url = `${SPORT_BASE}/api/v1/unique-tournament/${tournamentId}/season/${seasonId}/events/round/${round}`;
+  const data = await fetch(url, { headers: hdr })
+    .then(r => r.ok ? r.json() : { events: [] })
+    .catch(() => ({ events: [] }));
+  return (data?.events || []).sort((a, b) => (a.startTimestamp || 0) - (b.startTimestamp || 0));
 }
 
 function mapEventStatus(type) {
@@ -324,33 +330,33 @@ app.get('/api/league-matches', async (req, res) => {
   if (cached && Date.now() - cached.ts < ttl) return res.json(cached.data);
 
   try {
-    const { rounds, sortedRounds, currentRound } = await getLeagueRounds(sport, tournament, KEY);
+    const { currentRound, seasonId } = await getLeagueRounds(sport, tournament, KEY);
 
-    if (!sortedRounds.length || currentRound == null)
+    if (currentRound == null || !seasonId)
       return res.json({ journee: 0, matches: [], journeeInfo: { current: 0, previous: 0, next: 0 } });
 
-    const currentIdx    = sortedRounds.indexOf(currentRound);
-    const previousRound = currentIdx > 0 ? sortedRounds[currentIdx - 1] : null;
-    const nextRound     = currentIdx < sortedRounds.length - 1 ? sortedRounds[currentIdx + 1] : null;
+    // Navigation par numéro de journée — pas par fenêtre de dates
+    const previousRound = currentRound > 1 ? currentRound - 1 : null;
+    const nextRound     = currentRound + 1;
     const targetRound   = { current: currentRound, previous: previousRound, next: nextRound }[journee];
 
     if (targetRound == null)
       return res.json({
         journee: 0, matches: [],
-        journeeInfo: { current: currentRound, previous: previousRound ?? 0, next: nextRound ?? 0 },
+        journeeInfo: { current: currentRound, previous: previousRound ?? 0, next: nextRound },
       });
 
-    const matches = (rounds.get(targetRound) || [])
-      .sort((a, b) => (a.startTimestamp || 0) - (b.startTimestamp || 0))
-      .map(mapEventToMatch);
+    // Fetch tous les matchs de la journée via l'endpoint dédié
+    const events  = await fetchRoundEvents(tournament, seasonId, targetRound, KEY);
+    const matches = events.map(mapEventToMatch);
 
     const result = {
       journee: targetRound,
       matches,
       journeeInfo: {
         current:  currentRound,
-        previous: previousRound ?? currentRound - 1,
-        next:     nextRound     ?? currentRound + 1,
+        previous: previousRound ?? 0,
+        next:     nextRound,
       },
     };
 
