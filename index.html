@@ -1137,6 +1137,7 @@
   }
   .lm-team { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
   .lm-logo { width: 52px; height: 52px; object-fit: contain; border-radius: 6px; }
+  .lm-logo-init { display: flex; align-items: center; justify-content: center; background: var(--bg-4); border-radius: 8px; font-size: 13px; font-weight: 800; color: var(--text-2); letter-spacing: 0.5px; }
   .lm-team-name {
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 16px; font-weight: 800; text-align: center; line-height: 1.2;
@@ -2998,9 +2999,15 @@ function renderLeagueMatches(matches, journee, tournamentName) {
       centerHtml = `<div class="lm-score-wrap"><div class="lm-time">${m.startTime || '--:--'}</div><div class="lm-center-date">${escapeHtml(m.startDate || '')}</div></div>`;
     }
 
-    const logoHtml = (url) => url
-      ? `<img class="lm-logo" src="${url}" alt="" onerror="this.style.display='none'">`
-      : `<div class="lm-logo" style="background:var(--bg-4);border-radius:8px;"></div>`;
+    const teamInitials = (name) => (name || '?').split(' ').map(w => w[0]).join('').slice(0,3).toUpperCase();
+    const logoHtml = (url, teamName) => {
+      const initials = teamInitials(teamName);
+      const fallbackId = 'fb' + Math.random().toString(36).slice(2,8);
+      if (!url) return `<div class="lm-logo lm-logo-init"><span>${initials}</span></div>`;
+      return `<img class="lm-logo" src="${url}" referrerpolicy="no-referrer" alt="${initials}"
+        onerror="this.style.display='none';document.getElementById('${fallbackId}').style.display='flex'">
+        <div class="lm-logo lm-logo-init" id="${fallbackId}" style="display:none"><span>${initials}</span></div>`;
+    };
 
     const favId   = String(m.id);
     const isFav   = typeof userFavoris !== 'undefined' && userFavoris.has(favId);
@@ -3016,12 +3023,12 @@ function renderLeagueMatches(matches, journee, tournamentName) {
       </div>
       <div class="lm-teams-row">
         <div class="lm-team">
-          ${logoHtml(m.homeLogo)}
+          ${logoHtml(m.homeLogo, m.homeTeam)}
           <div class="lm-team-name">${escapeHtml(m.homeTeam || '?')}</div>
         </div>
         ${centerHtml}
         <div class="lm-team">
-          ${logoHtml(m.awayLogo)}
+          ${logoHtml(m.awayLogo, m.awayTeam)}
           <div class="lm-team-name">${escapeHtml(m.awayTeam || '?')}</div>
         </div>
       </div>
