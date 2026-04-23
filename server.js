@@ -247,37 +247,41 @@ async function getLeagueRounds(sport, tournamentId, KEY) {
     }
   });
 
-  const sortedRounds = [...rounds.keys()].sort((a, b) => a - b);
+  // Trier par date du premier match (pas par numéro de journée)
+  const sortedByDate = [...rounds.keys()].sort((a, b) => {
+    const minA = Math.min(...rounds.get(a).map(e => e.startTimestamp || Infinity));
+    const minB = Math.min(...rounds.get(b).map(e => e.startTimestamp || Infinity));
+    return minA - minB;
+  });
   const nowTs = Math.floor(Date.now() / 1000);
 
-  // 1. Priorité absolue : round avec des matchs LIVE en ce moment
+  // 1. Priorité : round avec des matchs LIVE
   let currentRound = null;
-  for (const r of sortedRounds) {
+  for (const r of sortedByDate) {
     if (rounds.get(r).some(e => e.status?.type === 'inprogress')) {
-      currentRound = r;
-      break;
+      currentRound = r; break;
     }
   }
 
-  // 2. Pas de live : première journée avec matchs à venir (pas reportés passés)
+  // 2. Round dont le prochain match est le plus proche dans le futur
   if (currentRound == null) {
-    for (const r of sortedRounds) {
-      const hasUpcoming = rounds.get(r).some(e => {
-        const type = e.status?.type;
+    let minFutureTs = Infinity;
+    for (const r of sortedByDate) {
+      for (const e of rounds.get(r)) {
         const ts   = e.startTimestamp || 0;
-        if (type === 'inprogress') return true;
-        if (type === 'finished' || type === 'canceled') return false;
-        if (type === 'postponed') return ts > nowTs;
-        return ts > nowTs - 3600;
-      });
-      if (hasUpcoming) { currentRound = r; break; }
+        const type = e.status?.type;
+        if (type !== 'finished' && type !== 'canceled' && ts > nowTs - 3600 && ts < minFutureTs) {
+          minFutureTs = ts;
+          currentRound = r;
+        }
+      }
     }
   }
 
-  // 3. Fallback : dernière journée connue
-  if (currentRound == null) currentRound = sortedRounds[sortedRounds.length - 1] ?? null;
+  // 3. Fallback
+  if (currentRound == null) currentRound = sortedByDate[sortedByDate.length - 1] ?? null;
 
-  const result = { rounds, sortedRounds, currentRound, ts: Date.now() };
+  const result = { rounds, sortedByDate, currentRound, ts: Date.now() };
   leagueRoundsCache.set(cacheKey, result);
   return result;
 }
@@ -340,14 +344,15 @@ app.get('/api/league-matches', async (req, res) => {
   if (cached && Date.now() - cached.ts < ttl) return res.json(cached.data);
 
   try {
-    const { rounds, sortedRounds, currentRound } = await getLeagueRounds(sport, tournament, KEY);
+    const { rounds, sortedByDate, currentRound } = await getLeagueRounds(sport, tournament, KEY);
 
-    if (!sortedRounds.length || currentRound == null)
+    if (!sortedByDate.length || currentRound == null)
       return res.json({ journee: 0, matches: [], journeeInfo: { current: 0, previous: 0, next: 0 } });
 
-    const currentIdx    = sortedRounds.indexOf(currentRound);
-    const previousRound = currentIdx > 0 ? sortedRounds[currentIdx - 1] : null;
-    const nextRound     = currentIdx < sortedRounds.length - 1 ? sortedRounds[currentIdx + 1] : null;
+    // Navigation par date chronologique, pas par numéro de journée
+    const currentIdx    = sortedByDate.indexOf(currentRound);
+    const previousRound = currentIdx > 0 ? sortedByDate[currentIdx - 1] : null;
+    const nextRound     = currentIdx < sortedByDate.length - 1 ? sortedByDate[currentIdx + 1] : null;
     const targetRound   = { current: currentRound, previous: previousRound, next: nextRound }[journee];
 
     if (targetRound == null)
