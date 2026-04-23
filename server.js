@@ -214,19 +214,28 @@ async function getLeagueRounds(sport, tournamentId, KEY) {
   const today = new Date();
   const hdr   = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
 
-  // Scan -14 à +30 jours, par lots de 8 pour éviter le rate-limit
+  const fetchDate = async (offset) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() + offset);
+    const dateStr = d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
+    const url = `${SPORT_BASE}/api/v1/sport/${sport}/scheduled-events/${dateStr}`;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const r = await fetch(url, { headers: hdr });
+        if (r.ok) return await r.json();
+      } catch {}
+      await new Promise(res => setTimeout(res, 300 * (attempt + 1)));
+    }
+    return { events: [] };
+  };
+
+  // Scan -14 à +30 jours, par lots de 5 avec 150ms entre chaque lot
   const offsets = Array.from({ length: 45 }, (_, i) => i - 14);
   const results = [];
-  for (let i = 0; i < offsets.length; i += 8) {
-    const batch = await Promise.all(offsets.slice(i, i + 8).map(offset => {
-      const d = new Date(today);
-      d.setDate(d.getDate() + offset);
-      const dateStr = d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
-      return fetch(`${SPORT_BASE}/api/v1/sport/${sport}/scheduled-events/${dateStr}`, { headers: hdr })
-        .then(r => r.ok ? r.json() : { events: [] })
-        .catch(() => ({ events: [] }));
-    }));
+  for (let i = 0; i < offsets.length; i += 5) {
+    const batch = await Promise.all(offsets.slice(i, i + 5).map(fetchDate));
     results.push(...batch);
+    if (i + 5 < offsets.length) await new Promise(res => setTimeout(res, 150));
   }
 
   // Dédupliquer et grouper par journée
