@@ -214,18 +214,20 @@ async function getLeagueRounds(sport, tournamentId, KEY) {
   const today = new Date();
   const hdr   = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
 
-  // Scan -14 à +30 jours : aujourd'hui ± fenêtre raisonnée, pas de plongée dans le passé
+  // Scan -14 à +30 jours, par lots de 8 pour éviter le rate-limit
   const offsets = Array.from({ length: 45 }, (_, i) => i - 14);
-  const results = await Promise.all(
-    offsets.map(offset => {
+  const results = [];
+  for (let i = 0; i < offsets.length; i += 8) {
+    const batch = await Promise.all(offsets.slice(i, i + 8).map(offset => {
       const d = new Date(today);
       d.setDate(d.getDate() + offset);
       const dateStr = d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
       return fetch(`${SPORT_BASE}/api/v1/sport/${sport}/scheduled-events/${dateStr}`, { headers: hdr })
         .then(r => r.ok ? r.json() : { events: [] })
         .catch(() => ({ events: [] }));
-    })
-  );
+    }));
+    results.push(...batch);
+  }
 
   // Dédupliquer et grouper par journée
   const eventsMap = new Map();
@@ -248,21 +250,32 @@ async function getLeagueRounds(sport, tournamentId, KEY) {
   const sortedRounds = [...rounds.keys()].sort((a, b) => a - b);
   const nowTs = Math.floor(Date.now() / 1000);
 
-  // Journée en cours = première journée avec au moins 1 match live ou programmé dans le futur
-  // Un match "reporté" avec timestamp passé ne compte PAS comme futur
-  let currentRound = sortedRounds[sortedRounds.length - 1] ?? null;
+  // 1. Priorité absolue : round avec des matchs LIVE en ce moment
+  let currentRound = null;
   for (const r of sortedRounds) {
-    const events = rounds.get(r);
-    const hasActive = events.some(e => {
-      const type = e.status?.type;
-      const ts   = e.startTimestamp || 0;
-      if (type === 'inprogress') return true;
-      if (type === 'finished' || type === 'canceled') return false;
-      if (type === 'postponed') return ts > nowTs; // reporté ET replanifié dans le futur
-      return ts > nowTs - 3600; // programmé avec 1h de grâce
-    });
-    if (hasActive) { currentRound = r; break; }
+    if (rounds.get(r).some(e => e.status?.type === 'inprogress')) {
+      currentRound = r;
+      break;
+    }
   }
+
+  // 2. Pas de live : première journée avec matchs à venir (pas reportés passés)
+  if (currentRound == null) {
+    for (const r of sortedRounds) {
+      const hasUpcoming = rounds.get(r).some(e => {
+        const type = e.status?.type;
+        const ts   = e.startTimestamp || 0;
+        if (type === 'inprogress') return true;
+        if (type === 'finished' || type === 'canceled') return false;
+        if (type === 'postponed') return ts > nowTs;
+        return ts > nowTs - 3600;
+      });
+      if (hasUpcoming) { currentRound = r; break; }
+    }
+  }
+
+  // 3. Fallback : dernière journée connue
+  if (currentRound == null) currentRound = sortedRounds[sortedRounds.length - 1] ?? null;
 
   const result = { rounds, sortedRounds, currentRound, ts: Date.now() };
   leagueRoundsCache.set(cacheKey, result);
@@ -343,10 +356,16 @@ app.get('/api/league-matches', async (req, res) => {
         journeeInfo: { current: currentRound, previous: previousRound ?? 0, next: nextRound ?? 0 },
       });
 
-    // Pour "current" : seulement les matchs d'aujourd'hui ou à venir
-    const todayStart = Math.floor(new Date().setHours(0, 0, 0, 0) / 1000);
+    // Pour "current" : garder live + à venir, exclure les matchs terminés passés
+    const nowTs2 = Math.floor(Date.now() / 1000);
     const matches = (rounds.get(targetRound) || [])
-      .filter(e => journee !== 'current' || (e.startTimestamp || 0) >= todayStart)
+      .filter(e => {
+        if (journee !== 'current') return true;
+        const type = e.status?.type;
+        if (type === 'inprogress') return true;       // live → toujours affiché
+        if (type === 'finished') return false;         // terminé → exclu
+        return (e.startTimestamp || 0) > nowTs2 - 3600; // à venir (1h de grâce)
+      })
       .sort((a, b) => (a.startTimestamp || 0) - (b.startTimestamp || 0))
       .map(mapEventToMatch);
 
