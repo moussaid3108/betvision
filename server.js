@@ -323,6 +323,123 @@ function mapEventToMatch(e) {
 
 const computeStatsCache = new Map(); // `${competition}` → {data, ts}
 
+// ─── /api/team-stats ─────────────────────────────────────
+const teamStatsCache = new Map(); // `team-stats:${sport}:${teamId}` → {data, ts}
+const TEAM_STATS_TTL = 12 * 3_600_000; // 12h
+
+async function getTeamStats(sport, teamId, KEY) {
+  const cacheKey = `team-stats:${sport}:${teamId}`;
+  const cached = teamStatsCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < TEAM_STATS_TTL) return cached.data;
+
+  const hdr = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
+  const base = `${SPORT_BASE}/api/v1/team/${teamId}`;
+
+  // Fetch 1 : derniers matchs
+  const eventsRes = await fetch(`${base}/events/last/0`, { headers: hdr, signal: AbortSignal.timeout(8000) });
+  if (!eventsRes.ok) {
+    const status = eventsRes.status;
+    if (cached) return cached.data; // fallback cache périmé
+    throw Object.assign(new Error('Upstream API error'), { status });
+  }
+  const eventsJson = await eventsRes.json();
+  console.log(`[team-stats] fetched last events for team ${teamId} (sport=${sport})`);
+
+  // 5 derniers matchs terminés (status.code === 100)
+  const finished = (eventsJson.events || [])
+    .filter(e => e.status?.code === 100)
+    .sort((a, b) => (b.startTimestamp || 0) - (a.startTimestamp || 0))
+    .slice(0, 5);
+
+  const form = finished.map(e => {
+    const isHome = Number(e.homeTeam?.id) === Number(teamId);
+    const hs = e.homeScore?.current ?? 0;
+    const as = e.awayScore?.current ?? 0;
+    if (isHome) return hs > as ? 'W' : hs === as ? 'D' : 'L';
+    return as > hs ? 'W' : as === hs ? 'D' : 'L';
+  });
+
+  const formScores = finished.map(e => ({
+    homeTeam:  e.homeTeam?.name || '?',
+    awayTeam:  e.awayTeam?.name || '?',
+    homeScore: e.homeScore?.current ?? null,
+    awayScore: e.awayScore?.current ?? null,
+    date:      e.startTimestamp ? new Date(e.startTimestamp * 1000)
+                 .toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', timeZone: 'Europe/Paris' }) : '',
+  }));
+
+  // Fetch 2 : stats saison (fallback sur /performance)
+  let statsJson = null;
+  const statsRes = await fetch(`${base}/statistics/overall`, { headers: hdr, signal: AbortSignal.timeout(8000) }).catch(() => null);
+  if (statsRes?.ok) {
+    statsJson = await statsRes.json();
+    console.log(`[team-stats] fetched season stats for team ${teamId}`);
+  } else {
+    const perfRes = await fetch(`${base}/performance`, { headers: hdr, signal: AbortSignal.timeout(8000) }).catch(() => null);
+    if (perfRes?.ok) { statsJson = await perfRes.json(); console.log(`[team-stats] fetched performance for team ${teamId}`); }
+  }
+
+  // Extraire moyennes depuis le JSON Sofascore
+  const s = statsJson?.statistics || statsJson?.performance || null;
+  const mp  = s?.matchesPlayed           || finished.length || 1;
+  const gf  = s?.goals                  ?? finished.reduce((acc, e) => {
+    const isHome = Number(e.homeTeam?.id) === Number(teamId);
+    return acc + (isHome ? (e.homeScore?.current ?? 0) : (e.awayScore?.current ?? 0));
+  }, 0);
+  const ga  = s?.goalsConceded          ?? finished.reduce((acc, e) => {
+    const isHome = Number(e.homeTeam?.id) === Number(teamId);
+    return acc + (isHome ? (e.awayScore?.current ?? 0) : (e.homeScore?.current ?? 0));
+  }, 0);
+
+  const home5 = finished.filter(e => Number(e.homeTeam?.id) === Number(teamId));
+  const away5 = finished.filter(e => Number(e.awayTeam?.id) === Number(teamId));
+  const avgGoals = (arr, getG) => arr.length ? parseFloat((arr.reduce((s, e) => s + getG(e), 0) / arr.length).toFixed(2)) : null;
+
+  const data = {
+    teamId:    Number(teamId),
+    teamName:  finished[0]?.homeTeam?.id == teamId ? finished[0]?.homeTeam?.name : finished[0]?.awayTeam?.name || String(teamId),
+    form,
+    formScores,
+    seasonStats: {
+      matchesPlayed:          mp,
+      goalsScoredAvg:         parseFloat((gf / mp).toFixed(2)),
+      goalsConcededAvg:       parseFloat((ga / mp).toFixed(2)),
+      goalsScoredHomeAvg:     avgGoals(home5, e => e.homeScore?.current ?? 0),
+      goalsConcededHomeAvg:   avgGoals(home5, e => e.awayScore?.current ?? 0),
+      goalsScoredAwayAvg:     avgGoals(away5, e => e.awayScore?.current ?? 0),
+      goalsConcededAwayAvg:   avgGoals(away5, e => e.homeScore?.current ?? 0),
+      cleanSheetsPercent:     finished.length
+        ? Math.round(finished.filter(e => {
+            const isHome = Number(e.homeTeam?.id) === Number(teamId);
+            return isHome ? (e.awayScore?.current ?? 1) === 0 : (e.homeScore?.current ?? 1) === 0;
+          }).length / finished.length * 100)
+        : 0,
+    },
+    lastUpdated: new Date().toISOString(),
+  };
+
+  teamStatsCache.set(cacheKey, { data, ts: Date.now() });
+  return data;
+}
+
+app.get('/api/team-stats', async (req, res) => {
+  const { teamId, sport = 'football' } = req.query;
+  if (!teamId || !/^\d+$/.test(teamId)) return res.status(400).json({ error: 'Invalid teamId or sport' });
+
+  const KEY = process.env.RAPIDAPI_KEY;
+  if (!KEY) return res.status(500).json({ error: 'RAPIDAPI_KEY not configured' });
+
+  try {
+    const data = await getTeamStats(sport, teamId, KEY);
+    res.json(data);
+  } catch (err) {
+    if (err.name === 'TimeoutError') return res.status(504).json({ error: 'Upstream timeout' });
+    const status = err.status;
+    if (status === 404 || status === 429) return res.status(502).json({ error: 'Upstream API error' });
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/compute-stats', (req, res) => {
   const { competition } = req.query;
 
