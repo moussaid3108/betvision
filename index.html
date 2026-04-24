@@ -2172,15 +2172,15 @@ async function openAnalysis(id) {
     }
   }
 
-  if (currentMatch.homeTeamId && currentMatch.awayTeamId && !currentMatch.h2h) {
-    try {
-      const h2hRes = await fetch(`/api/h2h?team1Id=${currentMatch.homeTeamId}&team2Id=${currentMatch.awayTeamId}&sport=football`);
-      currentMatch.h2h = h2hRes.ok ? await h2hRes.json() : null;
-    } catch (e) {
-      currentMatch.h2h = null;
-    }
-    loadedMatchesMap[currentMatch.id] = currentMatch;
+  try {
+    const h2hParams = new URLSearchParams({ eventId: currentMatch.id, sport: 'football' });
+    if (currentMatch.homeTeamId) h2hParams.set('team1Id', currentMatch.homeTeamId);
+    const h2hRes = await fetch(`/api/h2h?${h2hParams}`);
+    currentMatch.h2h = h2hRes.ok ? await h2hRes.json() : null;
+  } catch (e) {
+    currentMatch.h2h = null;
   }
+  loadedMatchesMap[currentMatch.id] = currentMatch;
 
   renderAnalysis(currentMatch);
   showPage('analysis');
