@@ -506,6 +506,73 @@ app.get('/api/compute-stats', async (req, res) => {
   res.json(data);
 });
 
+// ─── /api/h2h ─────────────────────────────────────────────
+const h2hCache = new Map();
+const H2H_TTL = 7 * 24 * 3_600_000; // 7 jours
+
+app.get('/api/h2h', async (req, res) => {
+  const { team1Id, team2Id, sport = 'football' } = req.query;
+  if (!team1Id || !team2Id || !/^\d+$/.test(team1Id) || !/^\d+$/.test(team2Id))
+    return res.status(400).json({ error: 'Invalid team IDs' });
+
+  const KEY = process.env.RAPIDAPI_KEY;
+  if (!KEY) return res.status(500).json({ error: 'RAPIDAPI_KEY not configured' });
+
+  const sorted = [Number(team1Id), Number(team2Id)].sort((a, b) => a - b);
+  const cacheKey = `h2h:${sport}:${sorted[0]}:${sorted[1]}`;
+  const cached = h2hCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < H2H_TTL) return res.json(cached.data);
+
+  const hdr = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
+  const empty = { team1Id: Number(team1Id), team2Id: Number(team2Id), matches: [], totalMatches: 0, balance: { team1Wins: 0, draws: 0, team2Wins: 0 }, lastUpdated: new Date().toISOString() };
+
+  try {
+    const r = await fetch(`${SPORT_BASE}/api/v1/team/${team1Id}/h2h-events/${team2Id}`, { headers: hdr, signal: AbortSignal.timeout(8000) });
+    if (!r.ok) {
+      if (cached) return res.json(cached.data);
+      return res.json(empty);
+    }
+    const json = await r.json();
+    console.log(`[h2h] fetched h2h for ${team1Id} vs ${team2Id}`);
+
+    const events = (json.previousEvents || json.events || [])
+      .filter(e => e.status?.code === 100)
+      .sort((a, b) => (b.startTimestamp || 0) - (a.startTimestamp || 0))
+      .slice(0, 5);
+
+    let team1Wins = 0, draws = 0, team2Wins = 0;
+    const matches = events.map(e => {
+      const isTeam1Home = Number(e.homeTeam?.id) === Number(team1Id);
+      const hs = e.homeScore?.current ?? 0;
+      const as = e.awayScore?.current ?? 0;
+      if (hs === as) draws++;
+      else if (isTeam1Home ? hs > as : as > hs) team1Wins++;
+      else team2Wins++;
+
+      const d = e.startTimestamp ? new Date(e.startTimestamp * 1000) : null;
+      return {
+        date: d ? d.toISOString() : null,
+        dateFormatted: d ? d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Europe/Paris' }) : '',
+        homeTeam: e.homeTeam?.name || '?',
+        awayTeam: e.awayTeam?.name || '?',
+        homeTeamId: Number(e.homeTeam?.id) || null,
+        awayTeamId: Number(e.awayTeam?.id) || null,
+        homeScore: hs,
+        awayScore: as,
+        competition: e.tournament?.name || '',
+      };
+    });
+
+    const data = { team1Id: Number(team1Id), team2Id: Number(team2Id), matches, totalMatches: matches.length, balance: { team1Wins, draws, team2Wins }, lastUpdated: new Date().toISOString() };
+    h2hCache.set(cacheKey, { data, ts: Date.now() });
+    res.json(data);
+  } catch (err) {
+    if (cached) return res.json(cached.data);
+    if (err.name === 'TimeoutError') return res.status(504).json({ error: 'Upstream timeout' });
+    res.status(502).json({ error: 'Upstream error' });
+  }
+});
+
 app.get('/api/team-logo', async (req, res) => {
   const { id } = req.query;
   if (!id || !/^\d+$/.test(id)) return res.status(400).end();

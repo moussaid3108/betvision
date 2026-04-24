@@ -464,6 +464,38 @@
     min-width: 40px; text-align: center;
   }
 
+  /* ─── H2H SECTION ─── */
+  .h2h-section {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; margin-bottom: 14px;
+  }
+  .h2h-section-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px; font-weight: 700; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;
+  }
+  .h2h-match-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12px;
+  }
+  .h2h-match-row:last-child { border-bottom: none; }
+  .h2h-match-date { width: 72px; flex-shrink: 0; font-size: 10px; color: var(--text-3); }
+  .h2h-match-teams { flex: 1; font-weight: 500; color: var(--text-1); }
+  .h2h-match-score {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px; font-weight: 800; min-width: 36px; text-align: center;
+  }
+  .h2h-win   { color: #22c55e; }
+  .h2h-draw  { color: #eab308; }
+  .h2h-loss  { color: #ef4444; }
+  .h2h-balance {
+    margin-top: 10px; padding: 8px 12px;
+    background: var(--bg-3); border-radius: 8px;
+    font-size: 12px; font-weight: 700; color: var(--text-2); text-align: center;
+  }
+  .h2h-empty { font-size: 12px; color: var(--text-3); text-align: center; padding: 8px 0; }
+  .h2h-count { font-size: 10px; color: var(--text-3); text-align: center; margin-top: 6px; }
+
   /* ─── SIGNAL GLOBAL ─── */
   .signal-card {
     background: var(--bg-2);
@@ -2140,6 +2172,16 @@ async function openAnalysis(id) {
     }
   }
 
+  if (currentMatch.homeTeamId && currentMatch.awayTeamId && !currentMatch.h2h) {
+    try {
+      const h2hRes = await fetch(`/api/h2h?team1Id=${currentMatch.homeTeamId}&team2Id=${currentMatch.awayTeamId}&sport=football`);
+      currentMatch.h2h = h2hRes.ok ? await h2hRes.json() : null;
+    } catch (e) {
+      currentMatch.h2h = null;
+    }
+    loadedMatchesMap[currentMatch.id] = currentMatch;
+  }
+
   renderAnalysis(currentMatch);
   showPage('analysis');
   document.getElementById('nav-paddock').classList.add('active');
@@ -2224,6 +2266,37 @@ function renderAnalysis(m) {
         <div class="proba-track"><div class="proba-fill fill-blue" style="width:0" data-w="${awayWin}"></div></div>
       </div>
     </div>
+
+    ${(() => {
+      const h2h = m.h2h;
+      if (!h2h || !h2h.matches || h2h.matches.length === 0) return `
+        <div class="h2h-section">
+          <div class="h2h-section-title">⚔️ Dernières confrontations</div>
+          <div class="h2h-empty">Aucune confrontation récente disponible</div>
+        </div>`;
+      const t1Id = m.homeTeamId;
+      const rows = h2h.matches.map(hm => {
+        const isTeam1Home = Number(hm.homeTeamId) === Number(t1Id);
+        const hs = hm.homeScore, as = hm.awayScore;
+        const t1Win = isTeam1Home ? hs > as : as > hs;
+        const isDraw = hs === as;
+        const scoreCls = isDraw ? 'h2h-draw' : t1Win ? 'h2h-win' : 'h2h-loss';
+        return `<div class="h2h-match-row">
+          <div class="h2h-match-date">${hm.dateFormatted}</div>
+          <div class="h2h-match-teams">${hm.homeTeam} – ${hm.awayTeam}</div>
+          <div class="h2h-match-score ${scoreCls}">${hs}–${as}</div>
+        </div>`;
+      }).join('');
+      const b = h2h.balance;
+      const homeLabel = m.home || 'Dom.';
+      const awayLabel = m.away || 'Ext.';
+      const balanceHtml = `<div class="h2h-balance">${homeLabel} <span class="h2h-win">${b.team1Wins}V</span> · <span class="h2h-draw">${b.draws}N</span> · <span class="h2h-loss">${b.team2Wins}D</span> ${awayLabel}</div>`;
+      const countHtml = h2h.totalMatches < 5 ? `<div class="h2h-count">${h2h.totalMatches} confrontation${h2h.totalMatches > 1 ? 's' : ''} disponible${h2h.totalMatches > 1 ? 's' : ''}</div>` : '';
+      return `<div class="h2h-section">
+        <div class="h2h-section-title">⚔️ Dernières confrontations</div>
+        ${rows}${balanceHtml}${countHtml}
+      </div>`;
+    })()}
 
     <div class="proba-section">
       <div class="proba-title">📊 Probabilités algorithmiques</div>
