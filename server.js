@@ -508,11 +508,11 @@ app.get('/api/compute-stats', async (req, res) => {
 
 // ─── /api/h2h ─────────────────────────────────────────────
 const h2hCache = new Map();
-const H2H_TTL      = 7 * 24 * 3_600_000; // 7 jours (résultat avec données)
-const H2H_EMPTY_TTL = 10 * 60_000;        // 10 min (résultat vide)
+const H2H_TTL       = 7 * 24 * 3_600_000;
+const H2H_EMPTY_TTL = 10 * 60_000;
 
 app.get('/api/h2h', async (req, res) => {
-  const { eventId, team1Id, sport = 'football' } = req.query;
+  const { eventId, team1Id, team2Id, sport = 'football' } = req.query;
   if (!eventId || !/^\d+$/.test(eventId))
     return res.status(400).json({ error: 'Invalid eventId' });
 
@@ -529,56 +529,91 @@ app.get('/api/h2h', async (req, res) => {
   const hdr = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
   const empty = { matches: [], totalMatches: 0, balance: { team1Wins: 0, draws: 0, team2Wins: 0 }, lastUpdated: new Date().toISOString() };
 
-  console.log(`[H2H] Fetching for eventId=${eventId} sport=${sport} team1Id=${team1Id || 'none'}`);
+  console.log(`[H2H] Fetching eventId=${eventId} team1Id=${team1Id||'?'} team2Id=${team2Id||'?'}`);
 
-  try {
-    const r = await fetch(`${SPORT_BASE}/api/v1/event/${eventId}/h2h`, { headers: hdr, signal: AbortSignal.timeout(8000) });
-    console.log(`[H2H] Upstream status: ${r.status}`);
-    if (!r.ok) {
-      if (cached) return res.json(cached.data);
-      return res.json(empty);
-    }
-
-    const json = await r.json();
-    const allEvents = json.events || json.previousEvents || [];
+  const buildMatches = (allEvents, refT1Id) => {
     const events = allEvents
       .filter(e => e.status?.code === 100)
       .sort((a, b) => (b.startTimestamp || 0) - (a.startTimestamp || 0))
       .slice(0, 5);
-
-    console.log(`[H2H] Upstream status: ${r.status}, events found: ${allEvents.length} (finished: ${events.length})`);
-
-    // team1 = équipe domicile du match courant si fourni, sinon domicile du 1er match H2H
-    const refTeam1Id = team1Id ? Number(team1Id) : (events[0] ? Number(events[0].homeTeam?.id) : null);
-
     let team1Wins = 0, draws = 0, team2Wins = 0;
     const matches = events.map(e => {
-      const isTeam1Home = Number(e.homeTeam?.id) === refTeam1Id;
+      const isTeam1Home = Number(e.homeTeam?.id) === Number(refT1Id);
       const hs = e.homeScore?.current ?? 0;
       const as = e.awayScore?.current ?? 0;
       if (hs === as) draws++;
       else if (isTeam1Home ? hs > as : as > hs) team1Wins++;
       else team2Wins++;
-
       const d = e.startTimestamp ? new Date(e.startTimestamp * 1000) : null;
       return {
         date: d ? d.toISOString() : null,
         dateFormatted: d ? d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Europe/Paris' }) : '',
-        homeTeam:   e.homeTeam?.name || '?',
-        awayTeam:   e.awayTeam?.name || '?',
-        homeTeamId: Number(e.homeTeam?.id) || null,
-        awayTeamId: Number(e.awayTeam?.id) || null,
-        homeScore:  hs,
-        awayScore:  as,
+        homeTeam:    e.homeTeam?.name || '?',
+        awayTeam:    e.awayTeam?.name || '?',
+        homeTeamId:  Number(e.homeTeam?.id) || null,
+        awayTeamId:  Number(e.awayTeam?.id) || null,
+        homeScore:   hs,
+        awayScore:   as,
         competition: e.tournament?.name || '',
       };
     });
+    return { matches, balance: { team1Wins, draws, team2Wins } };
+  };
 
-    console.log(`[H2H] Returning ${matches.length} matches`);
+  try {
+    // Stratégie 1 : endpoint H2H direct
+    const r = await fetch(`${SPORT_BASE}/api/v1/event/${eventId}/h2h`, { headers: hdr, signal: AbortSignal.timeout(8000) });
+    console.log(`[H2H] Direct endpoint status: ${r.status}`);
 
-    const data = { matches, totalMatches: matches.length, balance: { team1Wins, draws, team2Wins }, lastUpdated: new Date().toISOString() };
+    if (r.ok) {
+      const json = await r.json();
+      const keys = Object.keys(json).join(', ');
+      const allEvents = json.previousEvents || json.events || [];
+      console.log(`[H2H] Response keys: ${keys} | raw events: ${allEvents.length}`);
+
+      if (allEvents.length > 0) {
+        const refT1Id = team1Id || (allEvents[0] ? allEvents[0].homeTeam?.id : null);
+        const { matches, balance } = buildMatches(allEvents, refT1Id);
+        console.log(`[H2H] Returning ${matches.length} matches (direct)`);
+        const data = { matches, totalMatches: matches.length, balance, lastUpdated: new Date().toISOString() };
+        h2hCache.set(cacheKey, { data, ts: Date.now() });
+        return res.json(data);
+      }
+      console.warn(`[H2H] Direct endpoint returned 200 but no events. Keys: ${keys}`);
+    } else {
+      const errBody = await r.text().catch(() => '');
+      console.warn(`[H2H] Direct endpoint failed: ${r.status} — ${errBody.slice(0, 200)}`);
+    }
+
+    // Stratégie 2 : fallback via derniers matchs de team1 filtrés sur team2
+    if (!team1Id || !team2Id) {
+      console.warn('[H2H] Fallback impossible: team1Id ou team2Id manquant');
+      if (cached) return res.json(cached.data);
+      return res.json(empty);
+    }
+
+    console.log(`[H2H] Fallback: fetching last events for team1Id=${team1Id}`);
+    const r2 = await fetch(`${SPORT_BASE}/api/v1/team/${team1Id}/events/last/0`, { headers: hdr, signal: AbortSignal.timeout(8000) });
+    console.log(`[H2H] Fallback team events status: ${r2.status}`);
+
+    if (!r2.ok) {
+      if (cached) return res.json(cached.data);
+      return res.json(empty);
+    }
+
+    const json2 = await r2.json();
+    const teamEvents = json2.events || [];
+    const h2hEvents = teamEvents.filter(e =>
+      Number(e.homeTeam?.id) === Number(team2Id) || Number(e.awayTeam?.id) === Number(team2Id)
+    );
+    console.log(`[H2H] Fallback: team events total=${teamEvents.length}, vs team2=${h2hEvents.length}`);
+
+    const { matches, balance } = buildMatches(h2hEvents, team1Id);
+    console.log(`[H2H] Returning ${matches.length} matches (fallback)`);
+    const data = { matches, totalMatches: matches.length, balance, lastUpdated: new Date().toISOString() };
     h2hCache.set(cacheKey, { data, ts: Date.now() });
     res.json(data);
+
   } catch (err) {
     console.error('[H2H] ERROR:', err.message);
     if (cached) return res.json(cached.data);

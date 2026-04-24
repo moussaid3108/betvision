@@ -2175,6 +2175,7 @@ async function openAnalysis(id) {
   try {
     const h2hParams = new URLSearchParams({ eventId: currentMatch.id, sport: 'football' });
     if (currentMatch.homeTeamId) h2hParams.set('team1Id', currentMatch.homeTeamId);
+    if (currentMatch.awayTeamId) h2hParams.set('team2Id', currentMatch.awayTeamId);
     const h2hRes = await fetch(`/api/h2h?${h2hParams}`);
     currentMatch.h2h = h2hRes.ok ? await h2hRes.json() : null;
   } catch (e) {
