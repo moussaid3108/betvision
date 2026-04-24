@@ -508,8 +508,8 @@ app.get('/api/compute-stats', async (req, res) => {
 
 // ─── /api/h2h ─────────────────────────────────────────────
 const h2hCache = new Map();
-const H2H_TTL       = 7 * 24 * 3_600_000;
-const H2H_EMPTY_TTL = 10 * 60_000;
+const H2H_TTL      = 7 * 24 * 3_600_000;
+const H2H_EMPTY_TTL = 24 * 3_600_000;
 
 app.get('/api/h2h', async (req, res) => {
   const { eventId, team1Id, team2Id, sport = 'football' } = req.query;
@@ -531,7 +531,7 @@ app.get('/api/h2h', async (req, res) => {
 
   console.log(`[H2H] Fetching eventId=${eventId} team1Id=${team1Id||'?'} team2Id=${team2Id||'?'}`);
 
-  const buildMatches = (allEvents, refT1Id) => {
+  const buildResult = (allEvents, refT1Id) => {
     const events = allEvents
       .filter(e => e.status?.code === 100)
       .sort((a, b) => (b.startTimestamp || 0) - (a.startTimestamp || 0))
@@ -546,70 +546,72 @@ app.get('/api/h2h', async (req, res) => {
       else team2Wins++;
       const d = e.startTimestamp ? new Date(e.startTimestamp * 1000) : null;
       return {
-        date: d ? d.toISOString() : null,
+        date:          d ? d.toISOString() : null,
         dateFormatted: d ? d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Europe/Paris' }) : '',
-        homeTeam:    e.homeTeam?.name || '?',
-        awayTeam:    e.awayTeam?.name || '?',
-        homeTeamId:  Number(e.homeTeam?.id) || null,
-        awayTeamId:  Number(e.awayTeam?.id) || null,
-        homeScore:   hs,
-        awayScore:   as,
-        competition: e.tournament?.name || '',
+        homeTeam:      e.homeTeam?.name || '?',
+        awayTeam:      e.awayTeam?.name || '?',
+        homeTeamId:    Number(e.homeTeam?.id) || null,
+        awayTeamId:    Number(e.awayTeam?.id) || null,
+        homeScore:     hs,
+        awayScore:     as,
+        competition:   e.tournament?.name || '',
       };
     });
     return { matches, balance: { team1Wins, draws, team2Wins } };
   };
 
   try {
-    // Stratégie 1 : endpoint H2H direct
-    const r = await fetch(`${SPORT_BASE}/api/v1/event/${eventId}/h2h`, { headers: hdr, signal: AbortSignal.timeout(8000) });
-    console.log(`[H2H] Direct endpoint status: ${r.status}`);
-
-    if (r.ok) {
-      const json = await r.json();
-      const keys = Object.keys(json).join(', ');
-      const allEvents = json.previousEvents || json.events || [];
-      console.log(`[H2H] Response keys: ${keys} | raw events: ${allEvents.length}`);
-
-      if (allEvents.length > 0) {
-        const refT1Id = team1Id || (allEvents[0] ? allEvents[0].homeTeam?.id : null);
-        const { matches, balance } = buildMatches(allEvents, refT1Id);
-        console.log(`[H2H] Returning ${matches.length} matches (direct)`);
+    // ── Stratégie 1 : endpoint H2H direct ──────────────────
+    const r1 = await fetch(`${SPORT_BASE}/api/v1/event/${eventId}/h2h`, { headers: hdr, signal: AbortSignal.timeout(8000) });
+    if (r1.ok) {
+      const j1 = await r1.json();
+      const ev1 = (j1.previousEvents || j1.events || []).filter(e => e.status?.code === 100);
+      console.log(`[H2H] Strategy 1 returned ${ev1.length} matches`);
+      if (ev1.length >= 5) {
+        const refT1 = team1Id || ev1[0]?.homeTeam?.id;
+        const { matches, balance } = buildResult(ev1, refT1);
+        console.log(`[H2H] Final: returning ${matches.length} matches for eventId ${eventId}`);
         const data = { matches, totalMatches: matches.length, balance, lastUpdated: new Date().toISOString() };
         h2hCache.set(cacheKey, { data, ts: Date.now() });
         return res.json(data);
       }
-      console.warn(`[H2H] Direct endpoint returned 200 but no events. Keys: ${keys}`);
     } else {
-      const errBody = await r.text().catch(() => '');
-      console.warn(`[H2H] Direct endpoint failed: ${r.status} — ${errBody.slice(0, 200)}`);
+      const errText = await r1.text().catch(() => '');
+      console.warn(`[H2H] Strategy 1 failed: ${r1.status} — ${errText.slice(0, 150)}`);
     }
 
-    // Stratégie 2 : fallback via derniers matchs de team1 filtrés sur team2
+    // ── Stratégie 2 : pagination /team/{id}/events/last/{page} ─
     if (!team1Id || !team2Id) {
-      console.warn('[H2H] Fallback impossible: team1Id ou team2Id manquant');
+      console.warn('[H2H] Strategy 2 skipped: team1Id or team2Id missing');
       if (cached) return res.json(cached.data);
       return res.json(empty);
     }
 
-    console.log(`[H2H] Fallback: fetching last events for team1Id=${team1Id}`);
-    const r2 = await fetch(`${SPORT_BASE}/api/v1/team/${team1Id}/events/last/0`, { headers: hdr, signal: AbortSignal.timeout(8000) });
-    console.log(`[H2H] Fallback team events status: ${r2.status}`);
-
-    if (!r2.ok) {
-      if (cached) return res.json(cached.data);
-      return res.json(empty);
+    const accumulated = [];
+    for (let page = 0; page <= 5 && accumulated.length < 5; page++) {
+      let pageEvents = [];
+      try {
+        const r2 = await fetch(`${SPORT_BASE}/api/v1/team/${team1Id}/events/last/${page}`, { headers: hdr, signal: AbortSignal.timeout(5000) });
+        if (r2.ok) {
+          const j2 = await r2.json();
+          pageEvents = j2.events || [];
+        }
+      } catch (pageErr) {
+        console.warn(`[H2H] Strategy 2 page ${page} error: ${pageErr.message}`);
+      }
+      const h2hOnPage = pageEvents.filter(e =>
+        (Number(e.homeTeam?.id) === Number(team2Id) || Number(e.awayTeam?.id) === Number(team2Id)) &&
+        e.status?.code === 100
+      );
+      accumulated.push(...h2hOnPage);
+      console.log(`[H2H] Strategy 2 pagination: page ${page} returned ${pageEvents.length} events, ${h2hOnPage.length} h2h matches, total accumulated ${accumulated.length}`);
+      if (pageEvents.length === 0) break; // plus de données, inutile de paginer
     }
 
-    const json2 = await r2.json();
-    const teamEvents = json2.events || [];
-    const h2hEvents = teamEvents.filter(e =>
-      Number(e.homeTeam?.id) === Number(team2Id) || Number(e.awayTeam?.id) === Number(team2Id)
-    );
-    console.log(`[H2H] Fallback: team events total=${teamEvents.length}, vs team2=${h2hEvents.length}`);
+    const refT1 = team1Id || (accumulated[0]?.homeTeam?.id);
+    const { matches, balance } = buildResult(accumulated, refT1);
+    console.log(`[H2H] Final: returning ${matches.length} matches for eventId ${eventId}`);
 
-    const { matches, balance } = buildMatches(h2hEvents, team1Id);
-    console.log(`[H2H] Returning ${matches.length} matches (fallback)`);
     const data = { matches, totalMatches: matches.length, balance, lastUpdated: new Date().toISOString() };
     h2hCache.set(cacheKey, { data, ts: Date.now() });
     res.json(data);
