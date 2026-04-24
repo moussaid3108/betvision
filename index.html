@@ -2143,10 +2143,18 @@ async function openAnalysis(id) {
 }
 
 function renderAnalysis(m) {
-  const formBlock = (form) => form.map(r => {
-    const cls = r==='W' ? 'form-w' : r==='D' ? 'form-d' : 'form-l';
-    return `<div class="form-dot ${cls}">${r}</div>`;
-  }).join('');
+  const FORM_LABEL = { W: 'V', D: 'N', L: 'D' };
+  const formBlock = (form) => {
+    const slots = Array.from({ length: 5 }, (_, i) => form?.[i] || '?');
+    return slots.map(r => {
+      const cls = r === 'W' ? 'form-w' : r === 'D' ? 'form-d' : r === 'L' ? 'form-l' : 'form-l';
+      const label = FORM_LABEL[r] || r;
+      return `<div class="form-dot ${cls}">${label}</div>`;
+    }).join('');
+  };
+
+  const homeFormData = m.homeForm || m.formHome;
+  const awayFormData = m.awayForm || m.formAway;
 
   const homeWin = m.homeWin ?? 45;
   const drawPct = m.draw    ?? 27;
@@ -2163,12 +2171,12 @@ function renderAnalysis(m) {
       <div class="hero-teams">
         <div class="hero-team">
           <div class="hero-team-name">${m.home}</div>
-          <div class="hero-team-form">${formBlock(m.formHome)}</div>
+          <div class="hero-team-form">${formBlock(homeFormData)}</div>
         </div>
         <div class="hero-vs">VS</div>
         <div class="hero-team" style="text-align:right">
           <div class="hero-team-name">${m.away}</div>
-          <div class="hero-team-form" style="justify-content:flex-end">${formBlock(m.formAway)}</div>
+          <div class="hero-team-form" style="justify-content:flex-end">${formBlock(awayFormData)}</div>
         </div>
       </div>
       <div class="hero-datetime">📅 ${m.date} à ${m.time}${m.venue ? ` · 🏟 ${m.venue}` : ''}</div>
