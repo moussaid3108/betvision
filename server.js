@@ -321,6 +321,38 @@ function mapEventToMatch(e) {
   };
 }
 
+const computeStatsCache = new Map(); // `${competition}` → {data, ts}
+
+app.get('/api/compute-stats', (req, res) => {
+  const { competition } = req.query;
+
+  const cached = computeStatsCache.get(competition || '');
+  if (cached && Date.now() - cached.ts < 3_600_000) return res.json(cached.data);
+
+  // Cherche les λ par nom de ligue (insensible à la casse)
+  const league = Object.values(LEAGUES).find(l =>
+    competition && l.name.toLowerCase() === competition.toLowerCase()
+  );
+  const lH = league?.lH ?? 1.35;
+  const lA = league?.lA ?? 1.05;
+
+  const s = matchScore(lH, lA);
+  const data = {
+    btts:      s.btts,
+    over25:    s.over25,
+    over15:    s.over15 ?? Math.round(Math.min(95, s.over25 * 1.25)),
+    homeWin:   s.homeWin,
+    draw:      s.draw,
+    awayWin:   s.awayWin,
+    confidence: s.confidence,
+    goalsHome: parseFloat(lH.toFixed(2)),
+    goalsAway: parseFloat(lA.toFixed(2)),
+  };
+
+  computeStatsCache.set(competition || '', { data, ts: Date.now() });
+  res.json(data);
+});
+
 app.get('/api/team-logo', async (req, res) => {
   const { id } = req.query;
   if (!id || !/^\d+$/.test(id)) return res.status(400).end();

@@ -2106,7 +2106,7 @@ function renderMatchCard(m) {
 }
 
 // ─── ANALYSE MATCH ───
-function openAnalysis(id) {
+async function openAnalysis(id) {
   const fromLeague = document.getElementById('page-leaguematches').style.display === 'block';
   if (fromLeague) closeLeagueView();
   if (activeMatchId === id) {
@@ -2118,6 +2118,21 @@ function openAnalysis(id) {
   if (!currentMatch) return;
   activeMatchId = id;
   previousView = fromLeague ? 'leaguematches' : 'paddock';
+
+  // Si les stats sont à 0 (match ouvert depuis vue ligue), on les recalcule
+  if (currentMatch.btts === 0 || currentMatch.btts === undefined) {
+    try {
+      const res = await fetch(`/api/compute-stats?competition=${encodeURIComponent(currentMatch.competition || '')}`);
+      if (res.ok) {
+        const stats = await res.json();
+        Object.assign(currentMatch, stats);
+        loadedMatchesMap[currentMatch.id] = currentMatch;
+      }
+    } catch (e) {
+      console.warn('Stats recompute failed, using defaults', e);
+    }
+  }
+
   renderAnalysis(currentMatch);
   showPage('analysis');
   document.getElementById('nav-paddock').classList.add('active');
