@@ -2122,7 +2122,11 @@ async function openAnalysis(id) {
   // Si les stats sont à 0 (match ouvert depuis vue ligue), on les recalcule
   if (currentMatch.btts === 0 || currentMatch.btts === undefined) {
     try {
-      const res = await fetch(`/api/compute-stats?competition=${encodeURIComponent(currentMatch.competition || '')}`);
+      const params = new URLSearchParams({ competition: currentMatch.competition || '' });
+      if (currentMatch.id)          params.set('matchId',    currentMatch.id);
+      if (currentMatch.homeTeamId)  params.set('homeTeamId', currentMatch.homeTeamId);
+      if (currentMatch.awayTeamId)  params.set('awayTeamId', currentMatch.awayTeamId);
+      const res = await fetch(`/api/compute-stats?${params}`);
       if (res.ok) {
         const stats = await res.json();
         Object.assign(currentMatch, stats);

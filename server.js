@@ -306,18 +306,20 @@ function mapEventStatus(type) {
 function mapEventToMatch(e) {
   const d = e.startTimestamp ? new Date(e.startTimestamp * 1000) : null;
   return {
-    id:        e.id,
-    homeTeam:  e.homeTeam?.name || '?',
-    awayTeam:  e.awayTeam?.name || '?',
-    homeLogo:  e.homeTeam?.id ? `https://api.sofascore.app/api/v1/team/${e.homeTeam.id}/image` : null,
-    awayLogo:  e.awayTeam?.id ? `https://api.sofascore.app/api/v1/team/${e.awayTeam.id}/image` : null,
-    startTime: d ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }) : '--:--',
-    startDate: d ? d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'Europe/Paris' }) : 'TBD',
-    status:    mapEventStatus(e.status?.type),
-    score:     (e.homeScore?.current != null && e.awayScore?.current != null)
-                 ? { home: e.homeScore.current, away: e.awayScore.current }
-                 : null,
-    tournament: e.tournament?.name || '',
+    id:          e.id,
+    homeTeam:    e.homeTeam?.name || '?',
+    awayTeam:    e.awayTeam?.name || '?',
+    homeTeamId:  e.homeTeam?.id || null,
+    awayTeamId:  e.awayTeam?.id || null,
+    homeLogo:    e.homeTeam?.id ? `https://api.sofascore.app/api/v1/team/${e.homeTeam.id}/image` : null,
+    awayLogo:    e.awayTeam?.id ? `https://api.sofascore.app/api/v1/team/${e.awayTeam.id}/image` : null,
+    startTime:   d ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }) : '--:--',
+    startDate:   d ? d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'Europe/Paris' }) : 'TBD',
+    status:      mapEventStatus(e.status?.type),
+    score:       (e.homeScore?.current != null && e.awayScore?.current != null)
+                   ? { home: e.homeScore.current, away: e.awayScore.current }
+                   : null,
+    tournament:  e.tournament?.name || '',
   };
 }
 
@@ -440,33 +442,67 @@ app.get('/api/team-stats', async (req, res) => {
   }
 });
 
-app.get('/api/compute-stats', (req, res) => {
-  const { competition } = req.query;
+const COMPUTE_STATS_TTL = 6 * 3_600_000; // 6h
+const LIGUE_AVG_GOALS_CONCEDED = 1.2;
 
-  const cached = computeStatsCache.get(competition || '');
-  if (cached && Date.now() - cached.ts < 3_600_000) return res.json(cached.data);
+app.get('/api/compute-stats', async (req, res) => {
+  const { competition, matchId, homeTeamId, awayTeamId } = req.query;
 
-  // Cherche les λ par nom de ligue (insensible à la casse)
-  const league = Object.values(LEAGUES).find(l =>
-    competition && l.name.toLowerCase() === competition.toLowerCase()
-  );
-  const lH = league?.lH ?? 1.35;
-  const lA = league?.lA ?? 1.05;
+  const cacheKey = matchId ? `match:${matchId}` : `league:${competition || ''}`;
+  const cached = computeStatsCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < COMPUTE_STATS_TTL) return res.json(cached.data);
+
+  const KEY = process.env.RAPIDAPI_KEY;
+  let lH, lA, lambdaSource, homeForm, awayForm;
+
+  if (homeTeamId && awayTeamId && KEY) {
+    try {
+      const [homeStats, awayStats] = await Promise.all([
+        getTeamStats('football', homeTeamId, KEY),
+        getTeamStats('football', awayTeamId, KEY),
+      ]);
+
+      const hScored  = homeStats.seasonStats.goalsScoredHomeAvg  ?? homeStats.seasonStats.goalsScoredAvg;
+      const aConceded = awayStats.seasonStats.goalsConcededAwayAvg ?? awayStats.seasonStats.goalsConcededAvg;
+      const aScored  = awayStats.seasonStats.goalsScoredAwayAvg  ?? awayStats.seasonStats.goalsScoredAvg;
+      const hConceded = homeStats.seasonStats.goalsConcededHomeAvg ?? homeStats.seasonStats.goalsConcededAvg;
+
+      lH = Math.max(0.3, parseFloat((hScored  * (aConceded / LIGUE_AVG_GOALS_CONCEDED)).toFixed(3)));
+      lA = Math.max(0.3, parseFloat((aScored  * (hConceded / LIGUE_AVG_GOALS_CONCEDED)).toFixed(3)));
+      lambdaSource = 'team-based';
+      homeForm = homeStats.form;
+      awayForm = awayStats.form;
+    } catch (err) {
+      console.warn('[compute-stats] team-stats fallback:', err.message);
+      // fall through to league default
+    }
+  }
+
+  if (!lambdaSource) {
+    const league = Object.values(LEAGUES).find(l =>
+      competition && l.name.toLowerCase() === competition.toLowerCase()
+    );
+    lH = league?.lH ?? 1.35;
+    lA = league?.lA ?? 1.05;
+    lambdaSource = 'league-default';
+  }
 
   const s = matchScore(lH, lA);
   const data = {
-    btts:      s.btts,
-    over25:    s.over25,
-    over15:    s.over15 ?? Math.round(Math.min(95, s.over25 * 1.25)),
-    homeWin:   s.homeWin,
-    draw:      s.draw,
-    awayWin:   s.awayWin,
-    confidence: s.confidence,
-    goalsHome: parseFloat(lH.toFixed(2)),
-    goalsAway: parseFloat(lA.toFixed(2)),
+    btts:         s.btts,
+    over25:       s.over25,
+    over15:       s.over15 ?? Math.round(Math.min(95, s.over25 * 1.25)),
+    homeWin:      s.homeWin,
+    draw:         s.draw,
+    awayWin:      s.awayWin,
+    confidence:   s.confidence,
+    goalsHome:    parseFloat(lH.toFixed(2)),
+    goalsAway:    parseFloat(lA.toFixed(2)),
+    lambdaSource,
+    ...(homeForm !== undefined && { homeForm, awayForm }),
   };
 
-  computeStatsCache.set(competition || '', { data, ts: Date.now() });
+  computeStatsCache.set(cacheKey, { data, ts: Date.now() });
   res.json(data);
 });
 
