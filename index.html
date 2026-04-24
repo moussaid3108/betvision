@@ -3000,6 +3000,8 @@ function renderLeagueMatches(matches, journee, tournamentName) {
       loadedMatchesMap[m.id] = {
         id: m.id,
         home: m.homeTeam, away: m.awayTeam,
+        homeTeamId: m.homeTeamId || null,
+        awayTeamId: m.awayTeamId || null,
         competition: m.tournament,
         date: m.startDate, time: m.startTime,
         formHome: ['?','?','?','?','?'], formAway: ['?','?','?','?','?'],

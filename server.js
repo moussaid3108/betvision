@@ -502,7 +502,7 @@ app.get('/api/compute-stats', async (req, res) => {
     ...(homeForm !== undefined && { homeForm, awayForm }),
   };
 
-  computeStatsCache.set(cacheKey, { data, ts: Date.now() });
+  if (lambdaSource === 'team-based') computeStatsCache.set(cacheKey, { data, ts: Date.now() });
   res.json(data);
 });
 
@@ -636,6 +636,7 @@ app.get('*', (_req, res) => {
 
 // ─── Démarrage ────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
+computeStatsCache.clear();
 app.listen(PORT, () => {
   console.log(`BetVision AI démarré sur le port ${PORT}`);
 });
