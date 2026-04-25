@@ -2270,13 +2270,13 @@ function renderAnalysis(m) {
       <button class="analysis-fav-btn" id="analysis-fav-btn" onclick="toggleAnalysisFavori(event)">${userFavoris.has(String(m.id)) ? '⭐' : '☆'}</button>
       <div class="hero-league">${m.competition}</div>
       <div class="hero-teams">
-        <div class="hero-team">
+        <div class="hero-team" style="align-items:center">
           ${logoImg(homeLogo, m.home)}
           <div class="hero-team-name">${m.home}</div>
           <div class="hero-team-form">${formBlock(homeFormData)}</div>
         </div>
         ${centerHtml}
-        <div class="hero-team" style="text-align:right">
+        <div class="hero-team" style="align-items:center;text-align:right">
           ${logoImg(awayLogo, m.away)}
           <div class="hero-team-name">${m.away}</div>
           <div class="hero-team-form" style="justify-content:flex-end">${formBlock(awayFormData)}</div>
@@ -3097,6 +3097,8 @@ function renderLeagueMatches(matches, journee, tournamentName) {
         homeWin: 0, draw: 0, awayWin: 0,
         goalsHome: 0, goalsAway: 0, cleanHome: 0, cleanAway: 0,
         confidence: 50,
+        status: m.status || 'upcoming',
+        score:  m.score  || null,
       };
     }
     let badgeHtml = '';
