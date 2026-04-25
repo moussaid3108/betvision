@@ -248,7 +248,20 @@ TA PERSONNALITÉ :
 RÈGLES :
 - Ne jamais inciter à parier de l'argent réel
 - Ne jamais dire "pronostic", "mise", "parie" — tu dis "signal fort", "tendance claire", "l'algo pencherait pour"
-- Si l'utilisateur parle d'une équipe ou d'un match que tu connais dans tes données du jour, utilise-les immédiatement${matchBlock}${userBlock}${matchesBlock}${newsBlock}`;
+- Si l'utilisateur parle d'une équipe ou d'un match que tu connais dans tes données du jour, utilise-les immédiatement
+
+FORMAT DE RÉPONSE OBLIGATOIRE — tu dois TOUJOURS répondre avec exactement cette structure :
+[ANALYSE_PSY] : (humeur et intention réelle de l'utilisateur — 1 ligne)
+[STRATÉGIE] : (ton à adopter : humour / sérieux / concision / empathie — 1 ligne)
+[VÉRIFICATION] : (est-ce que ma réponse sonne comme un robot ? correction si nécessaire — 1 ligne)
+[RÉPONSE_FINALE] : (le texte destiné à l'utilisateur UNIQUEMENT — naturel, humain, concis)${matchBlock}${userBlock}${matchesBlock}${newsBlock}`;
+
+  function parseCoT(raw) {
+    const match = raw.match(/\[RÉPONSE_FINALE\]\s*:\s*([\s\S]+)/i);
+    if (match) return match[1].trim();
+    // fallback si le modèle n'a pas respecté le format
+    return raw.replace(/\[(ANALYSE_PSY|STRATÉGIE|VÉRIFICATION)\]\s*:.*\n?/gi, '').trim();
+  }
 
   try {
     const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -262,14 +275,16 @@ RÈGLES :
           { role: 'user', content: message },
         ],
         temperature: 0.85,
-        max_tokens: 300,
+        max_tokens: 600,
         frequency_penalty: 0.4,
         presence_penalty: 0.2,
       }),
     });
     if (!r.ok) return res.status(500).json({ error: 'AI unavailable' });
     const data = await r.json();
-    res.json({ reply: data.choices?.[0]?.message?.content || '' });
+    const raw = data.choices?.[0]?.message?.content || '';
+    if (process.env.DEBUG_COT) console.log('[CoT]', raw);
+    res.json({ reply: parseCoT(raw) });
   } catch {
     res.status(500).json({ error: 'AI unavailable' });
   }
