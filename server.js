@@ -229,7 +229,8 @@ app.post('/api/ai-chat', async (req, res) => {
       context.news.slice(0, 5).map(a => `• [${a.source}] ${a.title}`).join('\n');
   }
 
-  const systemPrompt = `Tu es Alex, le mentor sportif de BetVision AI. Tu es humain, direct, passionné de sport et tu parles comme un ami qui s'y connaît vraiment.
+  const aiName = context.aiName || 'Alex';
+  const systemPrompt = `Tu es ${aiName}, le mentor sportif de BetVision AI. Tu es humain, direct, passionné de sport et tu parles comme un ami qui s'y connaît vraiment.
 
 TON STYLE :
 - Tutoiement systématique, langage naturel et décontracté

@@ -2677,12 +2677,30 @@ async function checkPronoResults() {
 }
 
 // ─── IA CHAT ───
+let waitingForAiName = false;
+
+function getAiName() {
+  return localStorage.getItem('bv_ai_name_' + (currentUser?.id || 'guest')) || null;
+}
+function saveAiName(name) {
+  localStorage.setItem('bv_ai_name_' + (currentUser?.id || 'guest'), name);
+}
+
 async function sendMessage() {
   const input = document.getElementById('chat-input');
   const msg = input.value.trim();
   if (!msg) return;
   input.value = '';
   input.style.height = 'auto';
+
+  if (waitingForAiName) {
+    waitingForAiName = false;
+    saveAiName(msg);
+    appendMessage('user', msg);
+    appendMessage('ai', `Parfait ! Je m'appelle ${msg} 😊 Ravi de te rejoindre sur BetVision. Alors, t'es plutôt foot, basket, tennis ? Dis-moi sur quoi tu veux qu'on travaille ensemble.`);
+    return;
+  }
+
   appendMessage('user', msg);
   await callAI(msg);
 }
@@ -2703,10 +2721,21 @@ function loadChatHistory() {
   try {
     const key = 'bv_chat_' + (currentUser?.id || 'guest');
     const saved = JSON.parse(localStorage.getItem(key) || '[]');
-    if (!saved.length) return;
-    chatHistory = saved;
     const box = document.getElementById('chat-box');
     if (!box) return;
+    if (!saved.length) {
+      const aiName = getAiName();
+      if (!aiName) {
+        waitingForAiName = true;
+        box.innerHTML = '';
+        const div = document.createElement('div');
+        div.className = 'chat-msg ai';
+        div.textContent = "Salut ! 👋 Avant qu'on commence, j'aimerais que tu me donnes un prénom — homme ou femme, c'est toi qui choisis. Je serai ton assistant perso sur BetVision. Alors, tu m'appelles comment ?";
+        box.appendChild(div);
+      }
+      return;
+    }
+    chatHistory = saved;
     box.innerHTML = '';
     saved.forEach(h => {
       const div = document.createElement('div');
@@ -2747,7 +2776,7 @@ async function callAI(userMsg) {
       body: JSON.stringify({
         message: userMsg,
         history: chatHistory.slice(-50).map(h => ({ role: h.role, content: h.content })),
-        context: { matches: todayMatchesCache, news: todayNewsCache, user: userProfileCache, match: currentMatch || null },
+        context: { matches: todayMatchesCache, news: todayNewsCache, user: userProfileCache, match: currentMatch || null, aiName: getAiName() },
       }),
     });
 
