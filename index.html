@@ -1726,6 +1726,7 @@ let previousView     = 'paddock';
 let chatHistory   = [];
 let loadedMatchesMap = {};
 let todayMatchesCache = [];
+let todayNewsCache = [];
 
 
 // ─── NAVIGATION ───
@@ -1934,6 +1935,7 @@ async function buildNewsSlider() {
   try {
     const data = await fetch('/api/news').then(r => r.json());
     if (Array.isArray(data) && data.length) {
+      todayNewsCache = data.map(a => ({ source: a.source || 'Football', title: a.title || '' }));
       items = data.map(a => ({
         source: a.source || 'Football',
         title:  a.title  || '',
@@ -2716,7 +2718,7 @@ async function callAI(userMsg) {
       body: JSON.stringify({
         message: userMsg,
         history: chatHistory.slice(-8).map(h => ({ role: h.role, content: h.content })),
-        context: { matches: todayMatchesCache },
+        context: { matches: todayMatchesCache, news: todayNewsCache },
       }),
     });
 
