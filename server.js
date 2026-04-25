@@ -57,6 +57,8 @@ const LEAGUES = {
   7:   { name: 'Champions League', lH: 1.25, lA: 1.00 },
 };
 
+const LEAGUE_PRIORITY = { 17: 1, 23: 2, 8: 3, 35: 4, 34: 5 }; // PL, SerieA, LaLiga, Bundesliga, L1
+
 app.get('/api/today', async (req, res) => {
   const KEY = process.env.RAPIDAPI_KEY;
   if (!KEY) return res.status(500).json({ error: 'RAPIDAPI_KEY not configured', matches: [] });
@@ -77,22 +79,38 @@ app.get('/api/today', async (req, res) => {
       const tid    = e.tournament?.uniqueTournament?.id;
       const league = LEAGUES[tid] || { name: e.tournament?.name || 'Ligue', lH: 1.35, lA: 1.05 };
       const { lH, lA } = league;
-      const stats  = matchScore(lH, lA);
-      const d      = e.startTimestamp ? new Date(e.startTimestamp * 1000) : null;
+      const d = e.startTimestamp ? new Date(e.startTimestamp * 1000) : null;
+
+      // Réutilise le cache compute-stats si disponible, sinon calcule avec λ ligue
+      const cached = computeStatsCache.get(`match:${e.id || idx}`);
+      const stats  = cached ? cached.data : matchScore(lH, lA);
+
       return {
         id:          e.id || idx,
         home:        e.homeTeam?.name || '?',
         away:        e.awayTeam?.name || '?',
+        homeTeamId:  e.homeTeam?.id || null,
+        awayTeamId:  e.awayTeam?.id || null,
         competition: league.name,
         time:        d ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }) : '--:--',
         date:        d ? d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'Europe/Paris' }) : "Aujourd'hui",
-        ...stats,
-        goalsHome: +lH.toFixed(1), goalsAway: +lA.toFixed(1),
+        btts:        stats.btts        ?? null,
+        over25:      stats.over25      ?? null,
+        over15:      stats.over15      ?? null,
+        homeWin:     stats.homeWin     ?? null,
+        draw:        stats.draw        ?? null,
+        awayWin:     stats.awayWin     ?? null,
+        confidence:  stats.confidence  ?? null,
+        goalsHome:   stats.goalsHome   ?? +lH.toFixed(1),
+        goalsAway:   stats.goalsAway   ?? +lA.toFixed(1),
+        lambdaSource: cached ? cached.data.lambdaSource : 'league-default',
         formHome: ['?','?','?','?','?'], formAway: ['?','?','?','?','?'],
-        btts:   Math.min(90, Math.max(20, stats.btts)),
-        over25: Math.min(90, Math.max(15, stats.over25)),
+        _leaguePrio: LEAGUE_PRIORITY[tid] || 99,
       };
-    }).sort((a, b) => (b.btts + b.over25) - (a.btts + a.over25));
+    }).sort((a, b) => {
+      if (a._leaguePrio !== b._leaguePrio) return a._leaguePrio - b._leaguePrio;
+      return ((b.btts || 0) + (b.over25 || 0)) - ((a.btts || 0) + (a.over25 || 0));
+    }).map(({ _leaguePrio, ...m }) => m);
 
     res.json({ matches: matches.slice(0, 10) });
   } catch (e) {

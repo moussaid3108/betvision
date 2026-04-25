@@ -2002,7 +2002,7 @@ async function renderTopMatches() {
         <div class="top-match-info">
           <div class="top-match-teams">${m.home} vs ${m.away}</div>
           <div class="top-match-meta">${m.competition} · ${m.date} · ${m.time}</div>
-          <div class="top-match-meta">BTTS ${m.btts}% · Over 2.5 ${m.over25}% · Conf. ${m.confidence}%</div>
+          <div class="top-match-meta">BTTS ${m.btts != null ? m.btts + '%' : '—'} · Over 2.5 ${m.over25 != null ? m.over25 + '%' : '—'} · Conf. ${m.confidence != null ? m.confidence + '%' : '—'}</div>
         </div>
         <div class="top-match-right" style="flex-direction:column;align-items:flex-end;gap:6px;">
           <span class="badge-conf" style="background:#00b377;animation:none;">🎁 GRATUIT</span>
