@@ -1699,7 +1699,7 @@
   <button class="nav-item active" id="nav-paddock" onclick="showPage('paddock');initPaddock()">
     <span class="nav-icon"><img src="/icon-paddock.png?v=2" alt="Paddock"></span>Paddock
   </button>
-  <button class="nav-item" id="nav-ia" onclick="showPage('ia');loadChatHistory()">
+  <button class="nav-item" id="nav-ia" onclick="showPage('ia');loadChatHistory();checkGardienDuTemps()">
     <span class="nav-icon"><img src="/icon-ia.png?v=2" alt="IA"></span>IA
   </button>
 <button class="nav-item" id="nav-dashboard" onclick="showPage('dashboard');loadDashboard()">
@@ -2708,6 +2708,34 @@ async function sendMessage() {
 function sendQuick(q) {
   document.getElementById('chat-input').value = q;
   sendMessage();
+}
+
+// ─── GARDIEN DU TEMPS (Skill 3) ───
+async function checkGardienDuTemps() {
+  const mem = getMemory();
+  if (!mem.lastMessageAt) return;
+  const elapsed = Date.now() - mem.lastMessageAt;
+  if (elapsed < 2 * 60 * 60 * 1000) return; // moins de 2h → rien
+  const lastTopic = chatHistory.slice(-6).filter(h => h.role === 'user').pop()?.content || null;
+  if (!lastTopic) return;
+  try {
+    const res = await fetch('/api/ai-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: `[RELANCE_INTERNE] L'utilisateur revient après ${Math.round(elapsed/3600000)}h. Dernier sujet abordé : "${lastTopic}". Génère UNE phrase de relance naturelle, courte, comme si tu reprenais une conversation avec un ami. Pas de "Bonjour", pas de "Comment puis-je". Juste la relance.`,
+        history: [],
+        context: { aiName: getAiName(), memory: formatMemoryBlock() },
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.reply) {
+        setTimeout(() => appendMessage('ai', data.reply), 800);
+        const m = getMemory(); m.lastMessageAt = Date.now(); saveMemory(m);
+      }
+    }
+  } catch {}
 }
 
 // ─── MÉMOIRE LONG TERME (Le Journaliste) ───
