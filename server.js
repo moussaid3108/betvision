@@ -208,6 +208,13 @@ app.post('/api/ai-chat', async (req, res) => {
       ).join('\n');
   }
 
+  // Bloc profil utilisateur
+  let userBlock = '';
+  if (context.user) {
+    const u = context.user;
+    userBlock = `\n\n👤 PROFIL UTILISATEUR :\n• ${u.total} analyse(s) enregistrée(s) | ${u.won} réussies | ${u.pending} en cours | Taux de réussite : ${u.rate}%`;
+  }
+
   // Bloc actualités
   let newsBlock = '';
   if (context.news?.length) {
@@ -215,7 +222,7 @@ app.post('/api/ai-chat', async (req, res) => {
       context.news.slice(0, 5).map(a => `• [${a.source}] ${a.title}`).join('\n');
   }
 
-  const systemPrompt = `Tu es BetVision AI, assistant d'analyse statistique multi-sport. Tu couvres : football, basketball (NBA), tennis, Formule 1, rugby, baseball (MLB), hockey (NHL) et MMA.\n\nUtilise uniquement ces termes : 'analyse statistique', 'algorithme prédictif', 'outil d'aide à la décision', 'tendances', 'indicateurs de performance'. N'utilise JAMAIS : 'pronos', 'paris', 'parier', 'pronostic' (au sens parieur), 'mise'.\n\nRéponds en français, de manière concise (3-4 phrases max sauf si l'utilisateur demande une analyse détaillée). Adapte le vocabulaire technique au sport évoqué.${matchesBlock}${newsBlock}`;
+  const systemPrompt = `Tu es BetVision AI, assistant d'analyse statistique multi-sport. Tu couvres : football, basketball (NBA), tennis, Formule 1, rugby, baseball (MLB), hockey (NHL) et MMA.\n\nUtilise uniquement ces termes : 'analyse statistique', 'algorithme prédictif', 'outil d'aide à la décision', 'tendances', 'indicateurs de performance'. N'utilise JAMAIS : 'pronos', 'paris', 'parier', 'pronostic' (au sens parieur), 'mise'.\n\nRéponds en français, de manière concise (3-4 phrases max sauf si l'utilisateur demande une analyse détaillée). Adapte le vocabulaire technique au sport évoqué.${userBlock}${matchesBlock}${newsBlock}`;
 
   try {
     const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {

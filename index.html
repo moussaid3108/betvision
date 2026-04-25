@@ -1727,6 +1727,7 @@ let chatHistory   = [];
 let loadedMatchesMap = {};
 let todayMatchesCache = [];
 let todayNewsCache = [];
+let userProfileCache = null;
 
 
 // ─── NAVIGATION ───
@@ -2056,6 +2057,7 @@ async function renderPaddockStats() {
   const won       = data.filter(p => p.status === 'gagne').length;
   const pending   = data.filter(p => p.status === 'en_cours').length;
   const rate      = validated.length ? Math.round(won / validated.length * 100) : 0;
+  userProfileCache = { total: data.length, won, pending, rate };
 
   const { data: last } = await supabaseClient
     .from('pronostics').select('status,home_team,away_team')
@@ -2718,7 +2720,7 @@ async function callAI(userMsg) {
       body: JSON.stringify({
         message: userMsg,
         history: chatHistory.slice(-8).map(h => ({ role: h.role, content: h.content })),
-        context: { matches: todayMatchesCache, news: todayNewsCache },
+        context: { matches: todayMatchesCache, news: todayNewsCache, user: userProfileCache },
       }),
     });
 
