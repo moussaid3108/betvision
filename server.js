@@ -208,6 +208,13 @@ app.post('/api/ai-chat', async (req, res) => {
       ).join('\n');
   }
 
+  // Bloc match en cours d'analyse
+  let matchBlock = '';
+  if (context.match) {
+    const m = context.match;
+    matchBlock = `\n\n🔍 MATCH EN COURS D'ANALYSE :\n${m.home} vs ${m.away} (${m.competition} — ${m.date} ${m.time}) | Victoire dom. ${m.homeWin}% | Nul ${m.draw}% | Victoire ext. ${m.awayWin}% | BTTS ${m.btts}% | Over 2.5 ${m.over25}% | Signal ${m.confidence}% | λ dom. ${m.goalsHome} | λ ext. ${m.goalsAway}${m.score ? ` | Score : ${m.score.home}-${m.score.away}` : ''}`;
+  }
+
   // Bloc profil utilisateur
   let userBlock = '';
   if (context.user) {
@@ -222,7 +229,7 @@ app.post('/api/ai-chat', async (req, res) => {
       context.news.slice(0, 5).map(a => `• [${a.source}] ${a.title}`).join('\n');
   }
 
-  const systemPrompt = `Tu es BetVision AI, assistant d'analyse statistique multi-sport. Tu couvres : football, basketball (NBA), tennis, Formule 1, rugby, baseball (MLB), hockey (NHL) et MMA.\n\nUtilise uniquement ces termes : 'analyse statistique', 'algorithme prédictif', 'outil d'aide à la décision', 'tendances', 'indicateurs de performance'. N'utilise JAMAIS : 'pronos', 'paris', 'parier', 'pronostic' (au sens parieur), 'mise'.\n\nRéponds en français, de manière concise (3-4 phrases max sauf si l'utilisateur demande une analyse détaillée). Adapte le vocabulaire technique au sport évoqué.${userBlock}${matchesBlock}${newsBlock}`;
+  const systemPrompt = `Tu es BetVision AI, assistant d'analyse statistique multi-sport. Tu couvres : football, basketball (NBA), tennis, Formule 1, rugby, baseball (MLB), hockey (NHL) et MMA.\n\nUtilise uniquement ces termes : 'analyse statistique', 'algorithme prédictif', 'outil d'aide à la décision', 'tendances', 'indicateurs de performance'. N'utilise JAMAIS : 'pronos', 'paris', 'parier', 'pronostic' (au sens parieur), 'mise'.\n\nRéponds en français, de manière concise (3-4 phrases max sauf si l'utilisateur demande une analyse détaillée). Adapte le vocabulaire technique au sport évoqué.${matchBlock}${userBlock}${matchesBlock}${newsBlock}`;
 
   try {
     const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {

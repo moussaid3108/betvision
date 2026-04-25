@@ -2720,7 +2720,7 @@ async function callAI(userMsg) {
       body: JSON.stringify({
         message: userMsg,
         history: chatHistory.slice(-8).map(h => ({ role: h.role, content: h.content })),
-        context: { matches: todayMatchesCache, news: todayNewsCache, user: userProfileCache },
+        context: { matches: todayMatchesCache, news: todayNewsCache, user: userProfileCache, match: currentMatch || null },
       }),
     });
 
