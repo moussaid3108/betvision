@@ -75,37 +75,77 @@ app.get('/api/today', async (req, res) => {
 
     if (!events.length) return res.json({ matches: [] });
 
+    // Calcul stats en parallèle pour chaque match (cache teamStats 12h)
+    const statsResults = await Promise.allSettled(events.map(async (e, idx) => {
+      const cacheKey = `match:${e.id || idx}`;
+      const cached = computeStatsCache.get(cacheKey);
+      if (cached) return { id: e.id || idx, stats: cached.data, source: cached.data.lambdaSource };
+
+      const tid    = e.tournament?.uniqueTournament?.id;
+      const league = LEAGUES[tid] || { lH: 1.35, lA: 1.05 };
+      const hId = e.homeTeam?.id, aId = e.awayTeam?.id;
+
+      if (hId && aId) {
+        try {
+          const [hS, aS] = await Promise.all([
+            getTeamStats('football', hId, KEY),
+            getTeamStats('football', aId, KEY),
+          ]);
+          const hSS = hS.seasonStats, aSS = aS.seasonStats;
+          const hScored   = (hSS.goalsScoredHomeAvg  > 0.3 && hSS.homeGamesCount >= 2) ? hSS.goalsScoredHomeAvg  : hSS.goalsScoredAvg;
+          const aConceded = (aSS.goalsConcededAwayAvg > 0.3 && aSS.awayGamesCount >= 2) ? aSS.goalsConcededAwayAvg : aSS.goalsConcededAvg;
+          const aScored   = (aSS.goalsScoredAwayAvg  > 0.3 && aSS.awayGamesCount >= 2) ? aSS.goalsScoredAwayAvg  : aSS.goalsScoredAvg;
+          const hConceded = (hSS.goalsConcededHomeAvg > 0.3 && hSS.homeGamesCount >= 2) ? hSS.goalsConcededHomeAvg : hSS.goalsConcededAvg;
+          const lH = Math.max(0.5, parseFloat((hScored  * (aConceded / LIGUE_AVG_GOALS_CONCEDED)).toFixed(3)));
+          const lA = Math.max(0.5, parseFloat((aScored  * (hConceded / LIGUE_AVG_GOALS_CONCEDED)).toFixed(3)));
+          const s  = matchScore(lH, lA);
+          const statsData = { ...s, goalsHome: parseFloat(lH.toFixed(2)), goalsAway: parseFloat(lA.toFixed(2)), lambdaSource: 'team-based',
+            over15: s.over15 ?? Math.round(Math.min(95, s.over25 * 1.25)),
+            homeForm: hS.form, awayForm: aS.form };
+          computeStatsCache.set(cacheKey, { data: statsData, ts: Date.now() });
+          return { id: e.id || idx, stats: statsData, source: 'team-based' };
+        } catch {}
+      }
+
+      // Fallback λ ligue
+      const s = matchScore(league.lH, league.lA);
+      return { id: e.id || idx, stats: { ...s, goalsHome: +league.lH.toFixed(1), goalsAway: +league.lA.toFixed(1),
+        over15: s.over15 ?? Math.round(Math.min(95, s.over25 * 1.25)), lambdaSource: 'league-default' }, source: 'league-default' };
+    }));
+
+    const statsMap = {};
+    statsResults.forEach(r => { if (r.status === 'fulfilled') statsMap[r.value.id] = r.value; });
+
     const matches = events.map((e, idx) => {
       const tid    = e.tournament?.uniqueTournament?.id;
       const league = LEAGUES[tid] || { name: e.tournament?.name || 'Ligue', lH: 1.35, lA: 1.05 };
-      const { lH, lA } = league;
-      const d = e.startTimestamp ? new Date(e.startTimestamp * 1000) : null;
-
-      // Réutilise le cache compute-stats si disponible, sinon calcule avec λ ligue
-      const cached = computeStatsCache.get(`match:${e.id || idx}`);
-      const stats  = cached ? cached.data : matchScore(lH, lA);
-
+      const d      = e.startTimestamp ? new Date(e.startTimestamp * 1000) : null;
+      const sr     = statsMap[e.id || idx];
+      const stats  = sr?.stats || matchScore(league.lH, league.lA);
       return {
-        id:          e.id || idx,
-        home:        e.homeTeam?.name || '?',
-        away:        e.awayTeam?.name || '?',
-        homeTeamId:  e.homeTeam?.id || null,
-        awayTeamId:  e.awayTeam?.id || null,
-        competition: league.name,
-        time:        d ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }) : '--:--',
-        date:        d ? d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'Europe/Paris' }) : "Aujourd'hui",
-        btts:        stats.btts        ?? null,
-        over25:      stats.over25      ?? null,
-        over15:      stats.over15      ?? null,
-        homeWin:     stats.homeWin     ?? null,
-        draw:        stats.draw        ?? null,
-        awayWin:     stats.awayWin     ?? null,
-        confidence:  stats.confidence  ?? null,
-        goalsHome:   stats.goalsHome   ?? +lH.toFixed(1),
-        goalsAway:   stats.goalsAway   ?? +lA.toFixed(1),
-        lambdaSource: cached ? cached.data.lambdaSource : 'league-default',
-        formHome: ['?','?','?','?','?'], formAway: ['?','?','?','?','?'],
-        _leaguePrio: LEAGUE_PRIORITY[tid] || 99,
+        id:           e.id || idx,
+        home:         e.homeTeam?.name || '?',
+        away:         e.awayTeam?.name || '?',
+        homeTeamId:   e.homeTeam?.id || null,
+        awayTeamId:   e.awayTeam?.id || null,
+        competition:  league.name,
+        time:         d ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }) : '--:--',
+        date:         d ? d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'Europe/Paris' }) : "Aujourd'hui",
+        btts:         stats.btts        ?? null,
+        over25:       stats.over25      ?? null,
+        over15:       stats.over15      ?? null,
+        homeWin:      stats.homeWin     ?? null,
+        draw:         stats.draw        ?? null,
+        awayWin:      stats.awayWin     ?? null,
+        confidence:   stats.confidence  ?? null,
+        goalsHome:    stats.goalsHome   ?? +league.lH.toFixed(1),
+        goalsAway:    stats.goalsAway   ?? +league.lA.toFixed(1),
+        lambdaSource: sr?.source || 'league-default',
+        homeForm:     stats.homeForm || ['?','?','?','?','?'],
+        awayForm:     stats.awayForm || ['?','?','?','?','?'],
+        formHome:     stats.homeForm || ['?','?','?','?','?'],
+        formAway:     stats.awayForm || ['?','?','?','?','?'],
+        _leaguePrio:  LEAGUE_PRIORITY[tid] || 99,
       };
     }).sort((a, b) => {
       if (a._leaguePrio !== b._leaguePrio) return a._leaguePrio - b._leaguePrio;
