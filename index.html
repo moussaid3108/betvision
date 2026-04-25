@@ -1699,7 +1699,7 @@
   <button class="nav-item active" id="nav-paddock" onclick="showPage('paddock');initPaddock()">
     <span class="nav-icon"><img src="/icon-paddock.png?v=2" alt="Paddock"></span>Paddock
   </button>
-  <button class="nav-item" id="nav-ia" onclick="showPage('ia');loadChatHistory();checkGardienDuTemps()">
+  <button class="nav-item" id="nav-ia" onclick="showPage('ia');loadChatHistory();checkGardienDuTemps();checkMatchEngagement()">
     <span class="nav-icon"><img src="/icon-ia.png?v=2" alt="IA"></span>IA
   </button>
 <button class="nav-item" id="nav-dashboard" onclick="showPage('dashboard');loadDashboard()">
@@ -2733,6 +2733,70 @@ async function checkGardienDuTemps() {
       if (data.reply) {
         setTimeout(() => appendMessage('ai', data.reply), 800);
         const m = getMemory(); m.lastMessageAt = Date.now(); saveMemory(m);
+      }
+    }
+  } catch {}
+}
+
+// ─── ENGAGEMENT PROACTIF (Avant / Pendant / Après match) ───
+async function checkMatchEngagement() {
+  const mem = getMemory();
+  const antiSpamKey = 'bv_engage_ts_' + (currentUser?.id || 'guest');
+  const lastEngage = parseInt(localStorage.getItem(antiSpamKey) || '0');
+  if (Date.now() - lastEngage < 30 * 60 * 1000) return; // anti-spam 30 min
+
+  const now = Date.now();
+  const matches = todayMatchesCache;
+  if (!matches.length && !Object.keys(mem.facts).length) return;
+
+  // Trouver le match le plus pertinent (favori > tous)
+  let target = null;
+  let matchContext = null;
+
+  for (const m of matches) {
+    const isFav = userFavoris.has(String(m.id));
+    const startMs = m._startTs ? m._startTs * 1000 : null;
+    const isLive = m.status === 'live';
+    const isFinished = m.status === 'finished';
+    const isUpcoming = m.status === 'scheduled' && startMs && startMs - now < 2 * 3600 * 1000 && startMs > now;
+
+    if (isLive)      matchContext = 'live';
+    else if (isFinished) matchContext = 'finished';
+    else if (isUpcoming) matchContext = 'upcoming';
+    else continue;
+
+    if (isFav || !target) { target = m; if (isFav) break; }
+  }
+
+  let prompt;
+  if (target && matchContext === 'live') {
+    prompt = `[ENGAGEMENT] Le match ${target.home} vs ${target.away} est EN COURS maintenant. Score actuel inconnu. Génère UNE phrase courte, excitante, comme un ami qui suit le match en direct. Mentionne les équipes, reste naturel.`;
+  } else if (target && matchContext === 'upcoming') {
+    prompt = `[ENGAGEMENT] Le match ${target.home} vs ${target.away} commence très bientôt (dans moins de 2h). Stats : dom. ${target.homeWin}%, ext. ${target.awayWin}%, BTTS ${target.btts}%. Génère UNE phrase d'accroche courte et naturelle pour en parler à l'utilisateur.`;
+  } else if (target && matchContext === 'finished') {
+    prompt = `[ENGAGEMENT] Le match ${target.home} vs ${target.away} vient de se terminer. Génère UNE phrase naturelle et courte pour relancer la conversation dessus.`;
+  } else {
+    // Pas de match pertinent → message général basé sur la mémoire
+    const factsStr = Object.entries(mem.facts).map(([k,v]) => `${k}: ${v}`).join(', ');
+    if (!factsStr) return;
+    prompt = `[ENGAGEMENT] Tu connais bien cet utilisateur : ${factsStr}. Génère UNE phrase d'accroche spontanée et naturelle basée sur ce que tu sais de lui — une stat intéressante, une question sur son sport favori, une tendance du moment. Pas plus d'une phrase.`;
+  }
+
+  try {
+    const res = await fetch('/api/ai-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: prompt,
+        history: [],
+        context: { aiName: getAiName(), memory: formatMemoryBlock() },
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.reply) {
+        setTimeout(() => appendMessage('ai', data.reply), 600);
+        localStorage.setItem(antiSpamKey, String(Date.now()));
       }
     }
   } catch {}
