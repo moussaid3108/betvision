@@ -92,9 +92,11 @@
     text-transform: uppercase; letter-spacing: 0.8px;
     border: none; background: none;
   }
-  .nav-item .nav-icon { font-size: 20px; transition: transform .2s; }
+  .nav-item .nav-icon { font-size: 20px; transition: transform .2s; line-height: 1; }
+  .nav-item .nav-icon img { width: 26px; height: 26px; object-fit: cover; border-radius: 6px; display: block; }
   .nav-item.active { color: var(--accent); }
   .nav-item.active .nav-icon { transform: scale(1.15); }
+  .nav-item.active .nav-icon img { box-shadow: 0 0 8px var(--accent-glow); }
 
   /* ─── PADDOCK ─── */
   @keyframes pulseBadge {
@@ -1691,7 +1693,7 @@
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav">
   <button class="nav-item active" id="nav-paddock" onclick="showPage('paddock');initPaddock()">
-    <span class="nav-icon">⚡</span>Paddock
+    <span class="nav-icon"><img src="/icon-paddock.jpg" alt="Paddock" style="object-position:center 40%"></span>Paddock
   </button>
   <button class="nav-item" id="nav-ia" onclick="showPage('ia')">
     <span class="nav-icon">🤖</span>IA
