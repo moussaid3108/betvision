@@ -2205,125 +2205,121 @@ function renderAnalysis(m) {
   const homeWin = m.homeWin ?? 45;
   const drawPct = m.draw    ?? 27;
   const awayWin = m.awayWin ?? (100 - homeWin - drawPct);
-  const gH = typeof m.goalsHome === 'number' ? m.goalsHome.toFixed(1) : m.goalsHome;
-  const gA = typeof m.goalsAway === 'number' ? m.goalsAway.toFixed(1) : m.goalsAway;
+  const gH = typeof m.goalsHome === 'number' ? m.goalsHome.toFixed(1) : (m.goalsHome ?? '–');
+  const gA = typeof m.goalsAway === 'number' ? m.goalsAway.toFixed(1) : (m.goalsAway ?? '–');
   const csH = Math.round((m.cleanHome || 0) * 100);
   const csA = Math.round((m.cleanAway || 0) * 100);
 
+  const homeLogo = m.homeLogo || (m.homeTeamId ? `https://api.sofascore.app/api/v1/team/${m.homeTeamId}/image` : null);
+  const awayLogo = m.awayLogo || (m.awayTeamId ? `https://api.sofascore.app/api/v1/team/${m.awayTeamId}/image` : null);
+  const logoImg = (url, name) => url
+    ? `<img src="${url}" referrerpolicy="no-referrer" alt="${name}" style="width:44px;height:44px;object-fit:contain;border-radius:6px;" onerror="this.style.display='none'">`
+    : '';
+
+  const isFinished = m.status === 'finished';
+  const isLive     = m.status === 'live';
+  const hasScore   = m.score && m.score.home != null && m.score.away != null;
+
+  let centerHtml;
+  if (isFinished && hasScore) {
+    centerHtml = `<div style="text-align:center">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;letter-spacing:2px;color:var(--text-1)">${m.score.home} – ${m.score.away}</div>
+      <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#fff;background:#555;padding:2px 8px;border-radius:4px">Terminé</span>
+    </div>`;
+  } else if (isLive && hasScore) {
+    centerHtml = `<div style="text-align:center">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;letter-spacing:2px;color:var(--accent)">${m.score.home} – ${m.score.away}</div>
+      <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#fff;background:#e11d48;padding:2px 8px;border-radius:4px">LIVE</span>
+    </div>`;
+  } else {
+    centerHtml = `<div style="text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;color:var(--accent)">${m.time || '--:--'}</div>`;
+  }
+
+  const h2hBlock = (() => {
+    const h2h = m.h2h;
+    if (!h2h || !h2h.matches || h2h.matches.length === 0) return `
+      <div class="h2h-section">
+        <div class="h2h-section-title">⚔️ Dernières confrontations</div>
+        <div class="h2h-empty">Aucune confrontation récente disponible</div>
+      </div>`;
+    const t1Id = m.homeTeamId;
+    const rows = h2h.matches.map(hm => {
+      const isTeam1Home = Number(hm.homeTeamId) === Number(t1Id);
+      const hs = hm.homeScore, as = hm.awayScore;
+      const t1Win = isTeam1Home ? hs > as : as > hs;
+      const isDraw = hs === as;
+      const scoreCls = isDraw ? 'h2h-draw' : t1Win ? 'h2h-win' : 'h2h-loss';
+      return `<div class="h2h-match-row">
+        <div class="h2h-match-date">${hm.dateFormatted}</div>
+        <div class="h2h-match-teams">${hm.homeTeam} – ${hm.awayTeam}</div>
+        <div class="h2h-match-score ${scoreCls}">${hs}–${as}</div>
+      </div>`;
+    }).join('');
+    const b = h2h.balance;
+    const balanceHtml = `<div class="h2h-balance">${m.home || 'Dom.'} <span class="h2h-win">${b.team1Wins}V</span> · <span class="h2h-draw">${b.draws}N</span> · <span class="h2h-loss">${b.team2Wins}D</span> ${m.away || 'Ext.'}</div>`;
+    const countHtml = h2h.totalMatches < 5 ? `<div class="h2h-count">${h2h.totalMatches} confrontation${h2h.totalMatches > 1 ? 's' : ''} disponible${h2h.totalMatches > 1 ? 's' : ''}</div>` : '';
+    return `<div class="h2h-section">
+      <div class="h2h-section-title">⚔️ Dernières confrontations</div>
+      ${rows}${balanceHtml}${countHtml}
+    </div>`;
+  })();
+
   const content = `
+    <!-- 1. HEADER -->
     <div class="analysis-hero">
       <button class="analysis-fav-btn" id="analysis-fav-btn" onclick="toggleAnalysisFavori(event)">${userFavoris.has(String(m.id)) ? '⭐' : '☆'}</button>
       <div class="hero-league">${m.competition}</div>
       <div class="hero-teams">
         <div class="hero-team">
+          ${logoImg(homeLogo, m.home)}
           <div class="hero-team-name">${m.home}</div>
           <div class="hero-team-form">${formBlock(homeFormData)}</div>
         </div>
-        <div class="hero-vs">VS</div>
+        ${centerHtml}
         <div class="hero-team" style="text-align:right">
+          ${logoImg(awayLogo, m.away)}
           <div class="hero-team-name">${m.away}</div>
           <div class="hero-team-form" style="justify-content:flex-end">${formBlock(awayFormData)}</div>
         </div>
       </div>
-      <div class="hero-datetime">📅 ${m.date} à ${m.time}${m.venue ? ` · 🏟 ${m.venue}` : ''}</div>
+      <div class="hero-datetime">📅 ${m.date}${!isFinished && !isLive ? ` à ${m.time}` : ''}${m.venue ? ` · 🏟 ${m.venue}` : ''}</div>
     </div>
 
-    <div class="stats-grid">
-      <div class="stat-box">
-        <div class="stat-value stat-gold">${m.btts}%</div>
-        <div class="stat-label">BTTS</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value stat-blue">${m.over25}%</div>
-        <div class="stat-label">Over 2.5</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value stat-green">${m.confidence}%</div>
-        <div class="stat-label">Confiance</div>
-      </div>
-    </div>
-
+    <!-- 2. RÉSULTAT PROBABLE 1X2 -->
     <div class="proba-section">
       <div class="proba-title">🏆 Résultat probable (1X2)</div>
       <div class="proba-row">
-        <div class="proba-header">
-          <span class="proba-name">Victoire ${m.home}</span>
-          <span class="proba-pct stat-green">${homeWin}%</span>
-        </div>
+        <div class="proba-header"><span class="proba-name">Victoire ${m.home}</span><span class="proba-pct stat-green">${homeWin}%</span></div>
         <div class="proba-track"><div class="proba-fill fill-green" style="width:0" data-w="${homeWin}"></div></div>
       </div>
       <div class="proba-row">
-        <div class="proba-header">
-          <span class="proba-name">Match nul</span>
-          <span class="proba-pct stat-gold">${drawPct}%</span>
-        </div>
+        <div class="proba-header"><span class="proba-name">Match nul</span><span class="proba-pct stat-gold">${drawPct}%</span></div>
         <div class="proba-track"><div class="proba-fill fill-gold" style="width:0" data-w="${drawPct}"></div></div>
       </div>
       <div class="proba-row">
-        <div class="proba-header">
-          <span class="proba-name">Victoire ${m.away}</span>
-          <span class="proba-pct stat-blue">${awayWin}%</span>
-        </div>
+        <div class="proba-header"><span class="proba-name">Victoire ${m.away}</span><span class="proba-pct stat-blue">${awayWin}%</span></div>
         <div class="proba-track"><div class="proba-fill fill-blue" style="width:0" data-w="${awayWin}"></div></div>
       </div>
     </div>
 
-    ${(() => {
-      const h2h = m.h2h;
-      if (!h2h || !h2h.matches || h2h.matches.length === 0) return `
-        <div class="h2h-section">
-          <div class="h2h-section-title">⚔️ Dernières confrontations</div>
-          <div class="h2h-empty">Aucune confrontation récente disponible</div>
-        </div>`;
-      const t1Id = m.homeTeamId;
-      const rows = h2h.matches.map(hm => {
-        const isTeam1Home = Number(hm.homeTeamId) === Number(t1Id);
-        const hs = hm.homeScore, as = hm.awayScore;
-        const t1Win = isTeam1Home ? hs > as : as > hs;
-        const isDraw = hs === as;
-        const scoreCls = isDraw ? 'h2h-draw' : t1Win ? 'h2h-win' : 'h2h-loss';
-        return `<div class="h2h-match-row">
-          <div class="h2h-match-date">${hm.dateFormatted}</div>
-          <div class="h2h-match-teams">${hm.homeTeam} – ${hm.awayTeam}</div>
-          <div class="h2h-match-score ${scoreCls}">${hs}–${as}</div>
-        </div>`;
-      }).join('');
-      const b = h2h.balance;
-      const homeLabel = m.home || 'Dom.';
-      const awayLabel = m.away || 'Ext.';
-      const balanceHtml = `<div class="h2h-balance">${homeLabel} <span class="h2h-win">${b.team1Wins}V</span> · <span class="h2h-draw">${b.draws}N</span> · <span class="h2h-loss">${b.team2Wins}D</span> ${awayLabel}</div>`;
-      const countHtml = h2h.totalMatches < 5 ? `<div class="h2h-count">${h2h.totalMatches} confrontation${h2h.totalMatches > 1 ? 's' : ''} disponible${h2h.totalMatches > 1 ? 's' : ''}</div>` : '';
-      return `<div class="h2h-section">
-        <div class="h2h-section-title">⚔️ Dernières confrontations</div>
-        ${rows}${balanceHtml}${countHtml}
-      </div>`;
-    })()}
+    <!-- 3. BOUTON IA -->
+    <button style="width:100%;padding:14px;background:var(--accent-dim);border:1px solid rgba(0,229,160,0.3);border-radius:var(--radius);color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px;cursor:pointer;margin-bottom:14px;" onclick="askAIAboutMatch()">
+      🤖 Analyser avec l'IA
+    </button>
 
-    <div class="proba-section">
-      <div class="proba-title">📊 Probabilités algorithmiques</div>
-      <div class="proba-row">
-        <div class="proba-header">
-          <span class="proba-name">Les deux équipes marquent</span>
-          <span class="proba-pct stat-gold">${m.btts}%</span>
-        </div>
-        <div class="proba-track"><div class="proba-fill fill-gold" style="width:0" data-w="${m.btts}"></div></div>
+    <!-- 4. SIGNAL ALGORITHMIQUE -->
+    <div class="signal-card">
+      <div class="signal-header">
+        <span class="signal-title">🎯 Signal algorithmique</span>
+        <span class="signal-badge">${m.confidence >= 80 ? 'Élevé' : m.confidence >= 65 ? 'Modéré' : 'Faible'}</span>
       </div>
-      <div class="proba-row">
-        <div class="proba-header">
-          <span class="proba-name">Plus de 2.5 buts</span>
-          <span class="proba-pct stat-blue">${m.over25}%</span>
-        </div>
-        <div class="proba-track"><div class="proba-fill fill-blue" style="width:0" data-w="${m.over25}"></div></div>
-      </div>
-      <div class="proba-row">
-        <div class="proba-header">
-          <span class="proba-name">Plus de 1.5 buts</span>
-          <span class="proba-pct stat-green">${m.over15}%</span>
-        </div>
-        <div class="proba-track"><div class="proba-fill fill-green" style="width:0" data-w="${m.over15}"></div></div>
+      <div class="signal-meter">
+        <div class="signal-level">${m.confidence}%</div>
+        <div class="signal-desc">Indice calculé via distribution de Poisson : forme récente (5 derniers matchs), attaque/défense dom.–ext. et stats de saison 2025.</div>
       </div>
     </div>
 
+    <!-- 5. BUTS ATTENDUS POISSON -->
     <div class="proba-section">
       <div class="proba-title">⚽ Buts attendus (Poisson)</div>
       <div class="h2h-row">
@@ -2337,33 +2333,40 @@ function renderAnalysis(m) {
         <div class="h2h-score stat-gold">${gA}</div>
       </div>
       <div class="h2h-row">
-        <div class="h2h-date">CS dom.</div>
-        <div class="h2h-teams">Prob. feuille blanche</div>
+        <div class="h2h-date">CS</div>
+        <div class="h2h-teams">${m.home}</div>
         <div class="h2h-score stat-blue">${csH}%</div>
       </div>
       <div class="h2h-row">
-        <div class="h2h-date">CS ext.</div>
-        <div class="h2h-teams">Prob. feuille blanche</div>
+        <div class="h2h-date">CS</div>
+        <div class="h2h-teams">${m.away}</div>
         <div class="h2h-score stat-blue">${csA}%</div>
       </div>
     </div>
 
-    <div class="signal-card">
-      <div class="signal-header">
-        <span class="signal-title">🎯 Signal algorithmique</span>
-        <span class="signal-badge">${m.confidence >= 80 ? 'Élevé' : m.confidence >= 65 ? 'Modéré' : 'Faible'}</span>
+    <!-- 6. PROBABILITÉS -->
+    <div class="proba-section">
+      <div class="proba-title">📊 Probabilités algorithmiques</div>
+      <div class="proba-row">
+        <div class="proba-header"><span class="proba-name">Plus de 1.5 buts</span><span class="proba-pct stat-green">${m.over15}%</span></div>
+        <div class="proba-track"><div class="proba-fill fill-green" style="width:0" data-w="${m.over15}"></div></div>
       </div>
-      <div class="signal-meter">
-        <div class="signal-level">${m.confidence}%</div>
-        <div class="signal-desc">Indice calculé via distribution de Poisson : forme récente (5 derniers matchs), attaque/défense dom.–ext. et stats de saison 2025.</div>
+      <div class="proba-row">
+        <div class="proba-header"><span class="proba-name">Plus de 2.5 buts</span><span class="proba-pct stat-blue">${m.over25}%</span></div>
+        <div class="proba-track"><div class="proba-fill fill-blue" style="width:0" data-w="${m.over25}"></div></div>
+      </div>
+      <div class="proba-row">
+        <div class="proba-header"><span class="proba-name">Les deux équipes marquent</span><span class="proba-pct stat-gold">${m.btts}%</span></div>
+        <div class="proba-track"><div class="proba-fill fill-gold" style="width:0" data-w="${m.btts}"></div></div>
       </div>
     </div>
 
-    <button style="width:100%;padding:14px;background:var(--accent-dim);border:1px solid rgba(0,229,160,0.3);border-radius:var(--radius);color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px;cursor:pointer;margin-bottom:10px;" onclick="askAIAboutMatch()">
-      🤖 Analyser avec l'IA
-    </button>
+    <!-- 7. H2H -->
+    ${h2hBlock}
+
+    <!-- 8. BOUTON PRONO -->
     <button style="width:100%;padding:14px;background:var(--gold-dim);border:1px solid rgba(245,200,66,0.3);border-radius:var(--radius);color:var(--gold);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px;cursor:pointer;" onclick="openPronoModal()">
-      🎯 Suivre ce pronostic
+      🎯 Envoie ton prono ici
     </button>
   `;
 
