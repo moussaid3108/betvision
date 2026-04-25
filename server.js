@@ -129,6 +129,10 @@ app.get('/api/today', async (req, res) => {
         homeTeamId:   e.homeTeam?.id || null,
         awayTeamId:   e.awayTeam?.id || null,
         competition:  league.name,
+        status:       mapEventStatus(e.status?.type),
+        score:        (e.homeScore?.current != null && e.awayScore?.current != null)
+                        ? { home: e.homeScore.current, away: e.awayScore.current }
+                        : null,
         time:         d ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }) : '--:--',
         date:         d ? d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'Europe/Paris' }) : "Aujourd'hui",
         btts:         stats.btts        ?? null,
