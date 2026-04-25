@@ -2849,6 +2849,7 @@ const supabaseReady = new Promise(resolve => {
         currentUser = user || null;
         updateChatInputVisibility();
         loadFavoris();
+        renderPaddockStats();
         const btnCnx      = document.getElementById('btn-connexion');
         const avatar      = document.getElementById('user-avatar');
         const drawerUser  = document.getElementById('drawer-user-block');
