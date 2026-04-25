@@ -260,8 +260,10 @@ RÈGLES :
           ...history,
           { role: 'user', content: message },
         ],
-        temperature: 0.7,
-        max_tokens: 500,
+        temperature: 0.85,
+        max_tokens: 300,
+        frequency_penalty: 0.4,
+        presence_penalty: 0.2,
       }),
     });
     if (!r.ok) return res.status(500).json({ error: 'AI unavailable' });
