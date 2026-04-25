@@ -404,6 +404,8 @@ async function getTeamStats(sport, teamId, KEY) {
     formScores,
     seasonStats: {
       matchesPlayed:          mp,
+      homeGamesCount:         home5.length,
+      awayGamesCount:         away5.length,
       goalsScoredAvg:         parseFloat((gf / mp).toFixed(2)),
       goalsConcededAvg:       parseFloat((ga / mp).toFixed(2)),
       goalsScoredHomeAvg:     avgGoals(home5, e => e.homeScore?.current ?? 0),
@@ -462,13 +464,16 @@ app.get('/api/compute-stats', async (req, res) => {
         getTeamStats('football', awayTeamId, KEY),
       ]);
 
-      const hScored  = homeStats.seasonStats.goalsScoredHomeAvg  ?? homeStats.seasonStats.goalsScoredAvg;
-      const aConceded = awayStats.seasonStats.goalsConcededAwayAvg ?? awayStats.seasonStats.goalsConcededAvg;
-      const aScored  = awayStats.seasonStats.goalsScoredAwayAvg  ?? awayStats.seasonStats.goalsScoredAvg;
-      const hConceded = homeStats.seasonStats.goalsConcededHomeAvg ?? homeStats.seasonStats.goalsConcededAvg;
+      const hSS = homeStats.seasonStats;
+      const aSS = awayStats.seasonStats;
 
-      lH = Math.max(0.3, parseFloat((hScored  * (aConceded / LIGUE_AVG_GOALS_CONCEDED)).toFixed(3)));
-      lA = Math.max(0.3, parseFloat((aScored  * (hConceded / LIGUE_AVG_GOALS_CONCEDED)).toFixed(3)));
+      const hScored   = (hSS.goalsScoredHomeAvg  > 0.3 && hSS.homeGamesCount >= 2) ? hSS.goalsScoredHomeAvg  : hSS.goalsScoredAvg;
+      const aConceded = (aSS.goalsConcededAwayAvg > 0.3 && aSS.awayGamesCount >= 2) ? aSS.goalsConcededAwayAvg : aSS.goalsConcededAvg;
+      const aScored   = (aSS.goalsScoredAwayAvg  > 0.3 && aSS.awayGamesCount >= 2) ? aSS.goalsScoredAwayAvg  : aSS.goalsScoredAvg;
+      const hConceded = (hSS.goalsConcededHomeAvg > 0.3 && hSS.homeGamesCount >= 2) ? hSS.goalsConcededHomeAvg : hSS.goalsConcededAvg;
+
+      lH = Math.max(0.5, parseFloat((hScored  * (aConceded / LIGUE_AVG_GOALS_CONCEDED)).toFixed(3)));
+      lA = Math.max(0.5, parseFloat((aScored  * (hConceded / LIGUE_AVG_GOALS_CONCEDED)).toFixed(3)));
       lambdaSource = 'team-based';
       homeForm = homeStats.form;
       awayForm = awayStats.form;
