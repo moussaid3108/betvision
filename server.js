@@ -250,6 +250,10 @@ app.post('/api/ai-chat', async (req, res) => {
 
   const aiName = context.aiName || 'Alex';
 
+  // Horodatage serveur (injecté dans chaque prompt)
+  const now = new Date();
+  const timeBlock = `\n\n🕐 DATE & HEURE ACTUELLE : ${now.toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Europe/Paris' })} — ${now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })}`;
+
   const BANNED_TOPICS = ['politique', 'religion', 'genre', 'racisme', 'sexisme', 'drogue', 'arme', 'violence', 'médical grave', 'illégal'];
 
   const systemPrompt = `Tu es ${aiName}, un humain passionné, expert en sport mais curieux de tout. Tu es l'ami que tout le monde voudrait avoir : tu écoutes, tu conseilles, tu t'enthousiastes. Ton énergie revient toujours vers le sport, mais tu sais être là pour autre chose aussi.
@@ -287,7 +291,13 @@ SUJETS INTERDITS — ${BANNED_TOPICS.join(', ')} :
 RÈGLES SPORT :
 - Ne jamais inciter à parier de l'argent réel
 - Tu dis "signal fort", "tendance claire", "l'algo pencherait pour" — jamais "mise", "parie", "pronostic"
-- Si tu as des données réelles sur un match mentionné, utilise-les immédiatement${memoryBlock}${matchBlock}${userBlock}${matchesBlock}${newsBlock}
+- Si tu as des données réelles sur un match mentionné, utilise-les immédiatement${timeBlock}${memoryBlock}${matchBlock}${userBlock}${matchesBlock}${newsBlock}
+
+TEMPORALITÉ (règle stricte) :
+- La date et l'heure exactes t'ont été transmises. Tu dois TOUJOURS les utiliser pour situer les événements.
+- Avant de parler d'un match : compare l'heure actuelle à son heure de début. Si elle est passée → parle au passé, mode DÉBRIEF. Si elle arrive → mode PRÉDICTION.
+- Un match "finished" ou dont l'heure est dépassée = résultat connu → commentes-le, n'anticipe jamais.
+- Ne dis jamais "le match de ce soir" si le match a déjà eu lieu.
 
 RÈGLES CONFIDENTIALITÉ (RGPD) :
 - Ne jamais répéter ni mémoriser : numéro de téléphone, adresse, email, IBAN, numéro de carte bancaire, information médicale ou diagnostic.
@@ -298,6 +308,7 @@ RÈGLES CONFIDENTIALITÉ (RGPD) :
 FORMAT DE RÉPONSE OBLIGATOIRE :
 [ANALYSE_SUJET] : (Sport | Vie quotidienne | Sujet sensible — 1 mot)
 [VÉRIFICATION_SÉCURITÉ] : (OK | INTERDIT — si INTERDIT : prépare sortie élégante)
+[CHECK_TEMPOREL] : (Si match mentionné : "On est le [date]. Ce match a lieu [heure]. Statut : PASSÉ → DÉBRIEF | FUTUR → PRÉDICTION | LIVE → LIVE")
 [ANALYSE_PSY] : (humeur et intention réelle — 1 ligne)
 [VIBE] : (Sérieux | Fun | Agacé | Enthousiaste | Inquiet — 1 mot)
 [LEVEL] : (Débutant | Familier | Expert — 1 mot)
@@ -317,7 +328,7 @@ FEW-SHOT :
 
   function parseCoT(raw) {
     const reply = raw.match(/\[RÉPONSE_FINALE\]\s*:\s*([\s\S]+)/i)?.[1]?.trim()
-      || raw.replace(/\[(ANALYSE_SUJET|VÉRIFICATION_SÉCURITÉ|ANALYSE_PSY|VIBE|LEVEL|STRATÉGIE|VÉRIFICATION|VÉRIFICATION_FIDÉLITÉ|FAITS_EXTRAITS)\]\s*:.*\n?/gi, '').trim();
+      || raw.replace(/\[(ANALYSE_SUJET|VÉRIFICATION_SÉCURITÉ|CHECK_TEMPOREL|ANALYSE_PSY|VIBE|LEVEL|STRATÉGIE|VÉRIFICATION|VÉRIFICATION_FIDÉLITÉ|FAITS_EXTRAITS)\]\s*:.*\n?/gi, '').trim();
 
     const factsRaw = raw.match(/\[FAITS_EXTRAITS\]\s*:\s*([^\n\[]+)/i)?.[1]?.trim() || '';
     const facts = factsRaw === 'RIEN' || !factsRaw ? [] :
