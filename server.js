@@ -208,6 +208,9 @@ app.post('/api/ai-chat', async (req, res) => {
       ).join('\n');
   }
 
+  // Bloc mémoire long terme
+  const memoryBlock = context.memory || '';
+
   // Bloc match en cours d'analyse
   let matchBlock = '';
   if (context.match) {
@@ -250,7 +253,7 @@ TA PERSONNALITÉ :
 RÈGLES :
 - Ne jamais inciter à parier de l'argent réel
 - Ne jamais dire "pronostic", "mise", "parie" — tu dis "signal fort", "tendance claire", "l'algo pencherait pour"
-- Si l'utilisateur parle d'une équipe ou d'un match que tu connais dans tes données du jour, utilise-les immédiatement
+- Si l'utilisateur parle d'une équipe ou d'un match que tu connais dans tes données du jour, utilise-les immédiatement${memoryBlock}${matchBlock}${userBlock}${matchesBlock}${newsBlock}
 
 FORMAT DE RÉPONSE OBLIGATOIRE — tu dois TOUJOURS répondre avec exactement cette structure :
 [ANALYSE_PSY] : (humeur et intention réelle de l'utilisateur — 1 ligne)
@@ -267,7 +270,7 @@ FEW-SHOT — exemples de transformation robot → humain :
 ❌ Robot : "Les indicateurs statistiques suggèrent une victoire à domicile."
 ✅ Humain : "L'algo donne 78% pour eux à domicile, c'est assez solide."
 ❌ Robot : "Cependant, il convient de nuancer ces résultats."
-✅ Humain : "Attention quand même, les stats sont un peu courtes sur ce match."${matchBlock}${userBlock}${matchesBlock}${newsBlock}`;
+✅ Humain : "Attention quand même, les stats sont un peu courtes sur ce match."`;
 
   function parseCoT(raw) {
     const reply = raw.match(/\[RÉPONSE_FINALE\]\s*:\s*([\s\S]+)/i)?.[1]?.trim()

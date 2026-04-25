@@ -2710,6 +2710,30 @@ function sendQuick(q) {
   sendMessage();
 }
 
+// ─── MÉMOIRE LONG TERME (Le Journaliste) ───
+function getMemory() {
+  try {
+    return JSON.parse(localStorage.getItem('bv_memory_' + (currentUser?.id || 'guest')) || '{"facts":{},"lastTopic":null,"lastMessageAt":null}');
+  } catch { return { facts: {}, lastTopic: null, lastMessageAt: null }; }
+}
+function saveMemory(mem) {
+  try { localStorage.setItem('bv_memory_' + (currentUser?.id || 'guest'), JSON.stringify(mem)); } catch {}
+}
+function updateMemoryFacts(newFacts) {
+  if (!newFacts?.length) return;
+  const mem = getMemory();
+  newFacts.forEach(({ key, value }) => { mem.facts[key] = value; });
+  mem.lastMessageAt = Date.now();
+  saveMemory(mem);
+}
+function formatMemoryBlock() {
+  const mem = getMemory();
+  const entries = Object.entries(mem.facts);
+  if (!entries.length) return '';
+  return '\n\n🧠 CE QUE TU SAIS DE L\'UTILISATEUR (mémoire long terme) :\n' +
+    entries.map(([k, v]) => `• ${k} : ${v}`).join('\n');
+}
+
 function saveChatHistory() {
   try {
     const key = 'bv_chat_' + (currentUser?.id || 'guest');
@@ -2776,7 +2800,7 @@ async function callAI(userMsg) {
       body: JSON.stringify({
         message: userMsg,
         history: chatHistory.slice(-50).map(h => ({ role: h.role, content: h.content })),
-        context: { matches: todayMatchesCache, news: todayNewsCache, user: userProfileCache, match: currentMatch || null, aiName: getAiName() },
+        context: { matches: todayMatchesCache, news: todayNewsCache, user: userProfileCache, match: currentMatch || null, aiName: getAiName(), memory: formatMemoryBlock() },
       }),
     });
 
@@ -2784,6 +2808,10 @@ async function callAI(userMsg) {
 
     if (res.ok) {
       const data = await res.json();
+      updateMemoryFacts(data.facts);
+      const mem = getMemory();
+      mem.lastMessageAt = Date.now();
+      saveMemory(mem);
       appendMessage('ai', data.reply || 'Réponse vide.');
     } else {
       appendMessage('ai', getDemoReply(userMsg));
