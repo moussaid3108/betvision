@@ -194,10 +194,22 @@ app.get('/api/fixture', async (req, res) => {
 
 // ─── Groq AI chat ─────────────────────────────────────────
 app.post('/api/ai-chat', async (req, res) => {
-  const { message, history = [] } = req.body;
+  const { message, history = [], context = {} } = req.body;
   if (!message) return res.status(400).json({ error: 'Missing message' });
   const KEY = process.env.GROQ_API_KEY;
   if (!KEY) return res.status(500).json({ error: 'AI unavailable' });
+
+  // Bloc matchs du jour
+  let matchesBlock = '';
+  if (context.matches?.length) {
+    matchesBlock = '\n\n📅 MATCHS DU JOUR (stats algorithmiques réelles) :\n' +
+      context.matches.map(m =>
+        `• ${m.home} vs ${m.away} (${m.competition}, ${m.time})${m.status === 'finished' && m.score ? ` → Résultat : ${m.score.home}-${m.score.away}` : ''} | Victoire dom. ${m.homeWin}% | Nul ${m.draw}% | Victoire ext. ${m.awayWin}% | BTTS ${m.btts}% | Over 2.5 ${m.over25}% | Confiance ${m.confidence}%`
+      ).join('\n');
+  }
+
+  const systemPrompt = `Tu es BetVision AI, assistant d'analyse statistique multi-sport. Tu couvres : football, basketball (NBA), tennis, Formule 1, rugby, baseball (MLB), hockey (NHL) et MMA.\n\nUtilise uniquement ces termes : 'analyse statistique', 'algorithme prédictif', 'outil d'aide à la décision', 'tendances', 'indicateurs de performance'. N'utilise JAMAIS : 'pronos', 'paris', 'parier', 'pronostic' (au sens parieur), 'mise'.\n\nRéponds en français, de manière concise (3-4 phrases max sauf si l'utilisateur demande une analyse détaillée). Adapte le vocabulaire technique au sport évoqué.${matchesBlock}`;
+
   try {
     const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -205,7 +217,7 @@ app.post('/api/ai-chat', async (req, res) => {
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
         messages: [
-          { role: 'system', content: "Tu es BetVision AI, assistant d'analyse statistique multi-sport. Tu couvres : football, basketball (NBA), tennis, Formule 1, rugby, baseball (MLB), hockey (NHL) et MMA.\n\nUtilise uniquement ces termes : 'analyse statistique', 'algorithme prédictif', 'outil d'aide à la décision', 'tendances', 'indicateurs de performance'. N'utilise JAMAIS : 'pronos', 'paris', 'parier', 'pronostic' (au sens parieur), 'mise'.\n\nRéponds en français, de manière concise (3-4 phrases max sauf si l'utilisateur demande une analyse détaillée). Adapte le vocabulaire technique au sport évoqué (BTTS/Over pour foot, points/rebonds pour NBA, sets/aces pour tennis, pole position/tours rapides pour F1, etc.)." },
+          { role: 'system', content: systemPrompt },
           ...history,
           { role: 'user', content: message },
         ],

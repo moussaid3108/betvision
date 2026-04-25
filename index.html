@@ -1724,7 +1724,8 @@ let currentMatch     = null;
 let activeMatchId    = null;
 let previousView     = 'paddock';
 let chatHistory   = [];
-let loadedMatchesMap = {}; // id → match object
+let loadedMatchesMap = {};
+let todayMatchesCache = [];
 
 
 // ─── NAVIGATION ───
@@ -2008,7 +2009,8 @@ async function renderTopMatches() {
   container.innerHTML = '<div class="spinner"></div>';
   try {
     const data = await fetch('/api/today').then(r => r.json());
-    const top  = (data.matches || []).slice(0, 2);
+    todayMatchesCache = data.matches || [];
+    const top  = todayMatchesCache.slice(0, 2);
     if (!top.length) {
       container.innerHTML = '<div class="paddock-no-auth">Aucun match aujourd\'hui — revenez demain 🔜</div>';
       return;
@@ -2714,6 +2716,7 @@ async function callAI(userMsg) {
       body: JSON.stringify({
         message: userMsg,
         history: chatHistory.slice(-8).map(h => ({ role: h.role, content: h.content })),
+        context: { matches: todayMatchesCache },
       }),
     });
 
