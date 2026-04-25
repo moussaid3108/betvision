@@ -55,12 +55,15 @@
     display: flex; align-items: center; gap: 8px; justify-content: center;
   }
   .logo-icon {
-    width: 36px; height: 36px;
-    background: linear-gradient(135deg, var(--accent), #00b377);
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    overflow: hidden;
+    flex-shrink: 0;
     box-shadow: 0 0 16px var(--accent-glow);
+  }
+  .logo-icon img {
+    width: 100%; height: 100%; object-fit: cover; object-position: center 55%;
+    display: block;
   }
   .logo-text {
     font-family: 'Barlow Condensed', sans-serif;
@@ -1315,7 +1318,7 @@
     <span></span><span></span><span></span>
   </button>
   <div class="logo" onclick="showPage('paddock');initPaddock()" style="cursor:pointer">
-    <div class="logo-icon">⚽</div>
+    <div class="logo-icon"><img src="/logo.png" alt="BetVision AI"></div>
     <div>
       <div class="logo-text">BetVision AI</div>
       <div class="logo-sub">Algorithme Prédictif</div>
