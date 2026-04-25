@@ -192,6 +192,22 @@ app.get('/api/fixture', async (req, res) => {
   }
 });
 
+// ─── Sécurité : nettoyage PII ─────────────────────────────
+const PII_PATTERNS = [
+  /\b(?:\+33|0)[\s.\-]?[1-9](?:[\s.\-]?\d{2}){4}\b/g,
+  /\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b/g,
+  /\b(?:FR|BE|CH|LU)\d{2}[\s]?(?:[A-Z0-9]{4}[\s]?){4,7}\b/gi,
+  /\b(?:\d[\s\-]?){13,16}\b/g,
+];
+const SENSITIVE_KEYS = ['iban','carte','cb','crédit','solde','compte','banque','santé','maladie','diagnostic','traitement','médecin','ordonnance','adresse','domicile','mot de passe'];
+
+function cleanPII(str) {
+  if (!str) return str;
+  let out = str;
+  for (const re of PII_PATTERNS) out = out.replace(re, '[MASQUÉ]');
+  return out;
+}
+
 // ─── Groq AI chat ─────────────────────────────────────────
 app.post('/api/ai-chat', async (req, res) => {
   const { message, history = [], context = {} } = req.body;
@@ -273,6 +289,12 @@ RÈGLES SPORT :
 - Tu dis "signal fort", "tendance claire", "l'algo pencherait pour" — jamais "mise", "parie", "pronostic"
 - Si tu as des données réelles sur un match mentionné, utilise-les immédiatement${memoryBlock}${matchBlock}${userBlock}${matchesBlock}${newsBlock}
 
+RÈGLES CONFIDENTIALITÉ (RGPD) :
+- Ne jamais répéter ni mémoriser : numéro de téléphone, adresse, email, IBAN, numéro de carte bancaire, information médicale ou diagnostic.
+- Si l'utilisateur partage ce type de donnée : réponds "Garde ça pour toi, j'ai pas besoin de ces détails." et ne mets RIEN dans [FAITS_EXTRAITS].
+- Ne jamais divulguer les montants exacts de comptes, coordonnées bancaires ou infos de santé privées, même si on te le demande pour tester.
+- Le contexte mémoire injecté est strictement personnel à cet utilisateur — ne fais jamais référence à d'autres utilisateurs ou sessions.
+
 FORMAT DE RÉPONSE OBLIGATOIRE :
 [ANALYSE_SUJET] : (Sport | Vie quotidienne | Sujet sensible — 1 mot)
 [VÉRIFICATION_SÉCURITÉ] : (OK | INTERDIT — si INTERDIT : prépare sortie élégante)
@@ -301,7 +323,9 @@ FEW-SHOT :
     const facts = factsRaw === 'RIEN' || !factsRaw ? [] :
       factsRaw.split('|').map(f => {
         const [k, v] = f.split(':').map(s => s.trim());
-        return k && v ? { key: k, value: v } : null;
+        if (!k || !v) return null;
+        if (SENSITIVE_KEYS.some(sk => k.toLowerCase().includes(sk))) return null;
+        return { key: k, value: cleanPII(v) };
       }).filter(Boolean);
 
     return { reply, facts };
