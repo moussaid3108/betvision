@@ -254,15 +254,33 @@ RÈGLES :
 
 FORMAT DE RÉPONSE OBLIGATOIRE — tu dois TOUJOURS répondre avec exactement cette structure :
 [ANALYSE_PSY] : (humeur et intention réelle de l'utilisateur — 1 ligne)
-[STRATÉGIE] : (ton à adopter : humour / sérieux / concision / empathie — 1 ligne)
-[VÉRIFICATION] : (est-ce que ma réponse sonne comme un robot ? correction si nécessaire — 1 ligne)
-[RÉPONSE_FINALE] : (le texte destiné à l'utilisateur UNIQUEMENT — naturel, humain, concis)${matchBlock}${userBlock}${matchesBlock}${newsBlock}`;
+[VIBE] : (Sérieux | Fun | Agacé | Enthousiaste | Inquiet — 1 mot)
+[LEVEL] : (Débutant | Familier | Expert — 1 mot)
+[STRATÉGIE] : (ton à adopter selon VIBE+LEVEL. Si LEVEL=Familier ou Expert : interdiction d'utiliser "Cependant", "Nonobstant", "Il convient de". Si VIBE=Agacé : valider d'abord, aider ensuite.)
+[VÉRIFICATION] : (est-ce que ma réponse sonne comme un robot ? Si oui, réécrire.)
+[FAITS_EXTRAITS] : (0 à 2 faits nouveaux appris sur l'utilisateur dans CE message, format clé:valeur. Ex: equipe_favorite:PSG | sport_suivi:football. Mettre RIEN si aucun fait nouveau.)
+[RÉPONSE_FINALE] : (le texte destiné à l'utilisateur UNIQUEMENT)
+
+FEW-SHOT — exemples de transformation robot → humain :
+❌ Robot : "Je suis prêt à vous aider avec votre analyse."
+✅ Humain : "Vas-y, dis-moi ce match, on regarde ça ensemble."
+❌ Robot : "Les indicateurs statistiques suggèrent une victoire à domicile."
+✅ Humain : "L'algo donne 78% pour eux à domicile, c'est assez solide."
+❌ Robot : "Cependant, il convient de nuancer ces résultats."
+✅ Humain : "Attention quand même, les stats sont un peu courtes sur ce match."${matchBlock}${userBlock}${matchesBlock}${newsBlock}`;
 
   function parseCoT(raw) {
-    const match = raw.match(/\[RÉPONSE_FINALE\]\s*:\s*([\s\S]+)/i);
-    if (match) return match[1].trim();
-    // fallback si le modèle n'a pas respecté le format
-    return raw.replace(/\[(ANALYSE_PSY|STRATÉGIE|VÉRIFICATION)\]\s*:.*\n?/gi, '').trim();
+    const reply = raw.match(/\[RÉPONSE_FINALE\]\s*:\s*([\s\S]+)/i)?.[1]?.trim()
+      || raw.replace(/\[(ANALYSE_PSY|VIBE|LEVEL|STRATÉGIE|VÉRIFICATION|FAITS_EXTRAITS)\]\s*:.*\n?/gi, '').trim();
+
+    const factsRaw = raw.match(/\[FAITS_EXTRAITS\]\s*:\s*([^\n\[]+)/i)?.[1]?.trim() || '';
+    const facts = factsRaw === 'RIEN' || !factsRaw ? [] :
+      factsRaw.split('|').map(f => {
+        const [k, v] = f.split(':').map(s => s.trim());
+        return k && v ? { key: k, value: v } : null;
+      }).filter(Boolean);
+
+    return { reply, facts };
   }
 
   try {
@@ -286,7 +304,8 @@ FORMAT DE RÉPONSE OBLIGATOIRE — tu dois TOUJOURS répondre avec exactement ce
     const data = await r.json();
     const raw = data.choices?.[0]?.message?.content || '';
     if (process.env.DEBUG_COT) console.log('[CoT]', raw);
-    res.json({ reply: parseCoT(raw) });
+    const { reply, facts } = parseCoT(raw);
+    res.json({ reply, facts });
   } catch {
     res.status(500).json({ error: 'AI unavailable' });
   }
