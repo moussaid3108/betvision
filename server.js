@@ -679,7 +679,7 @@ app.get('/api/league-matches', async (req, res) => {
       });
 
     // Pour "current" : tous les matchs d'aujourd'hui (live, terminés, à venir) + futurs
-    const todayStart = Math.floor(new Date().setHours(0, 0, 0, 0) / 1000);
+    const todayStart = (() => { const d = new Date(); d.setDate(d.getDate() - 2); d.setHours(0, 0, 0, 0); return Math.floor(d / 1000); })();
     const matches = (rounds.get(targetRound) || [])
       .filter(e => journee !== 'current' || (e.startTimestamp || 0) >= todayStart)
       .sort((a, b) => (a.startTimestamp || 0) - (b.startTimestamp || 0))
