@@ -2863,6 +2863,44 @@ function getLifeTags() {
   return Object.keys(tags).length ? tags : null;
 }
 
+// ── Bankroll virtuelle ─────────────────────────────────────
+function getBankroll() {
+  try {
+    const raw = JSON.parse(localStorage.getItem('bv_bankroll_' + (currentUser?.id || 'guest')) || '{}');
+    return { initial: 1000, current: 1000, history: [], totalBets: 0, wins: 0, ...raw };
+  } catch { return { initial: 1000, current: 1000, history: [], totalBets: 0, wins: 0 }; }
+}
+function saveBankroll(b) {
+  try { localStorage.setItem('bv_bankroll_' + (currentUser?.id || 'guest'), JSON.stringify(b)); } catch {}
+}
+function computeKelly(probPct, cote) {
+  if (!probPct || !cote || cote <= 1) return null;
+  const p = probPct / 100;
+  const k = (p * cote - 1) / (cote - 1) * 0.25; // Kelly ¼
+  return Math.min(5, Math.max(0, parseFloat((k * 100).toFixed(1))));
+}
+function recordBankrollResult(matchLabel, prediction, won, stakePct) {
+  const b = getBankroll();
+  const stake = b.current * (stakePct / 100);
+  const pnl   = won ? stake * 0.9 : -stake; // flat ~1.90 cote pour simplifier
+  b.current   = Math.max(0, b.current + pnl);
+  b.totalBets += 1;
+  if (won) b.wins += 1;
+  b.history.push({ date: new Date().toLocaleDateString('fr-FR'), match: matchLabel, prediction, won, pnl, stake });
+  if (b.history.length > 50) b.history = b.history.slice(-50);
+  saveBankroll(b);
+}
+function getBankrollContext() {
+  const b = getBankroll();
+  const winRate = b.totalBets > 0 ? Math.round((b.wins / b.totalBets) * 100) : 0;
+  // Kelly basé sur le meilleur signal en cours
+  let kelly = null;
+  if (currentMatch?.homeWin && currentOddsData?.odds?.home) {
+    kelly = computeKelly(currentMatch.homeWin, currentOddsData.odds.home);
+  }
+  return { initial: b.initial, current: +b.current.toFixed(2), winRate, totalBets: b.totalBets, history: b.history.slice(-3), kelly };
+}
+
 function getPredictions() {
   try { return JSON.parse(localStorage.getItem('bv_predictions_' + (currentUser?.id || 'guest')) || '[]'); }
   catch { return []; }
@@ -2963,6 +3001,7 @@ async function callAI(userMsg) {
           match: currentMatch || null, aiName: getAiName(), memory: formatMemoryBlock(),
           predictions: refreshPredictionsVsCache(), lifeTags: getLifeTags(),
           odds: currentOddsData || null,
+          bankroll: getBankrollContext(),
         },
       }),
     });
