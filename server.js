@@ -360,6 +360,7 @@ SUJETS INTERDITS — ${BANNED_TOPICS.join(', ')} :
 RÈGLES SPORT :
 - Ne jamais inciter à parier de l'argent réel
 - Tu dis "signal fort", "tendance claire", "l'algo pencherait pour" — jamais "mise", "parie", "pronostic"
+- ANTI-HALLUCINATION MATCHS : Tu ne dois JAMAIS inventer un match, un score, une équipe ou une confrontation qui ne figure pas dans les données live transmises. Si l'utilisateur mentionne un match absent de ton contexte, réponds : "J'ai pas ce match dans mon calendrier live — sélectionne-le depuis la liste pour que j'aie les vraies stats." Zéro invention.
 - Si tu as des données réelles sur un match mentionné, utilise-les immédiatement${timeBlock}${memoryBlock}${lifeTagsBlock}${matchBlock}${oddsBlock}${bankrollBlock}${userBlock}${matchesBlock}${newsBlock}${predictionsBlock}
 
 BET ARCHITECT — DATA CORRELATION :
@@ -502,7 +503,7 @@ FEW-SHOT :
     });
     if (!r.ok) {
       const errBody = await r.text().catch(() => '');
-      console.error('[Groq error]', r.status, errBody.slice(0, 300));
+      console.error('[OpenAI error]', r.status, errBody.slice(0, 300));
       return res.status(500).json({ error: 'AI unavailable' });
     }
     const data = await r.json();
@@ -1176,11 +1177,11 @@ app.get('/api/odds', async (req, res) => {
   }
 });
 
-// ─── Live React : réaction Groq sur événement en direct ──
+// ─── Live React : réaction IA sur événement en direct ────
 app.post('/api/live-react', async (req, res) => {
   const { event, match, userPrediction, aiName = 'Alex' } = req.body;
   if (!event) return res.status(400).json({ error: 'Missing event' });
-  const KEY = process.env.GROQ_API_KEY;
+  const KEY = process.env.OPENAI_API_KEY;
   if (!KEY) return res.status(500).json({ error: 'AI unavailable' });
 
   const matchLabel = match ? `${match.home} vs ${match.away}` : 'match en cours';
@@ -1195,11 +1196,11 @@ Si l'événement impacte sa prédiction → dis-lui directement si ça va dans s
 PAS de bullet points. PAS de jargon robot.`;
 
   try {
-    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${KEY}` },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'gpt-4o-mini',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.92,
         max_tokens: 120,
