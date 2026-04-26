@@ -1736,10 +1736,12 @@ let previousView     = 'paddock';
 let chatHistory   = [];
 let loadedMatchesMap = {};
 let todayMatchesCache = [];
+let todayMatchesCacheTs = 0;    // timestamp du dernier fetch /api/today
 let liveWatchInterval   = null;
 let liveScoreSnapshot   = {};   // { [matchId]: { score, status, minute } }
 let liveReactCooldown   = {};   // { [matchId]: timestamp } — anti-spam 2 min
 let todayNewsCache = [];
+let todayNewsCacheTs = 0;       // timestamp du dernier fetch /api/news
 let userProfileCache = null;
 
 
@@ -2989,23 +2991,32 @@ async function callAI(userMsg) {
   document.getElementById('chat-box').appendChild(typing);
   document.getElementById('chat-box').scrollTop = 9999;
 
-  // Auto-load matches si le cache est vide (utilisateur arrivé direct au chat)
-  if (!todayMatchesCache.length) {
+  // Auto-load matches si cache vide ou > 30min (quota RapidAPI)
+  const CACHE_TTL = 30 * 60_000;
+  if (!todayMatchesCache.length || Date.now() - todayMatchesCacheTs > CACHE_TTL) {
     try {
       const data = await fetch('/api/today').then(r => r.json());
-      todayMatchesCache = data.matches || [];
-      todayMatchesCache.forEach(m => { loadedMatchesMap[m.id] = m; });
-      console.log('[callAI] auto-load today:', todayMatchesCache.length, 'matchs');
-    } catch (e) { console.warn('[callAI] auto-load today failed:', e); }
+      if (data.matches?.length) {
+        todayMatchesCache = data.matches;
+        todayMatchesCacheTs = Date.now();
+        todayMatchesCache.forEach(m => { loadedMatchesMap[m.id] = m; });
+        console.log('[callAI] matchs chargés:', todayMatchesCache.length);
+      } else if (!todayMatchesCache.length) {
+        console.warn('[callAI] /api/today a retourné 0 match — vérifie RAPIDAPI_KEY');
+      }
+    } catch (e) { console.warn('[callAI] /api/today échec:', e.message); }
   }
 
-  // Auto-load news si le cache est vide
-  if (!todayNewsCache.length) {
+  // Auto-load news si cache vide ou > 1h
+  if (!todayNewsCache.length || Date.now() - todayNewsCacheTs > 3_600_000) {
     try {
       const data = await fetch('/api/news').then(r => r.json());
-      if (Array.isArray(data)) todayNewsCache = data.map(a => ({ source: a.source || 'Football', title: a.title || '' }));
-      console.log('[callAI] auto-load news:', todayNewsCache.length, 'articles');
-    } catch (e) { console.warn('[callAI] auto-load news failed:', e); }
+      if (Array.isArray(data) && data.length) {
+        todayNewsCache = data.map(a => ({ source: a.source || 'Football', title: a.title || '' }));
+        todayNewsCacheTs = Date.now();
+        console.log('[callAI] news chargées:', todayNewsCache.length, 'articles');
+      }
+    } catch (e) { console.warn('[callAI] /api/news échec:', e.message); }
   }
 
   try {
