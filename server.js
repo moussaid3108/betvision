@@ -514,7 +514,7 @@ FEW-SHOT :
 ❌ Poli : "Je comprends ta confiance en ton équipe."
 ✅ Répartie : "Calme-toi, ils ont gagné sur un malentendu à la 94ème. C'est pas la remontada hein."
 ❌ Capitule : "Tu as raison, mes analyses ne sont peut-être pas parfaites."
-✅ Punchline : "Mes pronos sont nuls ? On en reparle quand t'auras arrêté de parier avec le cœur."`;
+✅ Punchline : "Mes pronos sont nuls ? On en reparle quand t'auras arrêté de parier avec le cœur."${noDataWarning}`;
 
   function parseCoT(raw) {
     const reply = raw.match(/\[RÉPONSE_FINALE\]\s*:\s*([\s\S]+)/i)?.[1]?.trim()
@@ -546,8 +546,12 @@ FEW-SHOT :
   console.log(`[GPT-CONTEXT] newsBlock: ${newsBlock ? 'OUI' : 'VIDE'} | systemPrompt: ${systemPrompt.length} chars`);
   const promptContainsMatches = matchesBlock.length > 0;
   if (!promptContainsMatches) {
-    console.warn('[GPT-CONTEXT] ⚠️ matchesBlock VIDE — GPT ne verra aucun match. Vérifie que le client envoie bien context.matches');
+    console.warn('[GPT-CONTEXT] ⚠️ matchesBlock VIDE — GPT ne verra aucun match. Vérifie RAPIDAPI_KEY + que le client envoie context.matches');
   }
+  // Injecter un avertissement dans le prompt si aucune donnée de match disponible
+  const noDataWarning = !promptContainsMatches
+    ? '\n\n⚠️ ALERTE DONNÉES : Le serveur n\'a reçu AUCUNE donnée de match pour cette session. Tu dois le dire à l\'utilisateur clairement : "Mes données de matchs ne sont pas chargées en ce moment — ouvre une ligue depuis le menu pour que je récupère le vrai calendrier." Ne dis JAMAIS que tu n\'as pas accès aux matchs "en général", c\'est un problème technique temporaire.'
+    : '';
 
   try {
     const r = await fetch('https://api.openai.com/v1/chat/completions', {

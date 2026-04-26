@@ -3001,10 +3001,20 @@ async function callAI(userMsg) {
         todayMatchesCacheTs = Date.now();
         todayMatchesCache.forEach(m => { loadedMatchesMap[m.id] = m; });
         console.log('[callAI] matchs chargés:', todayMatchesCache.length);
-      } else if (!todayMatchesCache.length) {
-        console.warn('[callAI] /api/today a retourné 0 match — vérifie RAPIDAPI_KEY');
+      } else {
+        console.warn('[callAI] /api/today → 0 match. Erreur API:', data.error || 'inconnue');
+        // Si l'API Sport ne répond pas et qu'aucune donnée n'est disponible,
+        // on le signale directement dans le chat plutôt que de laisser l'IA halluciner
+        if (!todayMatchesCache.length && !Object.keys(loadedMatchesMap).length) {
+          document.getElementById('typing-indicator')?.remove();
+          btn.disabled = false;
+          appendMessage('ai', "Mon API Sport n'a pas chargé de données pour l'instant. Vérifie que RAPIDAPI_KEY est bien configurée sur le serveur, puis rafraîchis la page. Si ça persiste, ouvre une ligue depuis le menu ☰ pour forcer le chargement.");
+          return;
+        }
       }
-    } catch (e) { console.warn('[callAI] /api/today échec:', e.message); }
+    } catch (e) {
+      console.warn('[callAI] /api/today échec:', e.message);
+    }
   }
 
   // Auto-load news si cache vide ou > 1h
