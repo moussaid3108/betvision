@@ -2995,7 +2995,7 @@ async function callAI(userMsg) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         message: userMsg,
-        history: chatHistory.slice(-50).map(h => ({ role: h.role, content: h.content })),
+        history: chatHistory.slice(-15).map(h => ({ role: h.role, content: h.content })),
         context: {
           matches: todayMatchesCache, news: todayNewsCache, user: userProfileCache,
           match: currentMatch || null, aiName: getAiName(), memory: formatMemoryBlock(),
@@ -3165,23 +3165,26 @@ async function detectAndReact(current) {
 
 function getDemoReply(msg) {
   const q = msg.toLowerCase();
-  if (q.includes('btts') || q.includes('les deux')) {
-    return '📊 Analyse BTTS : Les matchs avec BTTS ≥ 65% correspondent à des rencontres où les deux équipes affichent λ ≥ 1.5 but/match. L\'algorithme Poisson calcule P(BTTS) = (1 − e^−λdom) × (1 − e^−λext). Consultez la page analyse pour les valeurs détaillées. ⚠️ Outil d\'aide à la décision uniquement.';
+  const m = currentMatch;
+  if (q.includes('btts') || q.includes('les deux équipes')) {
+    if (m) return `Sur ${m.home} vs ${m.away}, le BTTS est à ${m.btts}%. ${m.btts >= 65 ? "Signal fort — les deux équipes scorent souvent dans ce type de match." : "C'est pas le signal le plus solide là, je resterais prudent."}`;
+    return "Donne-moi un match sur lequel te positionner, je regarde le BTTS direct.";
   }
   if (q.includes('over') || q.includes('buts')) {
-    return '⚡ Over 2.5 buts : La probabilité est calculée par P(total > 2.5) = 1 − P(0) − P(1) − P(2) avec distribution de Poisson. Les matchs avec λ_total > 2.8 ont statistiquement une prob. Over 2.5 supérieure à 60%. ⚠️ Analyse statistique à titre informatif.';
+    if (m) return `${m.home} vs ${m.away} : Over 2.5 à ${m.over25}%. ${m.over25 >= 65 ? "Y'a de la matière, ce match part souvent sur des buts." : "Mouais, l'algo est pas convaincu sur les buts là."}`;
+    return "Dis-moi le match, je check l'Over direct.";
   }
-  if (q.includes('forme') || q.includes('form')) {
-    return '📈 Forme récente : L\'algorithme analyse les 5 derniers résultats de chaque équipe. Une série WWWWW génère un bonus de +8 pts dans l\'indice de confiance. Les équipes avec ≥ 4 victoires sur 5 présentent un signal renforcé. ⚠️ Analyse statistique uniquement.';
+  if (q.includes('marquer') || q.includes('buteur') || q.includes('score') || q.includes('nante') || q.includes('qui va')) {
+    if (m) return `Sur ${m.home} vs ${m.away} : l'algo donne ${m.homeWin}% dom., ${m.draw}% nul, ${m.awayWin}% ext. Le signal global est à ${m.confidence}%. ${m.confidence >= 70 ? "C'est assez clair." : "C'est serré, je joue la prudence."}`;
+    return "C'est lequel le match ? Dis-moi et j'analyse ça direct.";
   }
-  if (q.includes('combiné') || q.includes('combin')) {
-    return '🎯 Combiné algorithmique : La prob. conjointe de 3 sélections indépendantes à 70% est ≈ 34%. L\'algorithme recommande des signaux ≥ 70% avec faible corrélation entre matchs pour limiter le risque. ⚠️ Ces données sont à titre informatif uniquement.';
-  }
-  if (q.includes('vs') || q.includes('analyse')) {
-    const m = currentMatch;
-    if (m) return `🔍 ${m.home} vs ${m.away} : λ_dom = ${m.goalsHome}, λ_ext = ${m.goalsAway}. BTTS ${m.btts}%, Over 2.5 ${m.over25}%, victoire dom. ${m.homeWin ?? '?'}%. Signal global : ${m.confidence}% (${m.confidence >= 80 ? 'élevé' : m.confidence >= 65 ? 'modéré' : 'faible'}). ⚠️ Analyse statistique uniquement.`;
-  }
-  return '🤖 BetVision AI : Posez-moi une question sur un match chargé (BTTS, Over 2.5, forme, combiné) pour obtenir une analyse statistique détaillée. ⚠️ Outil d\'aide à la décision uniquement.';
+  if (m) return `${m.home} vs ${m.away} — victoire dom. ${m.homeWin}%, nul ${m.draw}%, ext. ${m.awayWin}%. Signal ${m.confidence}%. Tu veux qu'on creuse un angle ?`;
+  const fallbacks = [
+    "Dis-moi le match qui t'intéresse, je sors les stats.",
+    "C'est quoi le match du moment pour toi ?",
+    "J'attends le nom du match et je te balance l'analyse.",
+  ];
+  return fallbacks[Math.floor(Math.random() * fallbacks.length)];
 }
 
 // ─── DASHBOARD ───

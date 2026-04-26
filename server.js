@@ -495,12 +495,16 @@ FEW-SHOT :
           { role: 'user', content: message },
         ],
         temperature: 0.85,
-        max_tokens: 600,
+        max_tokens: 900,
         frequency_penalty: 0.4,
         presence_penalty: 0.2,
       }),
     });
-    if (!r.ok) return res.status(500).json({ error: 'AI unavailable' });
+    if (!r.ok) {
+      const errBody = await r.text().catch(() => '');
+      console.error('[Groq error]', r.status, errBody.slice(0, 300));
+      return res.status(500).json({ error: 'AI unavailable' });
+    }
     const data = await r.json();
     const raw = data.choices?.[0]?.message?.content || '';
     if (process.env.DEBUG_COT) console.log('[CoT]', raw);
