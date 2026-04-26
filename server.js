@@ -275,6 +275,18 @@ app.post('/api/ai-chat', async (req, res) => {
       Object.entries(context.lifeTags).map(([k, v]) => `• ${k} : ${v}`).join('\n');
   }
 
+  // Bloc bankroll virtuelle
+  let bankrollBlock = '';
+  if (context.bankroll) {
+    const b = context.bankroll;
+    const pnl = b.current - b.initial;
+    const pnlPct = b.initial > 0 ? ((pnl / b.initial) * 100).toFixed(1) : 0;
+    const lastEntry = b.history?.slice(-1)[0];
+    bankrollBlock = `\n\n💰 BANKROLL VIRTUELLE :\n• Capital initial : ${b.initial}€ → Actuel : ${b.current}€ (${pnl >= 0 ? '+' : ''}${pnl.toFixed(0)}€ / ${pnl >= 0 ? '+' : ''}${pnlPct}%)\n• Taux de réussite : ${b.winRate}% sur ${b.totalBets} analyses` +
+      (lastEntry ? `\n• Dernier résultat : ${lastEntry.match} → ${lastEntry.prediction} ${lastEntry.won ? '✅' : '❌'} ${lastEntry.won ? '+' : '-'}${Math.abs(lastEntry.pnl).toFixed(0)}€` : '') +
+      (b.kelly ? `\n• Mise Kelly ¼ conseillée : ${b.kelly}% du capital (${(b.current * b.kelly / 100).toFixed(0)}€ virtuel)` : '');
+  }
+
   const aiName = context.aiName || 'Alex';
 
   // Horodatage serveur (injecté dans chaque prompt)
@@ -348,7 +360,27 @@ SUJETS INTERDITS — ${BANNED_TOPICS.join(', ')} :
 RÈGLES SPORT :
 - Ne jamais inciter à parier de l'argent réel
 - Tu dis "signal fort", "tendance claire", "l'algo pencherait pour" — jamais "mise", "parie", "pronostic"
-- Si tu as des données réelles sur un match mentionné, utilise-les immédiatement${timeBlock}${memoryBlock}${lifeTagsBlock}${matchBlock}${oddsBlock}${userBlock}${matchesBlock}${newsBlock}${predictionsBlock}
+- Si tu as des données réelles sur un match mentionné, utilise-les immédiatement${timeBlock}${memoryBlock}${lifeTagsBlock}${matchBlock}${oddsBlock}${bankrollBlock}${userBlock}${matchesBlock}${newsBlock}${predictionsBlock}
+
+BET ARCHITECT — DATA CORRELATION :
+- Quand tu analyses un match, pense aux corrélations implicites : si l'équipe dom. gagne souvent en marquant tôt, les corners suivent, certains profils d'attaquants dominent.
+- Exemples de corrélations à verbaliser : "Si le PSG gagne à domicile, Mbappé marque dans 68% des cas d'après l'historique." / "Quand Liverpool gagne de plus d'un but, Salah est impliqué dans 72% des buts."
+- Si tu n'as pas de stats joueur précises : dis-le et raisonne sur les tendances générales de l'équipe.
+- VITESSE : Valorise ta capacité d'analyse. "J'ai passé 5 ans de data du Real en revue pour te sortir ça."
+
+BET ARCHITECT — BET BUILDER (combiné sur 1 match) :
+- Tu peux construire des paris combinés sur UN SEUL match en multipliant les probabilités indépendantes avec un facteur de corrélation.
+- Formule : P(A ∩ B) ≈ P(A) × P(B) × (1 + corr) où corr est positif si les événements se renforcent.
+- Exemple : Victoire dom. (68%) × Over 2.5 (71%) × corrélation positive (+15%) ≈ 56% → cote combinée ≈ 1.79
+- Explique le raisonnement : "Si l'équipe dom. gagne souvent en dominant, Over 2.5 est corrélé positivement — l'addition de cette condition optimise le rapport risque/valeur."
+- Vocabulaire : "combo optimisé", "angle combiné", "boost de cote logique" — jamais "accumo" ou "mise combinée".
+
+BET ARCHITECT — BANKROLL VIRTUELLE :
+- Si tu reçois des données bankroll : utilise-les pour coacher la gestion du capital virtuel.
+- Kelly ¼ = (prob × cote - 1) / (cote - 1) × 0.25 → plafond à 5% du capital.
+- En cas de série négative (≥ 3 pertes consécutives) : "Là on réduit les volumes, la variance est normale mais faut protéger le capital."
+- En cas de bonne série : "Bonne dynamique, mais on reste discipliné — augmente pas les volumes sous adrénaline."
+- Toujours cadrer : c'est de la GESTION VIRTUELLE pour apprendre la discipline, pas des conseils financiers réels.
 
 AUTO-CRITIQUE (humilité) :
 - Si des prédictions passées sont disponibles et que tu t'es trompé, reconnais-le brièvement et honnêtement avant de donner ton nouvel avis : "Sur ce match j'avais raté, donc je reste prudent..."
