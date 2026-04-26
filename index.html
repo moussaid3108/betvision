@@ -608,6 +608,13 @@
   }
   .chat-send:active { transform: scale(0.93); background: #00b377; }
   .chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
+  .chat-img-btn {
+    width: 40px; height: 48px; flex-shrink: 0;
+    background: transparent; border: 1px solid #2a2d35; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 18px; color: #888; transition: all .2s;
+  }
+  .chat-img-btn:hover { border-color: var(--accent); color: var(--accent); }
 
   .quick-questions {
     flex-shrink: 0;
@@ -1473,6 +1480,8 @@
     </div>
 
     <div class="chat-input-row">
+      <button class="chat-img-btn" onclick="document.getElementById('ticket-input').click()" title="Analyser un ticket">📎</button>
+      <input type="file" id="ticket-input" accept="image/*" style="display:none" onchange="callVision(this)">
       <textarea class="chat-input" id="chat-input" placeholder="Votre question..." rows="1"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
         oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
@@ -2805,8 +2814,9 @@ async function checkMatchEngagement() {
 // ─── MÉMOIRE LONG TERME (Le Journaliste) ───
 function getMemory() {
   try {
-    return JSON.parse(localStorage.getItem('bv_memory_' + (currentUser?.id || 'guest')) || '{"facts":{},"lastTopic":null,"lastMessageAt":null}');
-  } catch { return { facts: {}, lastTopic: null, lastMessageAt: null }; }
+    const raw = JSON.parse(localStorage.getItem('bv_memory_' + (currentUser?.id || 'guest')) || '{}');
+    return { facts: {}, lifeTags: {}, lastTopic: null, lastMessageAt: null, ...raw };
+  } catch { return { facts: {}, lifeTags: {}, lastTopic: null, lastMessageAt: null }; }
 }
 function saveMemory(mem) {
   try { localStorage.setItem('bv_memory_' + (currentUser?.id || 'guest'), JSON.stringify(mem)); } catch {}
@@ -2814,16 +2824,53 @@ function saveMemory(mem) {
 function updateMemoryFacts(newFacts) {
   if (!newFacts?.length) return;
   const mem = getMemory();
-  newFacts.forEach(({ key, value }) => { mem.facts[key] = value; });
+  newFacts.forEach(({ key, value, type }) => {
+    if (type === 'life') mem.lifeTags[key] = value;
+    else mem.facts[key] = value;
+  });
   mem.lastMessageAt = Date.now();
   saveMemory(mem);
 }
 function formatMemoryBlock() {
   const mem = getMemory();
-  const entries = Object.entries(mem.facts);
+  const entries = Object.entries(mem.facts || {});
   if (!entries.length) return '';
   return '\n\n🧠 CE QUE TU SAIS DE L\'UTILISATEUR (mémoire long terme) :\n' +
     entries.map(([k, v]) => `• ${k} : ${v}`).join('\n');
+}
+function getLifeTags() {
+  const mem = getMemory();
+  const tags = mem.lifeTags || {};
+  return Object.keys(tags).length ? tags : null;
+}
+
+function getPredictions() {
+  try { return JSON.parse(localStorage.getItem('bv_predictions_' + (currentUser?.id || 'guest')) || '[]'); }
+  catch { return []; }
+}
+function savePredictionEntry(home, away, prediction) {
+  const preds = getPredictions();
+  if (preds.some(p => p.home === home && p.away === away && p.actual === null)) return;
+  preds.push({ home, away, prediction, actual: null, correct: null, ts: Date.now() });
+  try { localStorage.setItem('bv_predictions_' + (currentUser?.id || 'guest'), JSON.stringify(preds.slice(-20))); } catch {}
+}
+function refreshPredictionsVsCache() {
+  if (!todayMatchesCache?.length) return getPredictions();
+  const preds = getPredictions();
+  let changed = false;
+  preds.forEach(p => {
+    if (p.actual !== null) return;
+    const m = todayMatchesCache.find(m => m.status === 'finished' && m.score &&
+      (m.home === p.home || m.away === p.away));
+    if (!m) return;
+    const actual = m.score.home > m.score.away ? 'Victoire dom.'
+                 : m.score.home < m.score.away ? 'Victoire ext.' : 'Match nul';
+    p.actual = actual;
+    p.correct = p.prediction?.toLowerCase().includes(actual.split(' ')[0].toLowerCase());
+    changed = true;
+  });
+  if (changed) try { localStorage.setItem('bv_predictions_' + (currentUser?.id || 'guest'), JSON.stringify(preds)); } catch {}
+  return preds.filter(p => p.actual !== null).slice(-5);
 }
 
 function saveChatHistory() {
@@ -2892,7 +2939,12 @@ async function callAI(userMsg) {
       body: JSON.stringify({
         message: userMsg,
         history: chatHistory.slice(-50).map(h => ({ role: h.role, content: h.content })),
-        context: { matches: todayMatchesCache, news: todayNewsCache, user: userProfileCache, match: currentMatch || null, aiName: getAiName(), memory: formatMemoryBlock() },
+        context: {
+          matches: todayMatchesCache, news: todayNewsCache, user: userProfileCache,
+          match: currentMatch || null, aiName: getAiName(), memory: formatMemoryBlock(),
+          predictions: refreshPredictionsVsCache(),
+          lifeTags: getLifeTags(),
+        },
       }),
     });
 
@@ -2901,6 +2953,15 @@ async function callAI(userMsg) {
     if (res.ok) {
       const data = await res.json();
       updateMemoryFacts(data.facts);
+      // Stocker les prédictions extraites par Groq (clé commençant par "prédiction")
+      if (data.facts?.length) {
+        data.facts.forEach(({ key, value }) => {
+          if (key?.toLowerCase().startsWith('prédiction')) {
+            const parts = value?.split(' vs ');
+            if (parts?.length === 2) savePredictionEntry(parts[0].trim(), parts[1].split(':')[0].trim(), parts[1].split(':')[1]?.trim() || value);
+          }
+        });
+      }
       const mem = getMemory();
       mem.lastMessageAt = Date.now();
       saveMemory(mem);
@@ -2913,6 +2974,45 @@ async function callAI(userMsg) {
     appendMessage('ai', getDemoReply(userMsg));
   }
 
+  btn.disabled = false;
+}
+
+async function callVision(input) {
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+  appendMessage('user', `📎 Ticket envoyé : ${file.name}`);
+  const btn = document.getElementById('chat-send');
+  btn.disabled = true;
+  const typing = document.createElement('div');
+  typing.className = 'chat-msg ai typing';
+  typing.id = 'typing-indicator';
+  typing.textContent = '🔍 Analyse du ticket...';
+  document.getElementById('chat-box').appendChild(typing);
+  document.getElementById('chat-box').scrollTop = 9999;
+  try {
+    const b64 = await new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onload = e => res(e.target.result.split(',')[1]);
+      reader.onerror = rej;
+      reader.readAsDataURL(file);
+    });
+    const r = await fetch('/api/ai-vision', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64: b64, mimeType: file.type, context: { aiName: getAiName() } }),
+    });
+    document.getElementById('typing-indicator')?.remove();
+    if (r.ok) {
+      const data = await r.json();
+      appendMessage('ai', data.reply || 'Impossible de lire le ticket.');
+    } else {
+      appendMessage('ai', "J'arrive pas à lire cette image, envoie-moi une photo plus nette.");
+    }
+  } catch {
+    document.getElementById('typing-indicator')?.remove();
+    appendMessage('ai', "Problème avec l'image, réessaie.");
+  }
   btn.disabled = false;
 }
 
