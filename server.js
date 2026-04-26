@@ -248,6 +248,22 @@ app.post('/api/ai-chat', async (req, res) => {
       context.news.slice(0, 5).map(a => `• [${a.source}] ${a.title}`).join('\n');
   }
 
+  // Bloc auto-critique (prédictions passées correctes/fausses)
+  let predictionsBlock = '';
+  if (context.predictions?.length) {
+    predictionsBlock = '\n\n🔁 TES PRÉDICTIONS PASSÉES (auto-critique) :\n' +
+      context.predictions.slice(-5).map(p =>
+        `• ${p.home} vs ${p.away} — tu avais dit "${p.prediction}" → Résultat : ${p.actual} (${p.correct ? '✅ correct' : '❌ raté'})`
+      ).join('\n');
+  }
+
+  // Bloc life-tags (détails de vie non-sportifs)
+  let lifeTagsBlock = '';
+  if (context.lifeTags && Object.keys(context.lifeTags).length) {
+    lifeTagsBlock = '\n\n🏷️ TAGS DE VIE (small talk) :\n' +
+      Object.entries(context.lifeTags).map(([k, v]) => `• ${k} : ${v}`).join('\n');
+  }
+
   const aiName = context.aiName || 'Alex';
 
   // Horodatage serveur (injecté dans chaque prompt)
@@ -304,7 +320,17 @@ SUJETS INTERDITS — ${BANNED_TOPICS.join(', ')} :
 RÈGLES SPORT :
 - Ne jamais inciter à parier de l'argent réel
 - Tu dis "signal fort", "tendance claire", "l'algo pencherait pour" — jamais "mise", "parie", "pronostic"
-- Si tu as des données réelles sur un match mentionné, utilise-les immédiatement${timeBlock}${memoryBlock}${matchBlock}${userBlock}${matchesBlock}${newsBlock}
+- Si tu as des données réelles sur un match mentionné, utilise-les immédiatement${timeBlock}${memoryBlock}${lifeTagsBlock}${matchBlock}${userBlock}${matchesBlock}${newsBlock}${predictionsBlock}
+
+AUTO-CRITIQUE (humilité) :
+- Si des prédictions passées sont disponibles et que tu t'es trompé, reconnais-le brièvement et honnêtement avant de donner ton nouvel avis : "Sur ce match j'avais raté, donc je reste prudent..."
+- Ne te justifie pas longuement, ne te flagelle pas — reconnaître et avancer.
+- Si tu avais raison, une confirmation sobre suffit : "L'analyse tenait la route."
+
+LIFE-TAGS (small talk humain) :
+- Utilise les tags de vie dans la conversation naturellement, jamais de façon mécanique.
+- Si tu sais qu'il a un proche prénommé X, utilise ce prénom quand c'est pertinent.
+- Ces infos servent à créer du lien, pas à profiler — reste dans la chaleur humaine.
 
 TEMPORALITÉ (règle stricte) :
 - La date et l'heure exactes t'ont été transmises. Tu dois TOUJOURS les utiliser pour situer les événements.
@@ -323,13 +349,14 @@ FORMAT DE RÉPONSE OBLIGATOIRE :
 [VÉRIFICATION_SÉCURITÉ] : (OK | INTERDIT — si INTERDIT : prépare sortie élégante)
 [CHECK_TEMPOREL] : (Si match mentionné : "On est le [date]. Ce match a lieu [heure]. Statut : PASSÉ → DÉBRIEF | FUTUR → PRÉDICTION | LIVE → LIVE")
 [DÉTECTION_ÉMOTION] : (Neutre | Frustré | Tilt | Enthousiaste | Découragé — si Frustré/Tilt/Découragé → activer COACH MINDSET dans [STRATÉGIE])
+[AUTO_CRITIQUE] : (Prédiction passée concernée ? OUI → reconnais en 1 phrase. NON → skip.)
 [ANALYSE_PSY] : (humeur et intention réelle — 1 ligne)
 [VIBE] : (Sérieux | Fun | Agacé | Enthousiaste | Inquiet — 1 mot)
 [LEVEL] : (Débutant | Familier | Expert — 1 mot)
 [STRATÉGIE] : (ton à adopter. Si sensible → sortie élégante. Si vie quotidienne → empathie. Si sport → expertise max.)
 [VÉRIFICATION] : (ça sonne robot ? Si oui, réécrire.)
 [VÉRIFICATION_FIDÉLITÉ] : (utilisateur fidèle ? Si oui → stat exclusive ou angle rare.)
-[FAITS_EXTRAITS] : (0 à 2 faits clé:valeur appris dans CE message. RIEN si aucun.)
+[FAITS_EXTRAITS] : (0 à 2 faits. Format : clé:valeur:SPORT ou clé:valeur:LIFE. RIEN si aucun. Exemples : équipe_favorite:PSG:SPORT | ami_proche:Thomas:LIFE)
 [RÉPONSE_FINALE] : (texte destiné à l'utilisateur UNIQUEMENT — humain, concis)
 
 FEW-SHOT :
@@ -342,15 +369,22 @@ FEW-SHOT :
 
   function parseCoT(raw) {
     const reply = raw.match(/\[RÉPONSE_FINALE\]\s*:\s*([\s\S]+)/i)?.[1]?.trim()
-      || raw.replace(/\[(ANALYSE_SUJET|VÉRIFICATION_SÉCURITÉ|CHECK_TEMPOREL|DÉTECTION_ÉMOTION|ANALYSE_PSY|VIBE|LEVEL|STRATÉGIE|VÉRIFICATION|VÉRIFICATION_FIDÉLITÉ|FAITS_EXTRAITS)\]\s*:.*\n?/gi, '').trim();
+      || raw.replace(/\[(ANALYSE_SUJET|VÉRIFICATION_SÉCURITÉ|CHECK_TEMPOREL|DÉTECTION_ÉMOTION|AUTO_CRITIQUE|ANALYSE_PSY|VIBE|LEVEL|STRATÉGIE|VÉRIFICATION|VÉRIFICATION_FIDÉLITÉ|FAITS_EXTRAITS)\]\s*:.*\n?/gi, '').trim();
 
     const factsRaw = raw.match(/\[FAITS_EXTRAITS\]\s*:\s*([^\n\[]+)/i)?.[1]?.trim() || '';
     const facts = factsRaw === 'RIEN' || !factsRaw ? [] :
       factsRaw.split('|').map(f => {
-        const [k, v] = f.split(':').map(s => s.trim());
+        const parts = f.split(':').map(s => s.trim());
+        if (parts.length < 2) return null;
+        const k = parts[0];
+        const lastPart = parts[parts.length - 1].toUpperCase();
+        const type = (lastPart === 'LIFE' || lastPart === 'SPORT') ? lastPart.toLowerCase() : 'sport';
+        const v = (lastPart === 'LIFE' || lastPart === 'SPORT')
+          ? parts.slice(1, -1).join(':').trim()
+          : parts.slice(1).join(':').trim();
         if (!k || !v) return null;
         if (SENSITIVE_KEYS.some(sk => k.toLowerCase().includes(sk))) return null;
-        return { key: k, value: cleanPII(v) };
+        return { key: k, value: cleanPII(v), type };
       }).filter(Boolean);
 
     return { reply, facts };
@@ -973,6 +1007,46 @@ app.get('/api/live-scores', async (req, res) => {
   }));
 
   res.json(results.filter(Boolean));
+});
+
+// ─── Vision : analyse ticket de pari ─────────────────────
+app.post('/api/ai-vision', async (req, res) => {
+  const { imageBase64, mimeType = 'image/jpeg', context = {} } = req.body;
+  if (!imageBase64) return res.status(400).json({ error: 'Missing image' });
+  const KEY = process.env.GROQ_API_KEY;
+  if (!KEY) return res.status(500).json({ error: 'AI unavailable' });
+
+  const aiName = context.aiName || 'Alex';
+  const visionPrompt = `Tu es ${aiName}, expert en analyse sportive. Tu reçois une photo d'un ticket de pari.
+Commente en 3 points courts :
+1. Les sélections (sport, match, type de pari détecté)
+2. Ton avis honnête sur la qualité des sélections (signal fort, risque élevé, combiné trop ambitieux, etc.)
+3. Un conseil de gestion — SANS jamais inciter à miser de l'argent réel.
+Ton naturel : ami expert, tutoiement, langage décontracté. Maximum 5 phrases.`;
+
+  try {
+    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${KEY}` },
+      body: JSON.stringify({
+        model: 'llama-3.2-11b-vision-preview',
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: visionPrompt },
+            { type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}` } },
+          ],
+        }],
+        temperature: 0.7,
+        max_tokens: 350,
+      }),
+    });
+    if (!r.ok) return res.status(500).json({ error: 'Vision unavailable' });
+    const data = await r.json();
+    res.json({ reply: data.choices?.[0]?.message?.content || '' });
+  } catch {
+    res.status(500).json({ error: 'Vision unavailable' });
+  }
 });
 
 // ─── Fichiers statiques (index.html, etc.) ────────────────
