@@ -63,6 +63,10 @@ const LEAGUE_PRIORITY = { 17: 1, 23: 2, 8: 3, 35: 4, 34: 5 };
 let todayCache = { data: null, ts: 0, date: '' };
 const TODAY_TTL = 30 * 60_000;
 
+// Cache global /api/upcoming — 1h (3 jours de matchs)
+let upcomingCache = { data: null, ts: 0, dateKey: '' };
+const UPCOMING_TTL = 60 * 60_000;
+
 app.get('/api/today', async (req, res) => {
   const KEY = process.env.RAPIDAPI_KEY;
   if (!KEY) {
@@ -193,6 +197,98 @@ app.get('/api/today', async (req, res) => {
   }
 });
 
+// ─── /api/upcoming : 3 jours de matchs pour le contexte IA ──
+app.get('/api/upcoming', async (req, res) => {
+  const KEY = process.env.RAPIDAPI_KEY;
+  if (!KEY) return res.status(500).json({ error: 'RAPIDAPI_KEY not configured', matches: [] });
+
+  const baseDate = new Date();
+  const dateKey = baseDate.toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
+
+  if (upcomingCache.data && upcomingCache.dateKey === dateKey && Date.now() - upcomingCache.ts < UPCOMING_TTL) {
+    console.log('[/api/upcoming] CACHE HIT —', upcomingCache.data.matches.length, 'matchs (quota préservé)');
+    return res.json(upcomingCache.data);
+  }
+
+  const hdr = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
+  const DAY_LABELS = ['Aujourd\'hui', 'Demain', 'Dans 2 jours'];
+
+  console.log('[/api/upcoming] CACHE MISS — fetch 3 jours RapidAPI');
+
+  try {
+    // 3 appels en parallèle (1 par jour) — 3 crédits quota max
+    const days = await Promise.all([0, 1, 2].map(async offset => {
+      const d = new Date(baseDate);
+      d.setDate(d.getDate() + offset);
+      const dateStr = d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
+      try {
+        const r = await fetch(`${SPORT_BASE}/api/v1/sport/football/scheduled-events/${dateStr}`, { headers: hdr });
+        if (!r.ok) return { offset, events: [] };
+        const data = await r.json();
+        return { offset, dateStr, events: data?.events || [] };
+      } catch { return { offset, events: [] }; }
+    }));
+
+    const allMatches = [];
+    for (const { offset, events } of days) {
+      const filtered = events.filter(e => {
+        const tid = e?.tournament?.uniqueTournament?.id;
+        return tid && LEAGUES[tid];
+      });
+
+      for (const e of filtered) {
+        const tid = e.tournament?.uniqueTournament?.id;
+        const league = LEAGUES[tid] || { name: e.tournament?.name || '', lH: 1.35, lA: 1.05 };
+        const d = e.startTimestamp ? new Date(e.startTimestamp * 1000) : null;
+        const cacheKey = `match:${e.id}`;
+        const cached = computeStatsCache.get(cacheKey);
+        const stats = cached?.data || matchScore(league.lH, league.lA);
+
+        // Form depuis teamStatsCache (0 appel API supplémentaire — cache 12h)
+        const hId = e.homeTeam?.id, aId = e.awayTeam?.id;
+        const hStats = hId ? teamStatsCache.get(`team-stats:football:${hId}`)?.data : null;
+        const aStats = aId ? teamStatsCache.get(`team-stats:football:${aId}`)?.data : null;
+        const formStr = f => f?.length ? f.slice(0, 5).join('') : null;
+
+        allMatches.push({
+          id:          e.id,
+          home:        e.homeTeam?.name || '?',
+          away:        e.awayTeam?.name || '?',
+          homeTeamId:  hId || null,
+          awayTeamId:  aId || null,
+          competition: league.name,
+          status:      mapEventStatus(e.status?.type),
+          score:       (e.homeScore?.current != null && e.awayScore?.current != null)
+                         ? { home: e.homeScore.current, away: e.awayScore.current } : null,
+          time:        d ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }) : '--:--',
+          date:        d ? d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'Europe/Paris' }) : '',
+          dayOffset:   offset,
+          dayLabel:    DAY_LABELS[offset],
+          btts:        stats.btts    ?? null,
+          over25:      stats.over25  ?? null,
+          homeWin:     stats.homeWin ?? null,
+          draw:        stats.draw    ?? null,
+          awayWin:     stats.awayWin ?? null,
+          formHome:    formStr(hStats?.form) || null,
+          formAway:    formStr(aStats?.form) || null,
+        });
+      }
+    }
+
+    // Trier par dayOffset puis par heure
+    allMatches.sort((a, b) => a.dayOffset - b.dayOffset || a.time.localeCompare(b.time));
+
+    const result = { matches: allMatches.slice(0, 40) };
+    upcomingCache = { data: result, ts: Date.now(), dateKey };
+    console.log('[/api/upcoming]', result.matches.length, 'matchs sur 3 jours mis en cache 1h');
+    res.json(result);
+  } catch (e) {
+    console.error('[/api/upcoming] Erreur:', e.message);
+    if (upcomingCache.data) return res.json(upcomingCache.data);
+    res.status(500).json({ error: e.message, matches: [] });
+  }
+});
+
 app.get('/api/fixture', async (req, res) => {
   const { id } = req.query;
   if (!id) return res.status(400).json({ error: 'Missing id' });
@@ -246,20 +342,33 @@ app.post('/api/ai-chat', async (req, res) => {
   const KEY = process.env.OPENAI_API_KEY;
   if (!KEY) return res.status(500).json({ error: 'AI unavailable' });
 
-  // Bloc matchs du jour
+  // Bloc matchs — 3 sections : EN COURS / CALENDRIER / RÉSULTATS
   let matchesBlock = '';
   if (context.matches?.length) {
-    matchesBlock = '\n\n📅 MATCHS DU JOUR (calendrier réel — source unique de vérité) :\n' +
-      context.matches.map(m => {
-        let scoreInfo = '';
-        if (m.score != null) {
-          if (m.status === 'finished') scoreInfo = ` → TERMINÉ ${m.score.home}-${m.score.away}`;
-          else if (m.status === 'live') scoreInfo = ` → 🔴 LIVE ${m.score.home}-${m.score.away}${m.minute != null ? ` (${m.minute}')` : ''}`;
-        } else if (m.status === 'live') {
-          scoreInfo = ` → 🔴 LIVE (score non disponible)`;
-        }
-        return `• ${m.home} vs ${m.away} (${m.competition}, ${m.time})${scoreInfo} | Dom. ${m.homeWin}% | Nul ${m.draw}% | Ext. ${m.awayWin}% | BTTS ${m.btts}% | Over 2.5 ${m.over25}%`;
-      }).join('\n');
+    const live     = context.matches.filter(m => m.status === 'live');
+    const finished = context.matches.filter(m => m.status === 'finished');
+    const upcoming = context.matches.filter(m => m.status !== 'live' && m.status !== 'finished');
+
+    const fmtMatch = m => {
+      let scoreInfo = '';
+      if (m.score != null) {
+        if (m.status === 'finished') scoreInfo = ` → ✅ ${m.score.home}-${m.score.away}`;
+        else if (m.status === 'live') scoreInfo = ` → 🔴 LIVE ${m.score.home}-${m.score.away}${m.minute != null ? ` (${m.minute}')` : ''}`;
+      }
+      const stats = (m.homeWin != null && m.homeWin > 0)
+        ? ` | Dom.${m.homeWin}% Nul${m.draw}% Ext.${m.awayWin}% | BTTS ${m.btts}% | Over2.5 ${m.over25}%`
+        : '';
+      const form = (m.formHome && m.formAway) ? ` | Forme: ${m.formHome}/${m.formAway}` : '';
+      const day = m.dayLabel && m.dayLabel !== 'Aujourd\'hui' ? ` [${m.dayLabel}]` : '';
+      return `• ${m.home} vs ${m.away} (${m.competition}, ${m.time}${day})${scoreInfo}${stats}${form}`;
+    };
+
+    const sections = [];
+    if (live.length)     sections.push(`🔴 [MATCHS EN COURS]\n${live.map(fmtMatch).join('\n')}`);
+    if (upcoming.length) sections.push(`📅 [CALENDRIER À VENIR]\n${upcoming.map(fmtMatch).join('\n')}`);
+    if (finished.length) sections.push(`✅ [RÉSULTATS RÉCENTS]\n${finished.map(fmtMatch).join('\n')}`);
+
+    if (sections.length) matchesBlock = '\n\n' + sections.join('\n\n');
   }
 
   // Bloc mémoire long terme
