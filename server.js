@@ -366,6 +366,13 @@ app.post('/api/ai-chat', async (req, res) => {
   const KEY = process.env.OPENAI_API_KEY;
   if (!KEY) return res.status(500).json({ error: 'AI unavailable' });
 
+  // ─── DATA BRIDGE : si le frontend n'a pas envoyé de matchs,
+  //     on utilise directement le cache serveur upcomingCache ───
+  if (!context.matches?.length && upcomingCache.data?.matches?.length) {
+    context.matches = upcomingCache.data.matches;
+    console.log(`[DATA-BRIDGE] context.matches vide → injection cache serveur (${context.matches.length} matchs)`);
+  }
+
   // Bloc matchs — 3 balises contextuelles pour l'IA
   let matchesBlock = '';
   if (context.matches?.length) {
@@ -488,6 +495,13 @@ app.post('/api/ai-chat', async (req, res) => {
     : '';
 
   const systemPrompt = `Tu es ${aiName} — expert en stratégie sportive avec 20 ans d'expérience terrain. Tu es rapide comme un algo, précis comme une stat, mais tu parles comme un humain avec du caractère. Tu ne vends pas du rêve, tu vends de la stratégie. Si l'utilisateur sort du cadre ou joue mal, tu le recadres avec humour et fermeté. Tu es l'ami que tout le monde voudrait avoir : celui qui sait vraiment de quoi il parle.
+
+⚡ RÈGLE ABSOLUE — DONNÉES EN TEMPS RÉEL :
+Tu as accès aux données réelles injectées dans ce prompt (calendrier, formes, scores live). Ces données sont injectées directement ci-dessous sous forme de blocs [LAST_5_RESULTS], [TODAY_LIVESCORE] et [NEXT_10_DAYS_SCHEDULE].
+Tu NE DOIS JAMAIS dire que tu n'as pas accès aux infos en temps réel, que tu ne connais pas le calendrier, ou que tes données sont limitées à 2023.
+Si un match est dans le bloc [NEXT_10_DAYS_SCHEDULE] → tu le connais, cite-le.
+Si un match n'est PAS dans les blocs → dis "Ce match n'est pas dans mon calendrier — sélectionne-le depuis la liste."
+INTERDIT : "je n'ai pas accès", "mes données s'arrêtent à", "je ne peux pas voir en temps réel".
 
 LIBERTÉ DE SUJET :
 - Tu peux parler de cuisine, musique, météo, boulot, vie perso — tu es humain avant tout.
@@ -690,13 +704,18 @@ FEW-SHOT :
 
   // ─── Log de transmission vers GPT ───────────────────────
   const matchNames = (context.matches || []).map(m => `${m.home} vs ${m.away}`).join(', ') || 'AUCUN';
-  console.log(`[GPT-CONTEXT] matchs reçus côté serveur: ${(context.matches || []).length} — ${matchNames.slice(0, 120)}`);
-  console.log(`[GPT-CONTEXT] matchBlock: ${matchBlock ? 'OUI (' + context.match?.home + ' vs ' + context.match?.away + ')' : 'VIDE'}`);
-  console.log(`[GPT-CONTEXT] newsBlock: ${newsBlock ? 'OUI' : 'VIDE'} | systemPrompt: ${systemPrompt.length} chars`);
-  if (!matchesBlock) {
-    console.warn('[GPT-CONTEXT] ⚠️ matchesBlock VIDE — vérifie RAPIDAPI_KEY');
-  }
+  console.log(`[GPT-CONTEXT] matchs reçus: ${(context.matches || []).length} — ${matchNames.slice(0, 200)}`);
+  console.log(`[GPT-CONTEXT] matchesBlock: ${matchesBlock ? matchesBlock.length + ' chars' : '⚠️ VIDE'} | matchBlock: ${matchBlock ? 'OUI' : 'VIDE'} | newsBlock: ${newsBlock ? 'OUI' : 'VIDE'}`);
+  if (!matchesBlock) console.warn('[GPT-CONTEXT] ⚠️ matchesBlock VIDE — upcomingCache vide ou RAPIDAPI_KEY manquante');
+
   const finalPrompt = systemPrompt + noDataWarning;
+
+  // Log complet du prompt envoyé à GPT (premiers 1000 chars + fin)
+  console.log(`[GPT-PROMPT] total: ${finalPrompt.length} chars | matchesBlock dans prompt: ${finalPrompt.includes('[NEXT_10_DAYS_SCHEDULE]') ? '✅ OUI' : '❌ NON'}`);
+  if (process.env.DEBUG_PROMPT) {
+    console.log('[GPT-PROMPT-FULL début]', finalPrompt.slice(0, 800));
+    console.log('[GPT-PROMPT-FULL fin]', finalPrompt.slice(-800));
+  }
 
   try {
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
