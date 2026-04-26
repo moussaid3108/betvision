@@ -3019,6 +3019,22 @@ async function callAI(userMsg) {
     } catch (e) { console.warn('[callAI] /api/news échec:', e.message); }
   }
 
+  // Construire la liste de matchs la plus complète possible :
+  // todayMatchesCache (top 10 multi-ligues) + loadedMatchesMap (matchs browsés dans les ligues)
+  const buildContextMatches = () => {
+    const base = [...(todayMatchesCache || [])];
+    const existingIds = new Set(base.map(m => String(m.id)));
+    // Ajouter les matchs chargés via openLeagueView qui ne sont pas déjà dans base
+    Object.values(loadedMatchesMap).forEach(m => {
+      if (m.home && m.away && !existingIds.has(String(m.id))) {
+        base.push(m);
+        existingIds.add(String(m.id));
+      }
+    });
+    console.log('[callAI] context matches total:', base.length, '—', base.map(m => m.home + ' vs ' + m.away).slice(0, 5).join(', '));
+    return base.slice(0, 30); // max 30 matchs pour ne pas exploser le prompt
+  };
+
   try {
     const res = await fetch('/api/ai-chat', {
       method: 'POST',
@@ -3027,7 +3043,7 @@ async function callAI(userMsg) {
         message: userMsg,
         history: chatHistory.slice(-25).map(h => ({ role: h.role, content: h.content })),
         context: {
-          matches: todayMatchesCache, news: todayNewsCache, user: userProfileCache,
+          matches: buildContextMatches(), news: todayNewsCache, user: userProfileCache,
           match: currentMatch || null, aiName: getAiName(), memory: formatMemoryBlock(),
           predictions: refreshPredictionsVsCache(), lifeTags: getLifeTags(),
           odds: currentOddsData || null,

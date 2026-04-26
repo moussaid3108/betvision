@@ -539,6 +539,16 @@ FEW-SHOT :
     return { reply, facts };
   }
 
+  // ─── Log de transmission vers GPT ───────────────────────
+  const matchNames = (context.matches || []).map(m => `${m.home} vs ${m.away}`).join(', ') || 'AUCUN';
+  console.log(`[GPT-CONTEXT] matchs reçus côté serveur: ${(context.matches || []).length} — ${matchNames.slice(0, 120)}`);
+  console.log(`[GPT-CONTEXT] matchBlock: ${matchBlock ? 'OUI (' + context.match?.home + ' vs ' + context.match?.away + ')' : 'VIDE'}`);
+  console.log(`[GPT-CONTEXT] newsBlock: ${newsBlock ? 'OUI' : 'VIDE'} | systemPrompt: ${systemPrompt.length} chars`);
+  const promptContainsMatches = matchesBlock.length > 0;
+  if (!promptContainsMatches) {
+    console.warn('[GPT-CONTEXT] ⚠️ matchesBlock VIDE — GPT ne verra aucun match. Vérifie que le client envoie bien context.matches');
+  }
+
   try {
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
