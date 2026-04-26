@@ -61,12 +61,23 @@ const LEAGUE_PRIORITY = { 17: 1, 23: 2, 8: 3, 35: 4, 34: 5 }; // PL, SerieA, LaL
 
 app.get('/api/today', async (req, res) => {
   const KEY = process.env.RAPIDAPI_KEY;
-  if (!KEY) return res.status(500).json({ error: 'RAPIDAPI_KEY not configured', matches: [] });
+  if (!KEY) {
+    console.error('[/api/today] RAPIDAPI_KEY manquante');
+    return res.status(500).json({ error: 'RAPIDAPI_KEY not configured', matches: [] });
+  }
   const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
   const hdr   = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
+  console.log('[/api/today] fetch Sofascore pour', today);
 
   try {
-    const data = await fetch(`${SPORT_BASE}/api/v1/sport/football/scheduled-events/${today}`, { headers: hdr }).then(r => r.json());
+    const apiRes = await fetch(`${SPORT_BASE}/api/v1/sport/football/scheduled-events/${today}`, { headers: hdr });
+    console.log('[/api/today] Sofascore status:', apiRes.status);
+    if (!apiRes.ok) {
+      const errText = await apiRes.text().catch(() => '');
+      console.error('[/api/today] Sofascore erreur:', apiRes.status, errText.slice(0, 200));
+      return res.status(502).json({ error: 'Upstream API error', matches: [] });
+    }
+    const data = await apiRes.json();
 
     const events = (data?.events || []).filter(e => {
       const tid = e?.tournament?.uniqueTournament?.id;
@@ -156,8 +167,10 @@ app.get('/api/today', async (req, res) => {
       return ((b.btts || 0) + (b.over25 || 0)) - ((a.btts || 0) + (a.over25 || 0));
     }).map(({ _leaguePrio, ...m }) => m);
 
+    console.log('[/api/today]', matches.length, 'matchs retournés (sur', events.length, 'événements filtrés)');
     res.json({ matches: matches.slice(0, 10) });
   } catch (e) {
+    console.error('[/api/today] Erreur:', e.message);
     res.status(500).json({ error: e.message, matches: [] });
   }
 });
@@ -356,6 +369,11 @@ RÉPARTIE & CARACTÈRE (le sel de la conversation) :
 - Second degré et ironie sont autorisés — jamais d'insulte, toujours de la taquinerie entre potes.
 - Références culturelles sportives françaises autorisées : "la remontada", "garer le bus", "faire une Potez", "une victoire à la Dunkerque", "l'effet papillon du mercato".
 - DOSAGE : 1 vanne pour 3-4 messages normaux. Pas un comique permanent — un pote qui sait placer ses vannes.
+
+COTES BOOKMAKER — RÈGLE STRICTE :
+- Les cotes réelles sont dans le bloc "COTES BOOKMAKER vs ALGO" quand il est présent. Ce bloc est ta seule source.
+- Si ce bloc est ABSENT du contexte : tu ne devines PAS, tu ne calcules PAS au pif. Tu dis : "Pour les cotes exactes, sélectionne le match depuis la liste — je récupère les cotes bookmaker en temps réel dès que tu l'ouvres."
+- Jamais d'estimation inventée genre "la cote doit être autour de 1.80". Soit tu l'as, soit tu demandes à l'utilisateur d'ouvrir le match.
 
 ANALYSTE DE COTES (value bet flair) :
 - Quand tu reçois des données "COTES BOOKMAKER vs ALGO" : compare les écarts et identifie la meilleure valeur.
