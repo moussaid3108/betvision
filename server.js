@@ -57,7 +57,11 @@ const LEAGUES = {
   7:   { name: 'Champions League', lH: 1.25, lA: 1.00 },
 };
 
-const LEAGUE_PRIORITY = { 17: 1, 23: 2, 8: 3, 35: 4, 34: 5 }; // PL, SerieA, LaLiga, Bundesliga, L1
+const LEAGUE_PRIORITY = { 17: 1, 23: 2, 8: 3, 35: 4, 34: 5 };
+
+// Cache global /api/today — 30 min
+let todayCache = { data: null, ts: 0, date: '' };
+const TODAY_TTL = 30 * 60_000;
 
 app.get('/api/today', async (req, res) => {
   const KEY = process.env.RAPIDAPI_KEY;
@@ -66,15 +70,26 @@ app.get('/api/today', async (req, res) => {
     return res.status(500).json({ error: 'RAPIDAPI_KEY not configured', matches: [] });
   }
   const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
-  const hdr   = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
-  console.log('[/api/today] fetch Sofascore pour', today);
+
+  // Cache 30min — évite les appels RapidAPI répétitifs
+  if (todayCache.data && todayCache.date === today && Date.now() - todayCache.ts < TODAY_TTL) {
+    console.log('[/api/today] CACHE HIT —', todayCache.data.matches.length, 'matchs (quota préservé)');
+    return res.json(todayCache.data);
+  }
+
+  const hdr = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
+  console.log('[/api/today] CACHE MISS — fetch RapidAPI pour', today);
 
   try {
     const apiRes = await fetch(`${SPORT_BASE}/api/v1/sport/football/scheduled-events/${today}`, { headers: hdr });
-    console.log('[/api/today] Sofascore status:', apiRes.status);
+    console.log('[/api/today] RapidAPI status:', apiRes.status);
     if (!apiRes.ok) {
       const errText = await apiRes.text().catch(() => '');
-      console.error('[/api/today] Sofascore erreur:', apiRes.status, errText.slice(0, 200));
+      console.error('[/api/today] RapidAPI erreur:', apiRes.status, errText.slice(0, 200));
+      if (todayCache.data) {
+        console.warn('[/api/today] Utilisation du cache périmé suite à erreur API');
+        return res.json(todayCache.data);
+      }
       return res.status(502).json({ error: 'Upstream API error', matches: [] });
     }
     const data = await apiRes.json();
@@ -167,10 +182,13 @@ app.get('/api/today', async (req, res) => {
       return ((b.btts || 0) + (b.over25 || 0)) - ((a.btts || 0) + (a.over25 || 0));
     }).map(({ _leaguePrio, ...m }) => m);
 
-    console.log('[/api/today]', matches.length, 'matchs retournés (sur', events.length, 'événements filtrés)');
-    res.json({ matches: matches.slice(0, 10) });
+    const result = { matches: matches.slice(0, 10) };
+    todayCache = { data: result, ts: Date.now(), date: today };
+    console.log('[/api/today]', result.matches.length, 'matchs mis en cache 30min (sur', events.length, 'événements filtrés)');
+    res.json(result);
   } catch (e) {
     console.error('[/api/today] Erreur:', e.message);
+    if (todayCache.data) return res.json(todayCache.data);
     res.status(500).json({ error: e.message, matches: [] });
   }
 });
@@ -599,11 +617,12 @@ app.post('/api/chat', (req, res) => chatHandler(req, res));
 const leagueRoundsCache = new Map(); // `${sport}:${tid}` → {rounds, sortedRounds, currentRound, ts}
 const leagueCache       = new Map(); // `${sport}:${tid}:${journee}` → {data, ts}
 const liveScoreCache    = new Map(); // `${matchId}` → {data, ts}
+const LEAGUE_ROUNDS_TTL = 2 * 3_600_000; // 2h (était 30min — 45 appels RapidAPI par scan)
 
 async function getLeagueRounds(sport, tournamentId, KEY) {
   const cacheKey = `${sport}:${tournamentId}`;
   const cached = leagueRoundsCache.get(cacheKey);
-  if (cached && Date.now() - cached.ts < 1_800_000) return cached;
+  if (cached && Date.now() - cached.ts < LEAGUE_ROUNDS_TTL) return cached;
 
   const today = new Date();
   const hdr   = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
