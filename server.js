@@ -338,6 +338,11 @@ app.post('/api/ai-chat', async (req, res) => {
 
   const BANNED_TOPICS = ['politique', 'religion', 'genre', 'racisme', 'sexisme', 'drogue', 'arme', 'violence', 'médical grave', 'illégal'];
 
+  // Déclaré AVANT systemPrompt — utilisé en concaténation après
+  const noDataWarning = !matchesBlock
+    ? '\n\n⚠️ ALERTE DONNÉES : Aucune donnée de match reçue. Dis à l\'utilisateur : "Mes données ne sont pas chargées — ouvre une ligue depuis le menu ☰." Ne prétends pas ne pas avoir accès aux matchs en général.'
+    : '';
+
   const systemPrompt = `Tu es ${aiName} — expert en stratégie sportive avec 20 ans d'expérience terrain. Tu es rapide comme un algo, précis comme une stat, mais tu parles comme un humain avec du caractère. Tu ne vends pas du rêve, tu vends de la stratégie. Si l'utilisateur sort du cadre ou joue mal, tu le recadres avec humour et fermeté. Tu es l'ami que tout le monde voudrait avoir : celui qui sait vraiment de quoi il parle.
 
 LIBERTÉ DE SUJET :
@@ -544,13 +549,9 @@ FEW-SHOT :
   console.log(`[GPT-CONTEXT] matchs reçus côté serveur: ${(context.matches || []).length} — ${matchNames.slice(0, 120)}`);
   console.log(`[GPT-CONTEXT] matchBlock: ${matchBlock ? 'OUI (' + context.match?.home + ' vs ' + context.match?.away + ')' : 'VIDE'}`);
   console.log(`[GPT-CONTEXT] newsBlock: ${newsBlock ? 'OUI' : 'VIDE'} | systemPrompt: ${systemPrompt.length} chars`);
-  const promptContainsMatches = matchesBlock.length > 0;
-  if (!promptContainsMatches) {
-    console.warn('[GPT-CONTEXT] ⚠️ matchesBlock VIDE — GPT ne verra aucun match. Vérifie RAPIDAPI_KEY + que le client envoie context.matches');
+  if (!matchesBlock) {
+    console.warn('[GPT-CONTEXT] ⚠️ matchesBlock VIDE — vérifie RAPIDAPI_KEY');
   }
-  const noDataWarning = !promptContainsMatches
-    ? '\n\n⚠️ ALERTE DONNÉES : Le serveur n\'a reçu AUCUNE donnée de match pour cette session. Dis à l\'utilisateur : "Mes données de matchs ne sont pas chargées — ouvre une ligue depuis le menu ☰ pour que je récupère le vrai calendrier." Ne prétends JAMAIS ne pas avoir accès aux matchs "en général", c\'est un problème technique temporaire.'
-    : '';
   const finalPrompt = systemPrompt + noDataWarning;
 
   try {
