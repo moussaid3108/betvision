@@ -2991,29 +2991,27 @@ async function callAI(userMsg) {
   document.getElementById('chat-box').appendChild(typing);
   document.getElementById('chat-box').scrollTop = 9999;
 
-  // Auto-load matches si cache vide ou > 30min (quota RapidAPI)
-  const CACHE_TTL = 30 * 60_000;
+  // Auto-load 3 jours de matchs si cache vide ou > 1h
+  const CACHE_TTL = 60 * 60_000;
   if (!todayMatchesCache.length || Date.now() - todayMatchesCacheTs > CACHE_TTL) {
     try {
-      const data = await fetch('/api/today').then(r => r.json());
+      const data = await fetch('/api/upcoming').then(r => r.json());
       if (data.matches?.length) {
         todayMatchesCache = data.matches;
         todayMatchesCacheTs = Date.now();
         todayMatchesCache.forEach(m => { loadedMatchesMap[m.id] = m; });
-        console.log('[callAI] matchs chargés:', todayMatchesCache.length);
+        console.log('[callAI] upcoming chargés:', todayMatchesCache.length, 'matchs sur 3 jours');
       } else {
-        console.warn('[callAI] /api/today → 0 match. Erreur API:', data.error || 'inconnue');
-        // Si l'API Sport ne répond pas et qu'aucune donnée n'est disponible,
-        // on le signale directement dans le chat plutôt que de laisser l'IA halluciner
+        console.warn('[callAI] /api/upcoming → 0 match. Erreur:', data.error || 'inconnue');
         if (!todayMatchesCache.length && !Object.keys(loadedMatchesMap).length) {
           document.getElementById('typing-indicator')?.remove();
           btn.disabled = false;
-          appendMessage('ai', "Mon API Sport n'a pas chargé de données pour l'instant. Vérifie que RAPIDAPI_KEY est bien configurée sur le serveur, puis rafraîchis la page. Si ça persiste, ouvre une ligue depuis le menu ☰ pour forcer le chargement.");
+          appendMessage('ai', "Mon API Sport n'a pas chargé de données — vérifie que RAPIDAPI_KEY est bien configurée dans Coolify, puis rafraîchis la page.");
           return;
         }
       }
     } catch (e) {
-      console.warn('[callAI] /api/today échec:', e.message);
+      console.warn('[callAI] /api/upcoming échec:', e.message);
     }
   }
 
