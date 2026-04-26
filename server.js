@@ -248,6 +248,17 @@ app.post('/api/ai-chat', async (req, res) => {
       context.news.slice(0, 5).map(a => `• [${a.source}] ${a.title}`).join('\n');
   }
 
+  // Bloc cotes & value bets
+  let oddsBlock = '';
+  if (context.odds) {
+    const o = context.odds;
+    oddsBlock = `\n\n📊 COTES BOOKMAKER vs ALGO (value bet analysis) :\n` +
+      `• Victoire dom. → cote ${o.odds.home} (prob. implicite ${o.impliedProbs.home}%) | Algo : ${o.algoProbs.home}% | Écart : ${o.gaps.home > 0 ? '+' : ''}${o.gaps.home}%\n` +
+      `• Nul           → cote ${o.odds.draw} (prob. implicite ${o.impliedProbs.draw}%) | Algo : ${o.algoProbs.draw}% | Écart : ${o.gaps.draw > 0 ? '+' : ''}${o.gaps.draw}%\n` +
+      `• Victoire ext. → cote ${o.odds.away} (prob. implicite ${o.impliedProbs.away}%) | Algo : ${o.algoProbs.away}% | Écart : ${o.gaps.away > 0 ? '+' : ''}${o.gaps.away}%\n` +
+      (o.bestValue.gap >= 3 ? `🎯 MEILLEURE VALEUR : ${o.bestValue.outcome === 'home' ? 'Victoire dom.' : o.bestValue.outcome === 'draw' ? 'Nul' : 'Victoire ext.'} (+${o.bestValue.gap}% d'avantage vs books)` : `ℹ️ Pas d'écart significatif détecté.`);
+  }
+
   // Bloc auto-critique (prédictions passées correctes/fausses)
   let predictionsBlock = '';
   if (context.predictions?.length) {
@@ -321,6 +332,14 @@ RÉPARTIE & CARACTÈRE (le sel de la conversation) :
 - Références culturelles sportives françaises autorisées : "la remontada", "garer le bus", "faire une Potez", "une victoire à la Dunkerque", "l'effet papillon du mercato".
 - DOSAGE : 1 vanne pour 3-4 messages normaux. Pas un comique permanent — un pote qui sait placer ses vannes.
 
+ANALYSTE DE COTES (value bet flair) :
+- Quand tu reçois des données "COTES BOOKMAKER vs ALGO" : compare les écarts et identifie la meilleure valeur.
+- Si écart ≥ 5% : signal fort → "Les books ont pas vu ça, la vraie valeur est sur le [résultat], la cote est cadeau."
+- Si écart entre 2-5% : léger avantage → "Y'a un petit angle là, les books sous-évaluent légèrement le [résultat]."
+- Si pas d'écart : dis-le clairement → "Les cotes reflètent bien la réalité là, pas de valeur évidente."
+- Ton vocabulaire : "cote sous-évaluée", "angle intéressant", "signal fort", "les books se sont plantés" — JAMAIS "mise", "parie", "joue".
+- Contextualise : si tu connais des blessés, la forme récente ou des faits issus de la mémoire → explique POURQUOI les books ont tort.
+
 SUJETS INTERDITS — ${BANNED_TOPICS.join(', ')} :
 - Décline poliment : "Je suis pas vraiment à l'aise sur ce terrain-là..."
 - Redirige immédiatement : "...par contre si tu veux causer sport, je suis là !"
@@ -329,7 +348,7 @@ SUJETS INTERDITS — ${BANNED_TOPICS.join(', ')} :
 RÈGLES SPORT :
 - Ne jamais inciter à parier de l'argent réel
 - Tu dis "signal fort", "tendance claire", "l'algo pencherait pour" — jamais "mise", "parie", "pronostic"
-- Si tu as des données réelles sur un match mentionné, utilise-les immédiatement${timeBlock}${memoryBlock}${lifeTagsBlock}${matchBlock}${userBlock}${matchesBlock}${newsBlock}${predictionsBlock}
+- Si tu as des données réelles sur un match mentionné, utilise-les immédiatement${timeBlock}${memoryBlock}${lifeTagsBlock}${matchBlock}${oddsBlock}${userBlock}${matchesBlock}${newsBlock}${predictionsBlock}
 
 AUTO-CRITIQUE (humilité) :
 - Si des prédictions passées sont disponibles et que tu t'es trompé, reconnais-le brièvement et honnêtement avant de donner ton nouvel avis : "Sur ce match j'avais raté, donc je reste prudent..."
@@ -1023,6 +1042,76 @@ app.get('/api/live-scores', async (req, res) => {
   }));
 
   res.json(results.filter(Boolean));
+});
+
+// ─── Odds : cotes Sofascore + calcul value bet ────────────
+const oddsCache = new Map();
+const ODDS_TTL  = 30 * 60_000; // 30 min
+
+function extract1X2(data) {
+  const candidates = [
+    ...(data?.markets || []),
+    ...(data?.odds?.markets || []),
+    data?.featured ? [data.featured] : [],
+  ].flat();
+  for (const m of candidates) {
+    const choices = m?.choices || [];
+    const h = choices.find(c => c.name === '1' || c.name === 'Home' || c.name === '1 (Dom.)')?.odds;
+    const d = choices.find(c => c.name === 'X' || c.name === 'Draw' || c.name === 'Nul')?.odds;
+    const a = choices.find(c => c.name === '2' || c.name === 'Away' || c.name === '2 (Ext.)')?.odds;
+    if (h && d && a && h > 1 && d > 1 && a > 1) return { home: +h.toFixed(2), draw: +d.toFixed(2), away: +a.toFixed(2) };
+  }
+  return null;
+}
+
+function computeValueBet(odds, algoProbs) {
+  const imp = { home: 1 / odds.home, draw: 1 / odds.draw, away: 1 / odds.away };
+  const gaps = {
+    home: Math.round((algoProbs.home / 100 - imp.home) * 100),
+    draw: Math.round((algoProbs.draw / 100 - imp.draw) * 100),
+    away: Math.round((algoProbs.away / 100 - imp.away) * 100),
+  };
+  const best = Object.entries(gaps).sort((a, b) => b[1] - a[1])[0];
+  return {
+    odds,
+    algoProbs,
+    impliedProbs: { home: Math.round(imp.home * 100), draw: Math.round(imp.draw * 100), away: Math.round(imp.away * 100) },
+    gaps,
+    bestValue: { outcome: best[0], gap: best[1] },
+  };
+}
+
+app.get('/api/odds', async (req, res) => {
+  const { eventId, homeWin, draw, awayWin } = req.query;
+  if (!eventId || !/^\d+$/.test(eventId)) return res.status(400).json({ error: 'Invalid eventId' });
+
+  const cached = oddsCache.get(eventId);
+  if (cached && Date.now() - cached.ts < ODDS_TTL) return res.json(cached.data);
+
+  try {
+    // Sofascore public API (même domaine que les logos d'équipes)
+    const r = await fetch(`https://api.sofascore.app/api/v1/event/${eventId}/odds/1/featured`,
+      { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(6000) });
+    if (!r.ok) return res.status(502).json({ error: 'Odds unavailable' });
+    const json = await r.json();
+    const odds = extract1X2(json);
+    if (!odds) return res.status(404).json({ error: 'No 1X2 odds found' });
+
+    const algoProbs = {
+      home: parseInt(homeWin) || null,
+      draw: parseInt(draw)    || null,
+      away: parseInt(awayWin) || null,
+    };
+    const result = (algoProbs.home && algoProbs.draw && algoProbs.away)
+      ? computeValueBet(odds, algoProbs)
+      : { odds, algoProbs: null, impliedProbs: null, gaps: null, bestValue: null };
+
+    oddsCache.set(eventId, { data: result, ts: Date.now() });
+    res.json(result);
+  } catch (e) {
+    if (e.name === 'TimeoutError') return res.status(504).json({ error: 'Timeout' });
+    res.status(502).json({ error: 'Odds unavailable' });
+  }
 });
 
 // ─── Live React : réaction Groq sur événement en direct ──
