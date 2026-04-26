@@ -2995,7 +2995,7 @@ async function callAI(userMsg) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         message: userMsg,
-        history: chatHistory.slice(-15).map(h => ({ role: h.role, content: h.content })),
+        history: chatHistory.slice(-25).map(h => ({ role: h.role, content: h.content })),
         context: {
           matches: todayMatchesCache, news: todayNewsCache, user: userProfileCache,
           match: currentMatch || null, aiName: getAiName(), memory: formatMemoryBlock(),
