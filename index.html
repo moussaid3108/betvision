@@ -3105,7 +3105,21 @@ async function pollLiveScores() {
     const r = await fetch('/api/live-scores?matchIds=' + ids.join(','));
     if (!r.ok) return;
     const scores = await r.json();
-    scores.forEach(s => detectAndReact(s));
+    scores.forEach(s => {
+      // Propager score/status/minute dans loadedMatchesMap et todayMatchesCache
+      if (loadedMatchesMap[s.id]) {
+        if (s.score != null) loadedMatchesMap[s.id].score = s.score;
+        loadedMatchesMap[s.id].status = s.status;
+        if (s.minute != null) loadedMatchesMap[s.id].minute = s.minute;
+      }
+      const cached = todayMatchesCache.find(m => String(m.id) === String(s.id));
+      if (cached) {
+        if (s.score != null) cached.score = s.score;
+        cached.status = s.status;
+        if (s.minute != null) cached.minute = s.minute;
+      }
+      detectAndReact(s);
+    });
   } catch {}
 }
 
