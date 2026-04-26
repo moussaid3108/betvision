@@ -2989,6 +2989,25 @@ async function callAI(userMsg) {
   document.getElementById('chat-box').appendChild(typing);
   document.getElementById('chat-box').scrollTop = 9999;
 
+  // Auto-load matches si le cache est vide (utilisateur arrivé direct au chat)
+  if (!todayMatchesCache.length) {
+    try {
+      const data = await fetch('/api/today').then(r => r.json());
+      todayMatchesCache = data.matches || [];
+      todayMatchesCache.forEach(m => { loadedMatchesMap[m.id] = m; });
+      console.log('[callAI] auto-load today:', todayMatchesCache.length, 'matchs');
+    } catch (e) { console.warn('[callAI] auto-load today failed:', e); }
+  }
+
+  // Auto-load news si le cache est vide
+  if (!todayNewsCache.length) {
+    try {
+      const data = await fetch('/api/news').then(r => r.json());
+      if (Array.isArray(data)) todayNewsCache = data.map(a => ({ source: a.source || 'Football', title: a.title || '' }));
+      console.log('[callAI] auto-load news:', todayNewsCache.length, 'articles');
+    } catch (e) { console.warn('[callAI] auto-load news failed:', e); }
+  }
+
   try {
     const res = await fetch('/api/ai-chat', {
       method: 'POST',
