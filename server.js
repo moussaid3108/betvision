@@ -211,23 +211,40 @@ app.get('/api/upcoming', async (req, res) => {
   }
 
   const hdr = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
-  const DAY_LABELS = ['Aujourd\'hui', 'Demain', 'Dans 2 jours'];
+  const DAY_LABELS = {
+    '-2': 'Il y a 2 jours',
+    '-1': 'Hier',
+    '0':  'Aujourd\'hui',
+    '1':  'Demain',
+    '2':  'Dans 2 jours',
+    '3':  'Dans 3 jours'
+  };
+  const OFFSETS = [-2, -1, 0, 1, 2, 3];
 
-  console.log('[/api/upcoming] CACHE MISS — fetch 3 jours RapidAPI');
+  console.log('[/api/upcoming] CACHE MISS — fetch 6 jours RapidAPI (séquentiel anti-429)');
 
   try {
-    // 3 appels en parallèle (1 par jour) — 3 crédits quota max
-    const days = await Promise.all([0, 1, 2].map(async offset => {
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    const days = [];
+    for (const offset of OFFSETS) {
       const d = new Date(baseDate);
       d.setDate(d.getDate() + offset);
       const dateStr = d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
       try {
         const r = await fetch(`${SPORT_BASE}/api/v1/sport/football/scheduled-events/${dateStr}`, { headers: hdr });
-        if (!r.ok) return { offset, events: [] };
-        const data = await r.json();
-        return { offset, dateStr, events: data?.events || [] };
-      } catch { return { offset, events: [] }; }
-    }));
+        if (!r.ok) {
+          console.warn(`[/api/upcoming] offset ${offset} → HTTP ${r.status}`);
+          days.push({ offset, events: [] });
+        } else {
+          const data = await r.json();
+          days.push({ offset, dateStr, events: data?.events || [] });
+        }
+      } catch (err) {
+        console.warn(`[/api/upcoming] offset ${offset} → erreur:`, err.message);
+        days.push({ offset, events: [] });
+      }
+      if (offset !== OFFSETS[OFFSETS.length - 1]) await sleep(200);
+    }
 
     const allMatches = [];
     for (const { offset, events } of days) {
@@ -263,7 +280,7 @@ app.get('/api/upcoming', async (req, res) => {
           time:        d ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }) : '--:--',
           date:        d ? d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'Europe/Paris' }) : '',
           dayOffset:   offset,
-          dayLabel:    DAY_LABELS[offset],
+          dayLabel:    DAY_LABELS[String(offset)],
           btts:        stats.btts    ?? null,
           over25:      stats.over25  ?? null,
           homeWin:     stats.homeWin ?? null,
@@ -278,9 +295,9 @@ app.get('/api/upcoming', async (req, res) => {
     // Trier par dayOffset puis par heure
     allMatches.sort((a, b) => a.dayOffset - b.dayOffset || a.time.localeCompare(b.time));
 
-    const result = { matches: allMatches.slice(0, 40) };
+    const result = { matches: allMatches.slice(0, 60) };
     upcomingCache = { data: result, ts: Date.now(), dateKey };
-    console.log('[/api/upcoming]', result.matches.length, 'matchs sur 3 jours mis en cache 1h');
+    console.log('[/api/upcoming]', result.matches.length, 'matchs sur 6 jours mis en cache 1h');
     res.json(result);
   } catch (e) {
     console.error('[/api/upcoming] Erreur:', e.message);
@@ -342,11 +359,12 @@ app.post('/api/ai-chat', async (req, res) => {
   const KEY = process.env.OPENAI_API_KEY;
   if (!KEY) return res.status(500).json({ error: 'AI unavailable' });
 
-  // Bloc matchs — 3 sections : EN COURS / CALENDRIER / RÉSULTATS
+  // Bloc matchs — 4 sections : HISTORIQUE / EN COURS / CALENDRIER / RÉSULTATS DU JOUR
   let matchesBlock = '';
   if (context.matches?.length) {
     const live     = context.matches.filter(m => m.status === 'live');
-    const finished = context.matches.filter(m => m.status === 'finished');
+    const past     = context.matches.filter(m => m.dayOffset < 0 && m.status === 'finished');
+    const todayDone= context.matches.filter(m => (m.dayOffset == null || m.dayOffset === 0) && m.status === 'finished');
     const upcoming = context.matches.filter(m => m.status !== 'live' && m.status !== 'finished');
 
     const fmtMatch = m => {
@@ -364,9 +382,10 @@ app.post('/api/ai-chat', async (req, res) => {
     };
 
     const sections = [];
+    if (past.length)     sections.push(`📊 [HISTORIQUE RÉCENT]\n${past.map(fmtMatch).join('\n')}`);
     if (live.length)     sections.push(`🔴 [MATCHS EN COURS]\n${live.map(fmtMatch).join('\n')}`);
     if (upcoming.length) sections.push(`📅 [CALENDRIER À VENIR]\n${upcoming.map(fmtMatch).join('\n')}`);
-    if (finished.length) sections.push(`✅ [RÉSULTATS RÉCENTS]\n${finished.map(fmtMatch).join('\n')}`);
+    if (todayDone.length)sections.push(`✅ [RÉSULTATS DU JOUR]\n${todayDone.map(fmtMatch).join('\n')}`);
 
     if (sections.length) matchesBlock = '\n\n' + sections.join('\n\n');
   }
