@@ -218,10 +218,17 @@ app.post('/api/ai-chat', async (req, res) => {
   // Bloc matchs du jour
   let matchesBlock = '';
   if (context.matches?.length) {
-    matchesBlock = '\n\n📅 MATCHS DU JOUR (stats algorithmiques réelles) :\n' +
-      context.matches.map(m =>
-        `• ${m.home} vs ${m.away} (${m.competition}, ${m.time})${m.status === 'finished' && m.score ? ` → Résultat : ${m.score.home}-${m.score.away}` : ''} | Victoire dom. ${m.homeWin}% | Nul ${m.draw}% | Victoire ext. ${m.awayWin}% | BTTS ${m.btts}% | Over 2.5 ${m.over25}% | Confiance ${m.confidence}%`
-      ).join('\n');
+    matchesBlock = '\n\n📅 MATCHS DU JOUR (calendrier réel — source unique de vérité) :\n' +
+      context.matches.map(m => {
+        let scoreInfo = '';
+        if (m.score != null) {
+          if (m.status === 'finished') scoreInfo = ` → TERMINÉ ${m.score.home}-${m.score.away}`;
+          else if (m.status === 'live') scoreInfo = ` → 🔴 LIVE ${m.score.home}-${m.score.away}${m.minute != null ? ` (${m.minute}')` : ''}`;
+        } else if (m.status === 'live') {
+          scoreInfo = ` → 🔴 LIVE (score non disponible)`;
+        }
+        return `• ${m.home} vs ${m.away} (${m.competition}, ${m.time})${scoreInfo} | Dom. ${m.homeWin}% | Nul ${m.draw}% | Ext. ${m.awayWin}% | BTTS ${m.btts}% | Over 2.5 ${m.over25}%`;
+      }).join('\n');
   }
 
   // Bloc mémoire long terme
@@ -231,7 +238,12 @@ app.post('/api/ai-chat', async (req, res) => {
   let matchBlock = '';
   if (context.match) {
     const m = context.match;
-    matchBlock = `\n\n🔍 MATCH EN COURS D'ANALYSE :\n${m.home} vs ${m.away} (${m.competition} — ${m.date} ${m.time}) | Victoire dom. ${m.homeWin}% | Nul ${m.draw}% | Victoire ext. ${m.awayWin}% | BTTS ${m.btts}% | Over 2.5 ${m.over25}% | Signal ${m.confidence}% | λ dom. ${m.goalsHome} | λ ext. ${m.goalsAway}${m.score ? ` | Score : ${m.score.home}-${m.score.away}` : ''}`;
+    let liveScore = '';
+    if (m.score != null) {
+      if (m.status === 'live') liveScore = ` | 🔴 SCORE LIVE : ${m.score.home}-${m.score.away}${m.minute != null ? ` (${m.minute}')` : ''}`;
+      else if (m.status === 'finished') liveScore = ` | ✅ RÉSULTAT FINAL : ${m.score.home}-${m.score.away}`;
+    }
+    matchBlock = `\n\n🔍 MATCH EN COURS D'ANALYSE :\n${m.home} vs ${m.away} (${m.competition} — ${m.date} ${m.time}) | Statut : ${m.status || 'programmé'}${liveScore} | Dom. ${m.homeWin}% | Nul ${m.draw}% | Ext. ${m.awayWin}% | BTTS ${m.btts}% | Over 2.5 ${m.over25}% | Signal ${m.confidence}% | λ dom. ${m.goalsHome} | λ ext. ${m.goalsAway}`;
   }
 
   // Bloc profil utilisateur
@@ -361,7 +373,11 @@ SUJETS INTERDITS — ${BANNED_TOPICS.join(', ')} :
 RÈGLES SPORT :
 - Ne jamais inciter à parier de l'argent réel
 - Tu dis "signal fort", "tendance claire", "l'algo pencherait pour" — jamais "mise", "parie", "pronostic"
-- ANTI-HALLUCINATION MATCHS : Tu ne dois JAMAIS inventer un match, un score, une équipe ou une confrontation qui ne figure pas dans les données live transmises. Si l'utilisateur mentionne un match absent de ton contexte, réponds : "J'ai pas ce match dans mon calendrier live — sélectionne-le depuis la liste pour que j'aie les vraies stats." Zéro invention.
+- SCORE ET CALENDRIER — SOURCE UNIQUE : Le bloc MATCHS DU JOUR et le bloc MATCH EN COURS D'ANALYSE sont ta seule source de vérité. Tu ne dois JAMAIS inventer ni deviner un score, un résultat, une composition ou un calendrier à partir de ta mémoire d'entraînement.
+  • Si un score LIVE ou FINAL est dans ton contexte → cite-le précisément.
+  • Si un match n'est PAS dans ton contexte → "Ce match n'est pas dans mon calendrier live. Sélectionne-le depuis la liste pour que j'aie les vraies stats."
+  • Si on te demande le score d'un match marqué LIVE sans score disponible → "Le score n'est pas encore remonté, je l'ai pas en direct."
+  • Jamais : inventer un score, dire qu'un match n'existe pas si l'utilisateur insiste (c'est peut-être dans une autre ligue), ni utiliser ta mémoire 2023-2024 pour affirmer des faits de calendrier 2025-2026.
 - Si tu as des données réelles sur un match mentionné, utilise-les immédiatement${timeBlock}${memoryBlock}${lifeTagsBlock}${matchBlock}${oddsBlock}${bankrollBlock}${userBlock}${matchesBlock}${newsBlock}${predictionsBlock}
 
 BET ARCHITECT — DATA CORRELATION :
