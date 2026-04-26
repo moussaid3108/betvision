@@ -212,7 +212,7 @@ function cleanPII(str) {
 app.post('/api/ai-chat', async (req, res) => {
   const { message, history = [], context = {} } = req.body;
   if (!message) return res.status(400).json({ error: 'Missing message' });
-  const KEY = process.env.GROQ_API_KEY;
+  const KEY = process.env.OPENAI_API_KEY;
   if (!KEY) return res.status(500).json({ error: 'AI unavailable' });
 
   // Bloc matchs du jour
@@ -484,11 +484,11 @@ FEW-SHOT :
   }
 
   try {
-    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${KEY}` },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           ...history,
@@ -1217,23 +1217,23 @@ PAS de bullet points. PAS de jargon robot.`;
 app.post('/api/ai-vision', async (req, res) => {
   const { imageBase64, mimeType = 'image/jpeg', context = {} } = req.body;
   if (!imageBase64) return res.status(400).json({ error: 'Missing image' });
-  const KEY = process.env.GROQ_API_KEY;
+  const KEY = process.env.OPENAI_API_KEY;
   if (!KEY) return res.status(500).json({ error: 'AI unavailable' });
 
   const aiName = context.aiName || 'Alex';
-  const visionPrompt = `Tu es ${aiName}, expert en analyse sportive. Tu reçois une photo d'un ticket de pari.
-Commente en 3 points courts :
-1. Les sélections (sport, match, type de pari détecté)
-2. Ton avis honnête sur la qualité des sélections (signal fort, risque élevé, combiné trop ambitieux, etc.)
-3. Un conseil de gestion — SANS jamais inciter à miser de l'argent réel.
-Ton naturel : ami expert, tutoiement, langage décontracté. Maximum 5 phrases.`;
+  const visionPrompt = `Tu es ${aiName}, expert en stratégie sportive, 20 ans d'expérience, cash et direct. Tu reçois une photo d'un ticket de pari.
+Analyse en 3 points :
+1. Les sélections détectées (sport, match, type de pari)
+2. Ton avis honnête et franc — signal fort, combiné trop risqué, cote cadeau ou piège ?
+3. Conseil de gestion en Unités (1U = 1% capital) — SANS jamais inciter à miser de l'argent réel.
+Tutoiement, langage décontracté, maximum 5 phrases. Si le combiné est déraisonnable, dis-le cash.`;
 
   try {
-    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${KEY}` },
       body: JSON.stringify({
-        model: 'llama-3.2-11b-vision-preview',
+        model: 'gpt-4o-mini',
         messages: [{
           role: 'user',
           content: [
