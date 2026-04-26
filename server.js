@@ -57,7 +57,6 @@ const LEAGUES = {
   7:   { name: 'Champions League', lH: 1.25, lA: 1.00 },
 };
 
-const LEAGUE_PRIORITY = { 17: 1, 23: 2, 8: 3, 35: 4, 34: 5 };
 
 // Cache global /api/today — 30 min
 let todayCache = { data: null, ts: 0, date: '' };
@@ -105,15 +104,22 @@ app.get('/api/today', async (req, res) => {
 
     if (!events.length) return res.json({ matches: [] });
 
-    // Calcul stats en parallèle pour chaque match (cache teamStats 12h)
-    const statsResults = await Promise.allSettled(events.map(async (e, idx) => {
+    // Calcul stats séquentiel avec 250ms entre chaque match (anti-429)
+    const sleep250 = ms => new Promise(r => setTimeout(r, ms));
+    const statsResults = [];
+    for (let idx = 0; idx < events.length; idx++) {
+      const e = events[idx];
       const cacheKey = `match:${e.id || idx}`;
       const cached = computeStatsCache.get(cacheKey);
-      if (cached) return { id: e.id || idx, stats: cached.data, source: cached.data.lambdaSource };
+      if (cached) {
+        statsResults.push({ status: 'fulfilled', value: { id: e.id || idx, stats: cached.data, source: cached.data.lambdaSource } });
+        continue;
+      }
 
       const tid    = e.tournament?.uniqueTournament?.id;
       const league = LEAGUES[tid] || { lH: 1.35, lA: 1.05 };
       const hId = e.homeTeam?.id, aId = e.awayTeam?.id;
+      let result;
 
       if (hId && aId) {
         try {
@@ -133,15 +139,20 @@ app.get('/api/today', async (req, res) => {
             over15: s.over15 ?? Math.round(Math.min(95, s.over25 * 1.25)),
             homeForm: hS.form, awayForm: aS.form };
           computeStatsCache.set(cacheKey, { data: statsData, ts: Date.now() });
-          return { id: e.id || idx, stats: statsData, source: 'team-based' };
+          result = { id: e.id || idx, stats: statsData, source: 'team-based' };
         } catch {}
       }
 
-      // Fallback λ ligue
-      const s = matchScore(league.lH, league.lA);
-      return { id: e.id || idx, stats: { ...s, goalsHome: +league.lH.toFixed(1), goalsAway: +league.lA.toFixed(1),
-        over15: s.over15 ?? Math.round(Math.min(95, s.over25 * 1.25)), lambdaSource: 'league-default' }, source: 'league-default' };
-    }));
+      if (!result) {
+        // Fallback λ ligue
+        const s = matchScore(league.lH, league.lA);
+        result = { id: e.id || idx, stats: { ...s, goalsHome: +league.lH.toFixed(1), goalsAway: +league.lA.toFixed(1),
+          over15: s.over15 ?? Math.round(Math.min(95, s.over25 * 1.25)), lambdaSource: 'league-default' }, source: 'league-default' };
+      }
+
+      statsResults.push({ status: 'fulfilled', value: result });
+      if (idx < events.length - 1) await sleep250(250);
+    }
 
     const statsMap = {};
     statsResults.forEach(r => { if (r.status === 'fulfilled') statsMap[r.value.id] = r.value; });
@@ -179,12 +190,8 @@ app.get('/api/today', async (req, res) => {
         awayForm:     stats.awayForm || ['?','?','?','?','?'],
         formHome:     stats.homeForm || ['?','?','?','?','?'],
         formAway:     stats.awayForm || ['?','?','?','?','?'],
-        _leaguePrio:  LEAGUE_PRIORITY[tid] || 99,
       };
-    }).sort((a, b) => {
-      if (a._leaguePrio !== b._leaguePrio) return a._leaguePrio - b._leaguePrio;
-      return ((b.btts || 0) + (b.over25 || 0)) - ((a.btts || 0) + (a.over25 || 0));
-    }).map(({ _leaguePrio, ...m }) => m);
+    }).sort((a, b) => a.time.localeCompare(b.time));
 
     const result = { matches: matches.slice(0, 10) };
     todayCache = { data: result, ts: Date.now(), date: today };
@@ -211,17 +218,16 @@ app.get('/api/upcoming', async (req, res) => {
   }
 
   const hdr = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
-  const DAY_LABELS = {
-    '-2': 'Il y a 2 jours',
-    '-1': 'Hier',
-    '0':  'Aujourd\'hui',
-    '1':  'Demain',
-    '2':  'Dans 2 jours',
-    '3':  'Dans 3 jours'
-  };
-  const OFFSETS = [-2, -1, 0, 1, 2, 3];
 
-  console.log('[/api/upcoming] CACHE MISS — fetch 6 jours RapidAPI (séquentiel anti-429)');
+  // Horizon 10 jours (aujourd'hui + 9 suivants)
+  const OFFSETS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+  const dayLabel = offset => {
+    if (offset === 0) return 'Aujourd\'hui';
+    if (offset === 1) return 'Demain';
+    return `Dans ${offset} jours`;
+  };
+
+  console.log('[/api/upcoming] CACHE MISS — fetch 10 jours RapidAPI (séquentiel 300ms anti-429)');
 
   try {
     const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -238,12 +244,13 @@ app.get('/api/upcoming', async (req, res) => {
         } else {
           const data = await r.json();
           days.push({ offset, dateStr, events: data?.events || [] });
+          console.log(`[/api/upcoming] offset +${offset} → ${(data?.events||[]).filter(e=>LEAGUES[e?.tournament?.uniqueTournament?.id]).length} matchs ligue`);
         }
       } catch (err) {
         console.warn(`[/api/upcoming] offset ${offset} → erreur:`, err.message);
         days.push({ offset, events: [] });
       }
-      if (offset !== OFFSETS[OFFSETS.length - 1]) await sleep(200);
+      if (offset !== OFFSETS[OFFSETS.length - 1]) await sleep(300);
     }
 
     const allMatches = [];
@@ -280,7 +287,7 @@ app.get('/api/upcoming', async (req, res) => {
           time:        d ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }) : '--:--',
           date:        d ? d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'Europe/Paris' }) : '',
           dayOffset:   offset,
-          dayLabel:    DAY_LABELS[String(offset)],
+          dayLabel:    dayLabel(offset),
           btts:        stats.btts    ?? null,
           over25:      stats.over25  ?? null,
           homeWin:     stats.homeWin ?? null,
@@ -295,9 +302,9 @@ app.get('/api/upcoming', async (req, res) => {
     // Trier par dayOffset puis par heure
     allMatches.sort((a, b) => a.dayOffset - b.dayOffset || a.time.localeCompare(b.time));
 
-    const result = { matches: allMatches.slice(0, 60) };
+    const result = { matches: allMatches.slice(0, 120) };
     upcomingCache = { data: result, ts: Date.now(), dateKey };
-    console.log('[/api/upcoming]', result.matches.length, 'matchs sur 6 jours mis en cache 1h');
+    console.log('[/api/upcoming]', result.matches.length, 'matchs sur 10 jours mis en cache 1h');
     res.json(result);
   } catch (e) {
     console.error('[/api/upcoming] Erreur:', e.message);
@@ -359,14 +366,9 @@ app.post('/api/ai-chat', async (req, res) => {
   const KEY = process.env.OPENAI_API_KEY;
   if (!KEY) return res.status(500).json({ error: 'AI unavailable' });
 
-  // Bloc matchs — 4 sections : HISTORIQUE / EN COURS / CALENDRIER / RÉSULTATS DU JOUR
+  // Bloc matchs — 3 balises contextuelles pour l'IA
   let matchesBlock = '';
   if (context.matches?.length) {
-    const live     = context.matches.filter(m => m.status === 'live');
-    const past     = context.matches.filter(m => m.dayOffset < 0 && m.status === 'finished');
-    const todayDone= context.matches.filter(m => (m.dayOffset == null || m.dayOffset === 0) && m.status === 'finished');
-    const upcoming = context.matches.filter(m => m.status !== 'live' && m.status !== 'finished');
-
     const fmtMatch = m => {
       let scoreInfo = '';
       if (m.score != null) {
@@ -381,11 +383,25 @@ app.post('/api/ai-chat', async (req, res) => {
       return `• ${m.home} vs ${m.away} (${m.competition}, ${m.time}${day})${scoreInfo}${stats}${form}`;
     };
 
+    // [LAST_5_RESULTS] — forme des équipes (5 derniers matchs par équipe)
+    const teamForms = {};
+    for (const m of context.matches) {
+      const fmtForm = f => Array.isArray(f) ? f.slice(0, 5).join('') : (typeof f === 'string' ? f.slice(0, 5) : null);
+      if (m.home && m.formHome) { const s = fmtForm(m.formHome); if (s && s !== '?????') teamForms[m.home] = s; }
+      if (m.away && m.formAway) { const s = fmtForm(m.formAway); if (s && s !== '?????') teamForms[m.away] = s; }
+    }
+    const formLines = Object.entries(teamForms).map(([team, f]) => `• ${team} : ${f}`);
+
+    // [TODAY_LIVESCORE] — matchs en direct aujourd'hui
+    const live = context.matches.filter(m => m.status === 'live');
+
+    // [NEXT_10_DAYS_SCHEDULE] — tous les matchs programmés (non terminés)
+    const scheduled = context.matches.filter(m => m.status !== 'live' && m.status !== 'finished');
+
     const sections = [];
-    if (past.length)     sections.push(`📊 [HISTORIQUE RÉCENT]\n${past.map(fmtMatch).join('\n')}`);
-    if (live.length)     sections.push(`🔴 [MATCHS EN COURS]\n${live.map(fmtMatch).join('\n')}`);
-    if (upcoming.length) sections.push(`📅 [CALENDRIER À VENIR]\n${upcoming.map(fmtMatch).join('\n')}`);
-    if (todayDone.length)sections.push(`✅ [RÉSULTATS DU JOUR]\n${todayDone.map(fmtMatch).join('\n')}`);
+    if (formLines.length)  sections.push(`[LAST_5_RESULTS]\n${formLines.join('\n')}`);
+    if (live.length)       sections.push(`[TODAY_LIVESCORE]\n${live.map(fmtMatch).join('\n')}`);
+    if (scheduled.length)  sections.push(`[NEXT_10_DAYS_SCHEDULE]\n${scheduled.map(fmtMatch).join('\n')}`);
 
     if (sections.length) matchesBlock = '\n\n' + sections.join('\n\n');
   }
