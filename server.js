@@ -1025,6 +1025,43 @@ app.get('/api/live-scores', async (req, res) => {
   res.json(results.filter(Boolean));
 });
 
+// ─── Live React : réaction Groq sur événement en direct ──
+app.post('/api/live-react', async (req, res) => {
+  const { event, match, userPrediction, aiName = 'Alex' } = req.body;
+  if (!event) return res.status(400).json({ error: 'Missing event' });
+  const KEY = process.env.GROQ_API_KEY;
+  if (!KEY) return res.status(500).json({ error: 'AI unavailable' });
+
+  const matchLabel = match ? `${match.home} vs ${match.away}` : 'match en cours';
+  const predLine = userPrediction ? `\nPrédiction de l'utilisateur : ${userPrediction}` : '';
+
+  const prompt = `Tu es ${aiName}, un pote expert qui suit ce match EN DIRECT avec l'utilisateur.
+Événement détecté : ${event}
+Match : ${matchLabel}${predLine}
+
+Réagis en 2 phrases MAX. Style : vivant, spontané — interjections humaines ("Incroyable !", "Aïe coup dur...", "C'était prévisible !", "Et voilà !").
+Si l'événement impacte sa prédiction → dis-lui directement si ça va dans son sens ou non.
+PAS de bullet points. PAS de jargon robot.`;
+
+  try {
+    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${KEY}` },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.92,
+        max_tokens: 120,
+      }),
+    });
+    if (!r.ok) return res.status(500).json({ error: 'AI unavailable' });
+    const data = await r.json();
+    res.json({ reply: data.choices?.[0]?.message?.content?.trim() || '' });
+  } catch {
+    res.status(500).json({ error: 'AI unavailable' });
+  }
+});
+
 // ─── Vision : analyse ticket de pari ─────────────────────
 app.post('/api/ai-vision', async (req, res) => {
   const { imageBase64, mimeType = 'image/jpeg', context = {} } = req.body;
