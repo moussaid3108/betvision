@@ -1708,7 +1708,7 @@
   <button class="nav-item active" id="nav-paddock" onclick="showPage('paddock');initPaddock()">
     <span class="nav-icon"><img src="/icon-paddock.png?v=2" alt="Paddock"></span>Paddock
   </button>
-  <button class="nav-item" id="nav-ia" onclick="showPage('ia');loadChatHistory();checkGardienDuTemps();checkMatchEngagement()">
+  <button class="nav-item" id="nav-ia" onclick="showPage('ia');loadChatHistory();checkGardienDuTemps();checkMatchEngagement();startLiveWatch()">
     <span class="nav-icon"><img src="/icon-ia.png?v=2" alt="IA"></span>IA
   </button>
 <button class="nav-item" id="nav-dashboard" onclick="showPage('dashboard');loadDashboard()">
@@ -1735,6 +1735,9 @@ let previousView     = 'paddock';
 let chatHistory   = [];
 let loadedMatchesMap = {};
 let todayMatchesCache = [];
+let liveWatchInterval   = null;
+let liveScoreSnapshot   = {};   // { [matchId]: { score, status, minute } }
+let liveReactCooldown   = {};   // { [matchId]: timestamp } — anti-spam 2 min
 let todayNewsCache = [];
 let userProfileCache = null;
 
@@ -1754,6 +1757,7 @@ function showPage(name) {
   const navEl = document.getElementById('nav-' + name);
   if (navEl) navEl.classList.add('active');
   if (name === 'paddock') initPaddock();
+  if (name !== 'ia') stopLiveWatch();
   window.scrollTo(0, 0);
 }
 
@@ -3014,6 +3018,95 @@ async function callVision(input) {
     appendMessage('ai', "Problème avec l'image, réessaie.");
   }
   btn.disabled = false;
+}
+
+function startLiveWatch() {
+  stopLiveWatch();
+  // Seulement si des matchs live ou démarrant dans les 2h
+  const now = Date.now();
+  const watchable = (todayMatchesCache || []).filter(m => {
+    if (m.status === 'live') return true;
+    if (m.status === 'scheduled') {
+      const [h, min] = (m.time || '').split(':').map(Number);
+      const matchTs = new Date().setHours(h || 0, min || 0, 0, 0);
+      return matchTs - now < 2 * 3600_000 && matchTs > now;
+    }
+    return false;
+  });
+  if (!watchable.length) return;
+  pollLiveScores();
+  liveWatchInterval = setInterval(pollLiveScores, 60_000);
+}
+
+function stopLiveWatch() {
+  if (liveWatchInterval) { clearInterval(liveWatchInterval); liveWatchInterval = null; }
+}
+
+async function pollLiveScores() {
+  const ids = (todayMatchesCache || [])
+    .filter(m => m.status === 'live' || m.status === 'scheduled')
+    .map(m => m.id).filter(Boolean);
+  if (!ids.length) return;
+  try {
+    const r = await fetch('/api/live-scores?matchIds=' + ids.join(','));
+    if (!r.ok) return;
+    const scores = await r.json();
+    scores.forEach(s => detectAndReact(s));
+  } catch {}
+}
+
+async function detectAndReact(current) {
+  const prev = liveScoreSnapshot[current.id];
+  liveScoreSnapshot[current.id] = current;
+  if (!prev) return; // première lecture — pas d'événement
+
+  const match = (todayMatchesCache || []).find(m => String(m.id) === String(current.id));
+  const now = Date.now();
+  const cooldown = liveReactCooldown[current.id] || 0;
+  if (now - cooldown < 120_000) return; // anti-spam 2 min par match
+
+  let event = null;
+
+  // But marqué
+  if (current.score && prev.score) {
+    const homeGoal = current.score.home > prev.score.home;
+    const awayGoal = current.score.away > prev.score.away;
+    if (homeGoal) event = `⚽ But de ${match?.home || 'l\'équipe dom.'} ! Score : ${current.score.home}-${current.score.away}`;
+    else if (awayGoal) event = `⚽ But de ${match?.away || 'l\'équipe ext.'} ! Score : ${current.score.home}-${current.score.away}`;
+  }
+  // Match terminé
+  if (!event && prev.status === 'live' && current.status === 'finished') {
+    const s = current.score;
+    event = s
+      ? `🔔 Match terminé : ${match?.home || 'Dom.'} ${s.home} - ${s.away} ${match?.away || 'Ext.'}`
+      : `🔔 Match terminé.`;
+  }
+  // Match commencé
+  if (!event && prev.status === 'scheduled' && current.status === 'live') {
+    event = `🟢 Le match ${match?.home || ''} vs ${match?.away || ''} vient de débuter !`;
+  }
+
+  if (!event) return;
+
+  liveReactCooldown[current.id] = now;
+  // Cherche la prédiction de l'utilisateur sur ce match (depuis predictions cache)
+  const preds = getPredictions();
+  const userPred = preds.find(p => p.home === match?.home || p.away === match?.away);
+
+  try {
+    const res = await fetch('/api/live-react', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event, match: match || null,
+        userPrediction: userPred ? `${userPred.prediction} (${userPred.correct === null ? 'en cours' : userPred.correct ? '✅' : '❌'})` : null,
+        aiName: getAiName(),
+      }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.reply) appendMessage('ai', `🔴 LIVE — ${data.reply}`);
+  } catch {}
 }
 
 function getDemoReply(msg) {
