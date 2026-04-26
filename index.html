@@ -1730,6 +1730,7 @@ if (tg) {
 // ─── STATE ───
 let currentLeague = { code: 'PL', name: 'Premier League', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' };
 let currentMatch     = null;
+let currentOddsData  = null;
 let activeMatchId    = null;
 let previousView     = 'paddock';
 let chatHistory   = [];
@@ -2208,12 +2209,26 @@ async function openAnalysis(id) {
     }
   }
 
+  currentOddsData = null;
   try {
     const h2hParams = new URLSearchParams({ eventId: currentMatch.id, sport: 'football' });
     if (currentMatch.homeTeamId) h2hParams.set('team1Id', currentMatch.homeTeamId);
     if (currentMatch.awayTeamId) h2hParams.set('team2Id', currentMatch.awayTeamId);
-    const h2hRes = await fetch(`/api/h2h?${h2hParams}`);
-    currentMatch.h2h = h2hRes.ok ? await h2hRes.json() : null;
+
+    const oddsParams = new URLSearchParams({ eventId: currentMatch.id });
+    if (currentMatch.homeWin != null) oddsParams.set('homeWin', currentMatch.homeWin);
+    if (currentMatch.draw    != null) oddsParams.set('draw',    currentMatch.draw);
+    if (currentMatch.awayWin != null) oddsParams.set('awayWin', currentMatch.awayWin);
+
+    const [h2hRes, oddsRes] = await Promise.allSettled([
+      fetch(`/api/h2h?${h2hParams}`),
+      fetch(`/api/odds?${oddsParams}`),
+    ]);
+    currentMatch.h2h = h2hRes.status === 'fulfilled' && h2hRes.value.ok ? await h2hRes.value.json() : null;
+    if (oddsRes.status === 'fulfilled' && oddsRes.value.ok) {
+      const od = await oddsRes.value.json();
+      if (od?.odds) currentOddsData = od;
+    }
   } catch (e) {
     currentMatch.h2h = null;
   }
@@ -2946,8 +2961,8 @@ async function callAI(userMsg) {
         context: {
           matches: todayMatchesCache, news: todayNewsCache, user: userProfileCache,
           match: currentMatch || null, aiName: getAiName(), memory: formatMemoryBlock(),
-          predictions: refreshPredictionsVsCache(),
-          lifeTags: getLifeTags(),
+          predictions: refreshPredictionsVsCache(), lifeTags: getLifeTags(),
+          odds: currentOddsData || null,
         },
       }),
     });
