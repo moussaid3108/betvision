@@ -367,10 +367,17 @@ app.post('/api/ai-chat', async (req, res) => {
   if (!KEY) return res.status(500).json({ error: 'AI unavailable' });
 
   // ─── DATA BRIDGE : si le frontend n'a pas envoyé de matchs,
-  //     on utilise directement le cache serveur upcomingCache ───
-  if (!context.matches?.length && upcomingCache.data?.matches?.length) {
-    context.matches = upcomingCache.data.matches;
-    console.log(`[DATA-BRIDGE] context.matches vide → injection cache serveur (${context.matches.length} matchs)`);
+  //     on utilise le cache serveur (upcoming en priorité, today en fallback) ───
+  if (!context.matches?.length) {
+    const cached = upcomingCache.data?.matches?.length
+      ? upcomingCache.data.matches
+      : todayCache.data?.matches;
+    if (cached?.length) {
+      context.matches = cached;
+      console.log(`[DATA-BRIDGE] context.matches vide → injection cache serveur (${context.matches.length} matchs)`);
+    } else {
+      console.warn('[DATA-BRIDGE] ⚠️ aucun cache disponible — upcomingCache et todayCache vides');
+    }
   }
 
   // Bloc matchs — 3 balises contextuelles pour l'IA
@@ -710,8 +717,8 @@ FEW-SHOT :
 
   const finalPrompt = systemPrompt + noDataWarning;
 
-  // Log complet du prompt envoyé à GPT (premiers 1000 chars + fin)
-  console.log(`[GPT-PROMPT] total: ${finalPrompt.length} chars | matchesBlock dans prompt: ${finalPrompt.includes('[NEXT_10_DAYS_SCHEDULE]') ? '✅ OUI' : '❌ NON'}`);
+  // Log complet du prompt envoyé à GPT
+  console.log(`[GPT-PROMPT] total: ${finalPrompt.length} chars | matchesBlock: ${matchesBlock.length > 10 ? '✅ ' + matchesBlock.length + ' chars' : '❌ VIDE'}`);
   if (process.env.DEBUG_PROMPT) {
     console.log('[GPT-PROMPT-FULL début]', finalPrompt.slice(0, 800));
     console.log('[GPT-PROMPT-FULL fin]', finalPrompt.slice(-800));
@@ -1500,4 +1507,18 @@ const PORT = process.env.PORT || 3000;
 computeStatsCache.clear();
 app.listen(PORT, () => {
   console.log(`BetVision AI démarré sur le port ${PORT}`);
+  // Préchauffage du cache upcoming au démarrage (évite DATA-BRIDGE vide au 1er chat)
+  const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
+  if (RAPIDAPI_KEY) {
+    setTimeout(async () => {
+      try {
+        await fetch(`http://localhost:${PORT}/api/upcoming`);
+        console.log('[STARTUP] Cache upcoming préchauffé');
+      } catch (e) {
+        console.warn('[STARTUP] Préchauffage upcoming échoué:', e.message);
+      }
+    }, 2000); // 2s après démarrage pour laisser le serveur s'initialiser
+  } else {
+    console.warn('[STARTUP] RAPIDAPI_KEY manquante — cache upcoming non préchauffé');
+  }
 });
