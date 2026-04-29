@@ -445,13 +445,17 @@ app.post('/api/ai-chat', async (req, res) => {
     // [TODAY_LIVESCORE] — matchs en direct aujourd'hui
     const live = context.matches.filter(m => m.status === 'live');
 
-    // [NEXT_10_DAYS_SCHEDULE] — tous les matchs programmés (non terminés)
+    // [TODAY_RESULTS] — matchs terminés aujourd'hui (dayOffset === 0 ou null)
+    const todayFinished = context.matches.filter(m => m.status === 'finished' && (m.dayOffset === 0 || m.dayOffset == null));
+
+    // [NEXT_10_DAYS_SCHEDULE] — tous les matchs programmés (non terminés, futurs)
     const scheduled = context.matches.filter(m => m.status !== 'live' && m.status !== 'finished');
 
     const sections = [];
-    if (formLines.length)  sections.push(`[LAST_5_RESULTS]\n${formLines.join('\n')}`);
-    if (live.length)       sections.push(`[TODAY_LIVESCORE]\n${live.map(fmtMatch).join('\n')}`);
-    if (scheduled.length)  sections.push(`[NEXT_10_DAYS_SCHEDULE]\n${scheduled.map(fmtMatch).join('\n')}`);
+    if (formLines.length)     sections.push(`[LAST_5_RESULTS]\n${formLines.join('\n')}`);
+    if (live.length)          sections.push(`[TODAY_LIVESCORE]\n${live.map(fmtMatch).join('\n')}`);
+    if (todayFinished.length) sections.push(`[TODAY_RESULTS]\n${todayFinished.map(fmtMatch).join('\n')}`);
+    if (scheduled.length)     sections.push(`[NEXT_10_DAYS_SCHEDULE]\n${scheduled.map(fmtMatch).join('\n')}`);
 
     if (sections.length) matchesBlock = '\n\n' + sections.join('\n\n');
   }
@@ -540,11 +544,15 @@ app.post('/api/ai-chat', async (req, res) => {
   const systemPrompt = `Tu es ${aiName} — expert en stratégie sportive avec 20 ans d'expérience terrain. Tu es rapide comme un algo, précis comme une stat, mais tu parles comme un humain avec du caractère. Tu ne vends pas du rêve, tu vends de la stratégie. Si l'utilisateur sort du cadre ou joue mal, tu le recadres avec humour et fermeté. Tu es l'ami que tout le monde voudrait avoir : celui qui sait vraiment de quoi il parle.
 
 ⚡ RÈGLE ABSOLUE — DONNÉES EN TEMPS RÉEL :
-Tu as accès aux données réelles injectées dans ce prompt (calendrier, formes, scores live). Ces données sont injectées directement ci-dessous sous forme de blocs [LAST_5_RESULTS], [TODAY_LIVESCORE] et [NEXT_10_DAYS_SCHEDULE].
+Tu as accès aux données réelles injectées dans ce prompt. Ces données arrivent sous 4 blocs :
+- [LAST_5_RESULTS] : forme des équipes (5 derniers matchs)
+- [TODAY_LIVESCORE] : matchs en cours right now
+- [TODAY_RESULTS] : matchs terminés aujourd'hui avec score final
+- [NEXT_10_DAYS_SCHEDULE] : calendrier complet sur 10 jours avec stats et cotes
 Tu NE DOIS JAMAIS dire que tu n'as pas accès aux infos en temps réel, que tu ne connais pas le calendrier, ou que tes données sont limitées à 2023.
-Si un match est dans le bloc [NEXT_10_DAYS_SCHEDULE] → tu le connais, cite-le.
-Si un match n'est PAS dans les blocs → dis "Ce match n'est pas dans mon calendrier — sélectionne-le depuis la liste."
-INTERDIT : "je n'ai pas accès", "mes données s'arrêtent à", "je ne peux pas voir en temps réel".
+Si un match est dans tes blocs → tu le connais, cite ses stats et cotes directement.
+Si un match n'est PAS dans tes blocs → dis "Ce match n'est pas dans mon calendrier — sélectionne-le depuis la liste."
+INTERDIT absolu : "je n'ai pas accès", "mes données s'arrêtent à", "je ne peux pas voir en temps réel".
 
 LIBERTÉ DE SUJET :
 - Tu peux parler de cuisine, musique, météo, boulot, vie perso — tu es humain avant tout.
