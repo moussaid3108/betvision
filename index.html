@@ -46,19 +46,24 @@
   .header {
     position: sticky; top: 0; z-index: 100;
     background: linear-gradient(180deg, var(--bg-0) 60%, transparent);
-    padding: 16px 20px 12px;
-    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    display: grid; grid-template-columns: 44px 1fr auto;
+    align-items: center;
   }
+  .header-right { display: flex; justify-content: flex-end; align-items: center; }
   .logo {
-    display: flex; align-items: center; gap: 10px;
+    display: flex; align-items: center; gap: 8px; justify-content: center;
   }
   .logo-icon {
-    width: 36px; height: 36px;
-    background: linear-gradient(135deg, var(--accent), #00b377);
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    overflow: hidden;
+    flex-shrink: 0;
     box-shadow: 0 0 16px var(--accent-glow);
+  }
+  .logo-icon img {
+    width: 100%; height: 100%; object-fit: cover; object-position: center 55%;
+    display: block;
   }
   .logo-text {
     font-family: 'Barlow Condensed', sans-serif;
@@ -67,23 +72,15 @@
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   }
   .logo-sub { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 2px; margin-top: -2px; }
-  .header-badge {
-    background: var(--accent-dim);
-    border: 1px solid rgba(0,229,160,0.25);
-    color: var(--accent);
-    font-size: 10px; font-weight: 600;
-    padding: 4px 10px; border-radius: 20px;
-    text-transform: uppercase; letter-spacing: 1px;
-  }
-
   /* ─── BOTTOM NAV ─── */
   .bottom-nav {
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
-    background: var(--bg-1);
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 400;
+    background: rgba(12,14,18,0.98);
     border-top: 1px solid var(--border);
     display: flex;
     padding: 0 0 env(safe-area-inset-bottom);
-    backdrop-filter: blur(20px);
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
   }
   .nav-item {
     flex: 1; display: flex; flex-direction: column;
@@ -95,9 +92,184 @@
     text-transform: uppercase; letter-spacing: 0.8px;
     border: none; background: none;
   }
-  .nav-item .nav-icon { font-size: 20px; transition: transform .2s; }
+  .nav-item .nav-icon {
+    font-size: 20px; transition: transform .2s; line-height: 1;
+    width: 40px; height: 40px; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .nav-item .nav-icon img {
+    width: 40px; height: 40px; flex-shrink: 0;
+    object-fit: contain; display: block;
+  }
   .nav-item.active { color: var(--accent); }
   .nav-item.active .nav-icon { transform: scale(1.15); }
+  .nav-item.active .nav-icon img { filter: drop-shadow(0 0 6px #00e5a0); }
+  #nav-paddock .nav-icon img { clip-path: inset(0 12% 12% 0); }
+  #nav-ia .nav-icon img { clip-path: inset(0 12% 12% 0); }
+  #nav-dashboard .nav-icon img { clip-path: inset(0 12% 12% 0); }
+
+  /* ─── PADDOCK ─── */
+  @keyframes pulseBadge {
+    0%,100% { box-shadow: 0 0 0 0 rgba(255,77,106,0.6); }
+    50%      { box-shadow: 0 0 0 6px rgba(255,77,106,0); }
+  }
+  @keyframes paddockFadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+  }
+  #page-paddock { padding: 0; }
+  .paddock-page { padding: 0 0 24px; }
+
+  .paddock-greeting {
+    padding: 18px 16px 6px;
+    animation: paddockFadeIn .4s ease;
+  }
+  .paddock-hello {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 26px; font-weight: 800; color: var(--text-1);
+  }
+  .paddock-date { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+
+  /* Slider */
+  .news-slider-wrap { padding: 14px 16px 0; animation: paddockFadeIn .5s ease; }
+  .news-slider { overflow: hidden; border-radius: var(--radius); position: relative; }
+  .news-track {
+    display: flex;
+    transition: transform .4s cubic-bezier(.4,0,.2,1);
+    will-change: transform;
+  }
+  .news-card {
+    min-width: 100%; padding: 18px 20px 20px;
+    background: linear-gradient(135deg, #0a2e1a 0%, #050608 100%);
+    border: 1px solid rgba(0,229,160,0.15);
+    border-radius: var(--radius);
+    display: flex; flex-direction: column; gap: 6px;
+    position: relative; overflow: hidden; min-height: 120px;
+  }
+  .news-card-bg {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; opacity: 0.18; filter: grayscale(20%); pointer-events: none;
+  }
+  .news-card-body { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 6px; }
+  .news-card-tag { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--accent); font-weight: 700; }
+  .news-card-title { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 800; color: #fff; line-height: 1.2; }
+  .news-card-sub { font-size: 12px; color: var(--text-2); }
+  .news-dots { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }
+  .news-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--bg-4); transition: background .3s, transform .3s;
+  }
+  .news-dot.active { background: var(--accent); transform: scale(1.3); }
+
+  /* Top matchs */
+  .paddock-section { padding: 20px 16px 0; animation: paddockFadeIn .6s ease; }
+  .paddock-section-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 10px; color: var(--text-1);
+  }
+  .top-match-card {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 12px 14px;
+    margin-bottom: 8px; display: flex; align-items: center;
+    justify-content: space-between; gap: 10px;
+    animation: paddockFadeIn .5s ease;
+  }
+  .top-match-info { flex: 1; min-width: 0; }
+  .top-match-teams { font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .top-match-meta { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+  .top-match-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .badge-conf {
+    background: var(--red); color: #fff; font-size: 9px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 1px;
+    padding: 3px 7px; border-radius: 20px;
+    animation: pulseBadge 1.8s infinite;
+  }
+  .top-match-btn {
+    background: var(--accent-dim); border: 1px solid rgba(0,229,160,0.25);
+    color: var(--accent); font-size: 11px; font-weight: 700;
+    padding: 6px 10px; border-radius: 8px; cursor: pointer;
+    white-space: nowrap; transition: background .2s;
+  }
+  .top-match-btn:active { background: rgba(0,229,160,0.2); }
+
+  /* CTA Premium */
+  .cta-premium {
+    margin: 20px 16px 0;
+    background: linear-gradient(135deg, #00FF88, #00CC66);
+    border-radius: var(--radius); padding: 22px 20px;
+    animation: paddockFadeIn .7s ease;
+  }
+  .cta-premium-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px; font-weight: 800; color: #050608; margin-bottom: 6px;
+  }
+  .cta-premium-desc { font-size: 13px; color: rgba(0,0,0,0.65); line-height: 1.5; margin-bottom: 14px; }
+  .cta-premium-btn {
+    background: #050608; color: #00FF88; border: none;
+    border-radius: 10px; padding: 12px 20px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px; font-weight: 800; letter-spacing: .5px;
+    cursor: pointer; transition: opacity .2s;
+  }
+  .cta-premium-btn:active { opacity: .8; }
+
+  /* Stats rapides */
+  .paddock-stats-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+  .paddock-stat-card {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 12px 10px; text-align: center;
+  }
+  .paddock-stat-val { font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 800; }
+  .paddock-stat-label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+  .paddock-no-auth {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; text-align: center;
+    font-size: 13px; color: var(--text-3);
+  }
+  .paddock-no-auth span { color: var(--accent); cursor: pointer; text-decoration: underline; }
+
+  /* Favoris récents */
+  .paddock-fav-card {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 11px 13px;
+    margin-bottom: 8px; cursor: pointer; transition: border-color .2s;
+  }
+  .paddock-fav-card:active { border-color: rgba(0,229,160,0.3); }
+  .paddock-fav-teams { font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700; }
+  .paddock-fav-meta { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+  .paddock-manifesto {
+    margin: 20px 16px 8px;
+    background: linear-gradient(160deg, #1a1a2e 0%, #16213e 100%);
+    border: 1px solid #00FF88;
+    border-radius: var(--radius); padding: 24px 20px 20px;
+    text-align: center;
+    animation: paddockFadeIn .8s ease;
+  }
+  .paddock-manifesto-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px; font-weight: 800; color: #fff;
+    margin-bottom: 16px; line-height: 1.2;
+  }
+  .paddock-manifesto-body {
+    font-size: 13px; color: rgba(255,255,255,0.75);
+    line-height: 1.7; text-align: left; margin-bottom: 20px;
+  }
+  .paddock-manifesto-body p { margin-bottom: 12px; }
+  .paddock-manifesto-body ul {
+    list-style: none; padding: 0; margin: 0 0 12px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .paddock-manifesto-body ul li { color: rgba(255,255,255,0.85); }
+  .paddock-manifesto-btn {
+    width: 100%; padding: 14px;
+    background: #00FF88; border: none; border-radius: var(--radius);
+    color: #050608; font-family: 'Barlow Condensed', sans-serif;
+    font-size: 17px; font-weight: 800; letter-spacing: .5px;
+    cursor: pointer; transition: opacity .2s;
+  }
+  .paddock-manifesto-btn:active { opacity: .85; }
 
   /* ─── PAGES ─── */
   .page { display: none; padding: 0 16px; animation: fadeIn .3s ease; }
@@ -225,22 +397,25 @@
     margin-bottom: 14px;
   }
   .hero-teams {
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; align-items: stretch; justify-content: space-between;
   }
-  .hero-team { flex: 1; text-align: center; }
+  .hero-team { flex: 1; min-width: 0; overflow: hidden; text-align: center; display: flex; flex-direction: column; }
   .hero-team-name {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 22px; font-weight: 800; line-height: 1.1;
+    font-size: 16px; font-weight: 800; line-height: 1.1;
+    min-height: 2.2em;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; word-break: break-word;
   }
-  .hero-team-form { margin-top: 6px; display: flex; justify-content: center; gap: 3px; }
+  .hero-team-form { margin-top: auto; padding-top: 6px; display: flex; justify-content: center; flex-wrap: wrap; gap: 2px; overflow: hidden; }
   .form-dot {
-    width: 18px; height: 18px; border-radius: 50%;
+    width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
-    font-size: 9px; font-weight: 800;
+    font-size: 7px; font-weight: 800;
   }
-  .form-w { background: rgba(0,229,160,0.2); color: var(--accent); }
-  .form-d { background: rgba(255,200,66,0.2); color: var(--gold); }
-  .form-l { background: rgba(255,77,106,0.2); color: var(--red); }
+  .form-w { background: #22c55e; color: #fff; }
+  .form-d { background: #eab308; color: #fff; }
+  .form-l { background: #ef4444; color: #fff; }
   .hero-vs {
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 28px; font-weight: 800; color: var(--text-3);
@@ -304,6 +479,38 @@
     min-width: 40px; text-align: center;
   }
 
+  /* ─── H2H SECTION ─── */
+  .h2h-section {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; margin-bottom: 14px;
+  }
+  .h2h-section-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px; font-weight: 700; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;
+  }
+  .h2h-match-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12px;
+  }
+  .h2h-match-row:last-child { border-bottom: none; }
+  .h2h-match-date { width: 72px; flex-shrink: 0; font-size: 10px; color: var(--text-3); }
+  .h2h-match-teams { flex: 1; font-weight: 500; color: var(--text-1); }
+  .h2h-match-score {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px; font-weight: 800; min-width: 36px; text-align: center;
+  }
+  .h2h-win   { color: #22c55e; }
+  .h2h-draw  { color: #eab308; }
+  .h2h-loss  { color: #ef4444; }
+  .h2h-balance {
+    margin-top: 10px; padding: 8px 12px;
+    background: var(--bg-3); border-radius: 8px;
+    font-size: 12px; font-weight: 700; color: var(--text-2); text-align: center;
+  }
+  .h2h-empty { font-size: 12px; color: var(--text-3); text-align: center; padding: 8px 0; }
+  .h2h-count { font-size: 10px; color: var(--text-3); text-align: center; margin-top: 6px; }
+
   /* ─── SIGNAL GLOBAL ─── */
   .signal-card {
     background: var(--bg-2);
@@ -338,10 +545,15 @@
   .signal-desc { font-size: 12px; color: var(--text-2); line-height: 1.4; }
 
   /* ─── IA CHAT ─── */
-  .ia-page { padding: 0 16px 20px; }
+  #page-ia { padding: 0; }
+  .ia-page {
+    display: flex; flex-direction: column;
+    height: calc(100vh - 138px);
+  }
   .ia-intro {
+    flex-shrink: 0;
     background: var(--bg-2); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 18px; margin-bottom: 20px;
+    border-radius: var(--radius); padding: 18px; margin: 12px 16px 0;
   }
   .ia-intro-title {
     font-family: 'Barlow Condensed', sans-serif;
@@ -350,8 +562,9 @@
   .ia-intro-sub { font-size: 13px; color: var(--text-2); line-height: 1.5; }
 
   .chat-box {
-    display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;
-    min-height: 200px;
+    flex: 1; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 12px;
+    padding: 8px 16px 12px;
   }
   .chat-msg {
     max-width: 85%; padding: 12px 14px;
@@ -373,7 +586,10 @@
   .chat-msg.typing { color: var(--text-3); font-style: italic; }
 
   .chat-input-row {
+    flex-shrink: 0;
     display: flex; gap: 8px; align-items: flex-end;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    background: var(--bg-1); border-top: 1px solid var(--border);
   }
   .chat-input {
     flex: 1; background: var(--bg-2); border: 1px solid var(--border);
@@ -392,9 +608,17 @@
   }
   .chat-send:active { transform: scale(0.93); background: #00b377; }
   .chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
+  .chat-img-btn {
+    width: 40px; height: 48px; flex-shrink: 0;
+    background: transparent; border: 1px solid #2a2d35; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 18px; color: #888; transition: all .2s;
+  }
+  .chat-img-btn:hover { border-color: var(--accent); color: var(--accent); }
 
   .quick-questions {
-    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px;
+    flex-shrink: 0;
+    display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 16px 8px;
   }
   .quick-q {
     background: var(--bg-3); border: 1px solid var(--border);
@@ -403,6 +627,211 @@
     transition: all .2s;
   }
   .quick-q:active { background: var(--accent-dim); color: var(--accent); border-color: rgba(0,229,160,0.3); }
+
+  /* ─── EXIT BUTTON ─── */
+  #btn-exit {
+    display: none;
+    width: 40px; height: 40px; flex-shrink: 0;
+    background: #00e5a0; border: none; border-radius: 50%;
+    color: #050608; font-size: 20px; font-weight: 700;
+    cursor: pointer; align-items: center; justify-content: center;
+    transition: background .2s;
+  }
+  #btn-exit:active { background: #00b377; }
+
+  /* ─── FULLCHAT MODE ─── */
+  body.fullchat { padding-bottom: 0; }
+  body.fullchat .bottom-nav { display: none !important; }
+  body.fullchat #btn-exit { display: flex; }
+  body.fullchat #header-right-normal { display: none !important; }
+
+  body.fullchat .ia-page { height: calc(100dvh - 60px); }
+  body.fullchat .chat-box { padding-bottom: 80px; }
+  body.fullchat .chat-input-row {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    z-index: 390; transform: translateZ(0); -webkit-transform: translateZ(0);
+  }
+
+  body.fullchat .chat-community { height: calc(100dvh - 60px); }
+  body.fullchat .chat-feed-wrap { padding-bottom: 80px; }
+  body.fullchat .chat-input-area {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    z-index: 390; transform: translateZ(0); -webkit-transform: translateZ(0);
+  }
+
+  /* ─── PROFIL ─── */
+  .profile-page { padding: 0 16px 32px; }
+  .profile-avatar-wrap {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 28px 0 20px; gap: 12px;
+  }
+  .profile-avatar-img {
+    width: 90px; height: 90px; border-radius: 50%;
+    border: 3px solid var(--accent); object-fit: cover;
+    background: var(--bg-3);
+  }
+  .profile-avatar-placeholder {
+    width: 90px; height: 90px; border-radius: 50%;
+    border: 3px solid var(--accent); background: var(--bg-3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+  }
+  .profile-change-photo {
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text-2);
+    font-size: 12px; font-weight: 600; padding: 7px 14px;
+    cursor: pointer; transition: all .2s;
+  }
+  .profile-change-photo:active { border-color: var(--accent); color: var(--accent); }
+  .profile-section {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; margin-bottom: 12px;
+  }
+  .profile-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--text-3); margin-bottom: 8px;
+  }
+  .profile-input {
+    width: 100%; background: var(--bg-3); border: 1px solid var(--border);
+    border-radius: 8px; padding: 11px 14px; color: var(--text-1);
+    font-size: 14px; font-family: 'Barlow', sans-serif; outline: none;
+    transition: border-color .2s;
+  }
+  .profile-input:focus { border-color: rgba(0,229,160,0.4); }
+  .profile-input[disabled] { color: var(--text-3); cursor: default; }
+  .profile-save-btn {
+    width: 100%; padding: 12px; margin-top: 10px;
+    background: var(--accent); border: none; border-radius: 8px;
+    color: #050608; font-size: 14px; font-weight: 700; cursor: pointer;
+    transition: background .2s;
+  }
+  .profile-save-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .profile-msg { font-size: 12px; text-align: center; margin-top: 8px; min-height: 16px; }
+  .profile-msg.ok  { color: var(--accent); }
+  .profile-msg.err { color: var(--red); }
+  .profile-signout-btn {
+    width: 100%; padding: 13px; background: transparent;
+    border: 1px solid rgba(255,77,106,0.4); border-radius: var(--radius);
+    color: var(--red); font-size: 14px; font-weight: 700;
+    cursor: pointer; margin-top: 8px; transition: all .2s;
+  }
+  .profile-signout-btn:active { background: var(--red-dim); }
+
+  /* ─── FAVORIS ─── */
+  .fav-btn {
+    background: none; border: none; font-size: 17px;
+    cursor: pointer; padding: 2px 0 2px 6px; line-height: 1; flex-shrink: 0;
+    color: #999;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .favoris-page { padding: 0 16px 20px; }
+  .fav-card {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px; margin-bottom: 10px;
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  }
+  .fav-card-info { flex: 1; min-width: 0; }
+  .fav-teams { font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .fav-meta { font-size: 11px; color: var(--text-3); }
+  .fav-remove {
+    background: none; border: 1px solid rgba(255,77,106,0.3);
+    border-radius: 8px; color: var(--red);
+    font-size: 11px; font-weight: 600; padding: 5px 9px;
+    cursor: pointer; flex-shrink: 0; transition: all .2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .fav-remove:active { background: var(--red-dim); }
+  .analysis-fav-btn {
+    position: absolute; top: 14px; right: 14px;
+    background: none; border: none; font-size: 24px;
+    cursor: pointer; z-index: 2; padding: 2px;
+    color: #999;
+    -webkit-tap-highlight-color: transparent; line-height: 1;
+  }
+
+  /* ─── PRONOSTICS ─── */
+  .pronos-page { padding: 0 16px 20px; }
+  .pronos-kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
+  .pronos-kpi {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; text-align: center;
+  }
+  .pronos-kpi-value {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 32px; font-weight: 800; line-height: 1;
+  }
+  .pronos-kpi-label { font-size: 11px; color: var(--text-2); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 4px; }
+  .pronos-filters { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .pronos-filter {
+    background: var(--bg-3); border: 1px solid var(--border);
+    border-radius: 20px; padding: 6px 14px;
+    font-size: 12px; color: var(--text-2); cursor: pointer; transition: all .2s;
+  }
+  .pronos-filter.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(0,229,160,0.3); }
+  .prono-card {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px; margin-bottom: 10px;
+  }
+  .prono-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+  .prono-teams { font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 700; }
+  .prono-status { font-size: 13px; font-weight: 600; flex-shrink: 0; margin-left: 8px; }
+  .prono-status.en_cours { color: var(--gold); }
+  .prono-status.gagne    { color: var(--accent); }
+  .prono-status.perdu    { color: var(--red); }
+  .prono-meta { font-size: 11px; color: var(--text-3); margin-bottom: 8px; }
+  .prono-choice {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent-dim); border: 1px solid rgba(0,229,160,0.2);
+    border-radius: 8px; padding: 5px 10px;
+    font-size: 12px; color: var(--accent); font-weight: 600;
+  }
+
+  /* ─── MODAL PRONOSTIC ─── */
+  .prono-overlay {
+    display: none; position: fixed; inset: 0; z-index: 900;
+    background: rgba(0,0,0,0.75); align-items: flex-end;
+  }
+  .prono-overlay.open { display: flex; }
+  .prono-sheet {
+    background: var(--bg-1); border-radius: 20px 20px 0 0;
+    border-top: 1px solid var(--border);
+    padding: 24px 20px calc(28px + env(safe-area-inset-bottom));
+    width: 100%; position: relative;
+    animation: slideUp .3s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: none; } }
+  .prono-sheet-close {
+    position: absolute; top: 16px; right: 18px;
+    background: none; border: none; color: var(--text-3);
+    font-size: 22px; cursor: pointer; line-height: 1;
+  }
+  .prono-sheet-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 20px; font-weight: 800; margin-bottom: 4px;
+  }
+  .prono-sheet-match { font-size: 13px; color: var(--text-2); margin-bottom: 20px; }
+  .prono-group-label {
+    font-size: 10px; text-transform: uppercase;
+    letter-spacing: 1.5px; color: var(--text-3); margin-bottom: 8px;
+  }
+  .prono-options { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .prono-option {
+    padding: 9px 16px; background: var(--bg-3);
+    border: 1px solid var(--border); border-radius: 10px;
+    font-size: 13px; color: var(--text-2); cursor: pointer; transition: all .2s;
+  }
+  .prono-option.selected {
+    background: var(--accent-dim); border-color: rgba(0,229,160,0.4);
+    color: var(--accent); font-weight: 600;
+  }
+  .prono-confirm-btn {
+    width: 100%; padding: 14px; background: var(--accent); border: none;
+    border-radius: var(--radius); color: #050608;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 1px; cursor: pointer; margin-top: 4px; transition: background .2s;
+  }
+  .prono-confirm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
   /* ─── DASHBOARD ─── */
   .dashboard-page { padding: 0 16px 20px; }
@@ -465,24 +894,543 @@
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 2px; }
+
+  /* ─── AUTH MODAL ─── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: #131620; border: 1px solid var(--border);
+    border-radius: 16px; padding: 24px 20px; width: 90%; max-width: 360px;
+    position: relative; animation: fadeIn .25s ease;
+  }
+  .modal-close {
+    position: absolute; top: 14px; right: 16px;
+    background: none; border: none; color: var(--text-2);
+    font-size: 20px; cursor: pointer; line-height: 1;
+  }
+  .modal-tabs { display: flex; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .modal-tab {
+    flex: 1; padding: 10px; background: none; border: none;
+    color: var(--text-3); font-size: 14px; font-weight: 600;
+    cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+    transition: all .2s;
+  }
+  .modal-tab.active { color: #00e5a0; border-bottom-color: #00e5a0; }
+  .modal-google {
+    width: 100%; padding: 11px; background: #fff; border: none;
+    border-radius: 8px; color: #1f1f1f; font-size: 14px; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    gap: 10px; margin-bottom: 16px; transition: background .2s;
+  }
+  .modal-google:hover { background: #f0f0f0; }
+  .modal-separator {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    color: var(--text-3); font-size: 12px;
+  }
+  .modal-separator::before, .modal-separator::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+  .modal-field { margin-bottom: 14px; }
+  .modal-field label { display: block; font-size: 11px; color: var(--text-3); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .modal-field input {
+    width: 100%; background: var(--bg-3); border: 1px solid var(--border);
+    border-radius: 8px; padding: 11px 14px; color: var(--text-1);
+    font-size: 14px; font-family: 'Barlow', sans-serif; outline: none;
+    transition: border-color .2s;
+  }
+  .modal-field input:focus { border-color: rgba(0,229,160,0.4); }
+  .modal-submit {
+    width: 100%; padding: 13px; background: #00e5a0; border: none;
+    border-radius: 8px; color: #050608; font-size: 14px; font-weight: 700;
+    cursor: pointer; margin-top: 4px; transition: background .2s;
+  }
+  .modal-submit:hover { background: #00b377; }
+  .modal-msg { font-size: 12px; text-align: center; margin-top: 10px; min-height: 18px; }
+  .user-profile {
+    display: none; align-items: center; gap: 8px;
+  }
+  .user-profile.visible { display: flex; }
+  .user-avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 2px solid #00e5a0; object-fit: cover;
+  }
+  .user-name { font-size: 13px; font-weight: 600; color: var(--text-1); }
+  .btn-signout {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-3); border-radius: 8px; padding: 4px 10px;
+    font-size: 11px; font-weight: 600; cursor: pointer; transition: all .2s;
+  }
+  .btn-signout:hover { border-color: var(--red); color: var(--red); }
+
+  /* ─── DRAWER ─── */
+  .hamburger {
+    background: none; border: none; cursor: pointer;
+    display: flex; flex-direction: column; justify-content: center;
+    gap: 5px; padding: 4px; margin-right: 10px;
+  }
+  .hamburger span {
+    display: block; width: 22px; height: 2px;
+    background: #00FF88; border-radius: 2px;
+    transition: all .25s ease;
+  }
+  .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .hamburger.open span:nth-child(2) { opacity: 0; }
+  .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  .drawer-overlay {
+    display: none; position: fixed; inset: 0; z-index: 300;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(2px);
+  }
+  .drawer-overlay.open { display: block; }
+
+  .drawer {
+    position: fixed; top: 0; left: 0; z-index: 301;
+    width: 280px; height: 100%; background: #1a1a1a;
+    transform: translateX(-100%); transition: transform .28s cubic-bezier(.4,0,.2,1);
+    overflow-y: auto; display: flex; flex-direction: column;
+  }
+  .drawer.open { transform: translateX(0); }
+
+  .drawer-header {
+    padding: 20px 18px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px; font-weight: 800; color: #00FF88; letter-spacing: 1px;
+  }
+
+  .drawer-sport {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 18px; cursor: pointer;
+    font-size: 14px; font-weight: 600; color: var(--text-1);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    transition: background .15s;
+  }
+  .drawer-sport:hover { background: rgba(255,255,255,0.05); }
+  .drawer-sport .sport-left { display: flex; align-items: center; gap: 10px; }
+  .drawer-sport .arrow {
+    font-size: 11px; color: var(--text-3);
+    transition: transform .2s;
+  }
+  .drawer-sport.expanded .arrow { transform: rotate(90deg); }
+  .drawer-nav-item { padding: 14px 18px; }
+  .drawer-nav-item:hover { background: rgba(255,255,255,0.04); }
+  .drawer-nav-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 8px; font-size: 15px;
+    flex-shrink: 0;
+  }
+
+  .drawer-submenu { display: none; background: rgba(0,0,0,0.2); }
+  .drawer-submenu.open { display: block; }
+
+  .submenu-section { padding: 10px 18px 4px 42px; }
+  .submenu-title {
+    font-size: 11px; font-weight: 700; color: var(--text-3);
+    text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px;
+  }
+  .submenu-item {
+    padding: 11px 0; font-size: 15px; color: var(--text-2);
+    cursor: pointer; transition: color .15s;
+  }
+  .submenu-item:hover { color: #fff; }
+  .submenu-item.red  { color: #FF0000; }
+  .submenu-item.gold { color: #FFD700; }
+  .submenu-item.red:hover  { color: #ff6666; }
+  .submenu-item.gold:hover { color: #ffe84d; }
+
+  /* ─── COMMUNITY CHAT ─── */
+  #page-chat { padding: 0; }
+  .chat-community {
+    display: flex; flex-direction: column;
+    height: calc(100vh - 138px);
+  }
+  .chat-pinned-bar {
+    margin: 10px 14px 0;
+    background: rgba(255,50,50,0.1); border: 1px solid rgba(255,50,50,0.25);
+    border-radius: 10px; padding: 9px 13px;
+    font-size: 11px; color: #ff7070; line-height: 1.5; flex-shrink: 0;
+  }
+  .chat-feed-wrap {
+    flex: 1; overflow-y: auto; padding: 10px 14px;
+    display: flex; flex-direction: column; gap: 10px;
+    scrollbar-width: none;
+  }
+  .chat-feed-wrap::-webkit-scrollbar { display: none; }
+  .chat-row { display: flex; gap: 8px; align-items: flex-end; }
+  .chat-row.own { flex-direction: row-reverse; }
+  .chat-av {
+    width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+    object-fit: cover; background: var(--bg-4);
+    display: flex; align-items: center; justify-content: center; font-size: 13px;
+  }
+  .chat-bubble {
+    max-width: 74%; background: var(--bg-2);
+    border: 1px solid var(--border); border-radius: 12px 12px 12px 4px;
+    padding: 7px 11px;
+  }
+  .chat-row.own .chat-bubble {
+    background: rgba(0,229,160,0.1); border-color: rgba(0,229,160,0.2);
+    border-radius: 12px 12px 4px 12px;
+  }
+  .chat-bubble-name { font-size: 10px; font-weight: 700; color: var(--accent); margin-bottom: 2px; }
+  .chat-bubble-text { font-size: 13px; color: var(--text-1); line-height: 1.4; word-break: break-word; }
+  .chat-bubble-img { max-width: 100%; border-radius: 8px; margin-top: 5px; cursor: zoom-in; display: block; }
+  .chat-bubble-time { font-size: 9px; color: var(--text-3); margin-top: 3px; text-align: right; }
+  .chat-input-area {
+    padding: 8px 14px 10px; border-top: 1px solid var(--border);
+    background: var(--bg-1); flex-shrink: 0;
+  }
+  .chat-locked-notice {
+    text-align: center; font-size: 13px; color: var(--text-3); padding: 6px 0;
+  }
+  .chat-locked-notice span { color: var(--accent); cursor: pointer; text-decoration: underline; }
+  .chat-send-row { display: flex; gap: 8px; align-items: flex-end; }
+  .chat-community-input {
+    flex: 1; background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 10px 13px; font-size: 14px;
+    color: var(--text-1); font-family: 'Barlow', sans-serif;
+    resize: none; outline: none; min-height: 44px; max-height: 110px;
+    transition: border-color .2s;
+  }
+  .chat-community-input:focus { border-color: rgba(0,229,160,0.4); }
+  .chat-community-input::placeholder { color: var(--text-3); }
+  .chat-action-btn {
+    width: 44px; height: 44px; flex-shrink: 0; border: none;
+    border-radius: 12px; display: flex; align-items: center;
+    justify-content: center; cursor: pointer; font-size: 18px; transition: all .2s;
+  }
+  .btn-send-chat { background: var(--accent); color: #050608; }
+  .btn-send-chat:hover { background: #00b377; }
+  .btn-img-chat { background: var(--bg-3); border: 1px solid var(--border); }
+  .btn-img-chat:hover { border-color: var(--accent); }
+
+  /* Fullscreen image */
+  .img-overlay {
+    display: none; position: fixed; inset: 0; z-index: 500;
+    background: rgba(0,0,0,0.92); align-items: center; justify-content: center; cursor: zoom-out;
+  }
+  .img-overlay.open { display: flex; }
+  .img-overlay img { max-width: 95%; max-height: 90vh; border-radius: 8px; }
+
+  /* ─── PAGE LIGUE MATCHES (.lm-*) ─── */
+  #page-leaguematches {
+    position: fixed; inset: 0; z-index: 50;
+    background: var(--bg-0); overflow-y: auto;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    animation: fadeIn .25s ease;
+  }
+  .lm-header {
+    position: sticky; top: 0; z-index: 10;
+    background: linear-gradient(180deg, var(--bg-0) 85%, transparent);
+    padding: 12px 16px 4px;
+  }
+  .lm-header-top {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
+  }
+  .lm-back-btn {
+    background: none; border: none; color: var(--text-2);
+    font-size: 14px; font-weight: 500; cursor: pointer; padding: 8px 0;
+  }
+  .lm-back-btn:active { color: var(--accent); }
+  .lm-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px; font-weight: 800; color: var(--text-1);
+    flex: 1; text-align: center;
+  }
+  .lm-round-label {
+    font-size: 22px; color: var(--accent); text-align: center;
+    text-transform: uppercase; letter-spacing: 2px; font-weight: 800;
+    font-family: 'Barlow Condensed', sans-serif;
+  }
+  .lm-nav-days {
+    display: flex; flex-direction: column; gap: 6px; padding: 0 16px 8px;
+  }
+  .lm-nav-btns {
+    display: flex; gap: 8px;
+  }
+  .lm-nav-btn {
+    flex: 1; max-width: 130px;
+    background: var(--bg-3); border: 1px solid var(--border);
+    border-radius: 20px; padding: 7px 10px;
+    font-size: 12px; font-weight: 600; color: var(--text-2);
+    cursor: pointer; transition: all .2s; text-align: center;
+  }
+  .lm-nav-btn.active {
+    background: var(--accent-dim); border-color: rgba(0,229,160,0.35); color: var(--accent);
+  }
+  .lm-nav-btn:active { opacity: .7; }
+  .lm-list { padding: 10px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .lm-card {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 10px 14px 12px;
+    cursor: pointer; transition: transform .15s, border-color .2s;
+    position: relative; overflow: hidden;
+  }
+  .lm-card:active { transform: scale(0.98); }
+  .lm-card.status-live {
+    border-color: rgba(0,229,160,0.5);
+    animation: lmPulse 2.4s ease infinite;
+  }
+  @keyframes lmPulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(0,229,160,0.12); }
+    50%      { box-shadow: 0 0 14px 3px rgba(0,229,160,0.22); }
+  }
+  .lm-card.status-finished { opacity: 0.7; }
+  .lm-card.status-canceled { opacity: 0.4; }
+  .lm-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    border-radius: 20px; padding: 3px 9px;
+    font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;
+  }
+  .lm-badge.live {
+    background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,77,106,0.3);
+  }
+  .lm-badge.live::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--red); animation: pulse 1.2s infinite;
+  }
+  .lm-badge.finished  { background: var(--bg-4); color: var(--text-3); border: 1px solid var(--border); }
+  .lm-badge.postponed { background: rgba(245,200,66,0.12); color: var(--gold); border: 1px solid rgba(245,200,66,0.25); }
+  .lm-badge.canceled  { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,77,106,0.2); }
+  .lm-date { font-size: 10px; color: var(--text-3); font-weight: 500; }
+  .lm-badge-wrap { text-align: center; margin-bottom: 6px; }
+  .lm-teams-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  }
+  .lm-team { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .lm-logo { width: 48px; height: 48px; object-fit: contain; border-radius: 6px; flex-shrink: 0; }
+  .lm-logo-init { display: flex; align-items: center; justify-content: center; background: var(--bg-4); border-radius: 6px; font-size: 12px; font-weight: 800; color: var(--text-2); letter-spacing: 0.5px; }
+  .lm-team-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px; font-weight: 800; text-align: center; line-height: 1.2;
+    color: var(--text-1);
+  }
+  .lm-score-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 0 8px; }
+  .lm-score {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 30px; font-weight: 800; color: var(--text-1); line-height: 1;
+  }
+  .lm-score.live-score { color: var(--accent); }
+  .lm-time { font-size: 22px; font-weight: 700; color: var(--text-1); font-family: 'Barlow Condensed', sans-serif; }
+  .lm-center-date { display: none; }
+  .lm-card-date {
+    text-align: center; font-size: 13px; font-weight: 700;
+    color: var(--accent); letter-spacing: 0.5px; margin-bottom: 8px;
+  }
+  .lm-fav-btn {
+    position: absolute; top: 8px; right: 10px;
+    background: none; border: none;
+    font-size: 18px; cursor: pointer; color: #666; line-height: 1;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .lm-fav-btn.is-fav { color: #f5c842; }
 </style>
 </head>
 <body>
 
+<!-- DRAWER OVERLAY -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+
+<!-- DRAWER -->
+<div class="drawer" id="drawer">
+  <div class="drawer-header">⚡ BetVision AI</div>
+
+  <!-- NAVIGATION PRINCIPALE -->
+  <div class="drawer-sport drawer-nav-item" onclick="showPage('chat');initChat();closeDrawer()">
+    <span class="sport-left"><span class="drawer-nav-icon" style="background:rgba(0,229,160,0.15);color:#00e5a0;">💬</span> <span style="color:#00e5a0;">Chat communauté</span></span>
+    <span style="font-size:11px;color:#00e5a0;opacity:0.6;">›</span>
+  </div>
+  <div class="drawer-sport drawer-nav-item" onclick="openPronos();closeDrawer()">
+    <span class="sport-left"><span class="drawer-nav-icon" style="background:rgba(240,100,145,0.15);color:#f06491;">🎟️</span> <span style="color:#f06491;">Mes Pronostics</span></span>
+    <span style="font-size:11px;color:#f06491;opacity:0.6;">›</span>
+  </div>
+  <div class="drawer-sport drawer-nav-item" onclick="openFavoris();closeDrawer()">
+    <span class="sport-left"><span class="drawer-nav-icon" style="background:rgba(255,160,50,0.15);color:#ff9f1c;">⭐</span> <span style="color:#ff9f1c;">Favoris</span></span>
+    <span style="font-size:11px;color:#ff9f1c;opacity:0.6;">›</span>
+  </div>
+
+  <!-- SPORTS -->
+  <div style="padding:8px 18px 4px;font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--text-3);text-transform:uppercase;border-top:1px solid rgba(255,255,255,0.07);margin-top:4px">Sports & Ligues</div>
+
+  <!-- FOOTBALL -->
+  <div class="drawer-sport" id="sport-football" onclick="toggleFootball()">
+    <span class="sport-left">⚽ Football</span>
+    <span class="arrow">▶</span>
+  </div>
+  <div class="drawer-submenu" id="submenu-football">
+    <div class="submenu-section">
+      <div class="submenu-title">Divisions 1</div>
+      <div class="submenu-item" onclick="openLeagueView('football',34,'Ligue 1');closeDrawer()">🇫🇷 Ligue 1</div>
+      <div class="submenu-item" onclick="openLeagueView('football',17,'Premier League');closeDrawer()">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</div>
+      <div class="submenu-item" onclick="openLeagueView('football',35,'Bundesliga');closeDrawer()">🇩🇪 Bundesliga</div>
+      <div class="submenu-item" onclick="openLeagueView('football',23,'Serie A');closeDrawer()">🇮🇹 Serie A</div>
+      <div class="submenu-item" onclick="openLeagueView('football',8,'La Liga');closeDrawer()">🇪🇸 La Liga</div>
+      <div class="submenu-item" onclick="openLeagueView('football',238,'Liga Portugal');closeDrawer()">🇵🇹 Liga Portugal</div>
+    </div>
+    <div class="submenu-section">
+      <div class="submenu-title">Divisions 2</div>
+      <div class="submenu-item" onclick="openLeagueView('football',182,'Ligue 2');closeDrawer()">🇫🇷 Ligue 2</div>
+      <div class="submenu-item" onclick="openLeagueView('football',18,'Championship');closeDrawer()">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Championship</div>
+      <div class="submenu-item" onclick="openLeagueView('football',44,'2. Bundesliga');closeDrawer()">🇩🇪 2.Bundesliga</div>
+      <div class="submenu-item" onclick="openLeagueView('football',53,'Serie B');closeDrawer()">🇮🇹 Serie B</div>
+      <div class="submenu-item" onclick="openLeagueView('football',54,'Segunda División');closeDrawer()">🇪🇸 Segunda Division</div>
+      <div class="submenu-item" onclick="closeDrawer()">🇵🇹 Liga Portugal 2</div>
+    </div>
+    <div class="submenu-section">
+      <div class="submenu-title">Compétitions</div>
+      <div class="submenu-item red" onclick="openLeagueView('football',7,'Ligue des Champions');closeDrawer()">⭐ Ligue des Champions</div>
+      <div class="submenu-item" onclick="openLeagueView('football',679,'Europa League');closeDrawer()">🟠 Europa League</div>
+      <div class="submenu-item" onclick="closeDrawer()">🔵 Conference League</div>
+    </div>
+    <div class="submenu-section">
+      <div class="submenu-title">Compétition</div>
+      <div class="submenu-item gold" onclick="openLeagueView('football',16,'Coupe du Monde');closeDrawer()">🌍 Coupe du Monde</div>
+    </div>
+    <div class="submenu-section">
+      <div class="submenu-title">Tournois continentaux</div>
+      <div class="submenu-item" onclick="closeDrawer()">🇪🇺 Euro</div>
+    </div>
+    <div class="submenu-section" style="padding-bottom:12px">
+      <div class="submenu-title">Coupes nationales</div>
+      <div class="submenu-item" onclick="openLeagueView('football',335,'Coupe de France');closeDrawer()">🇫🇷 Coupe de France</div>
+      <div class="submenu-item" onclick="openLeagueView('football',19,'FA Cup');closeDrawer()">🏴󠁧󠁢󠁥󠁮󠁧󠁿 FA Cup</div>
+      <div class="submenu-item" onclick="closeDrawer()">🇩🇪 DFB-Pokal</div>
+      <div class="submenu-item" onclick="closeDrawer()">🇮🇹 Coppa Italia</div>
+      <div class="submenu-item" onclick="openLeagueView('football',329,'Copa del Rey');closeDrawer()">🇪🇸 Copa del Rey</div>
+      <div class="submenu-item" onclick="closeDrawer()">🇵🇹 Taça de Portugal</div>
+      <div class="submenu-item" onclick="closeDrawer()">🇲🇽 Liga MX</div>
+    </div>
+  </div>
+
+  <div class="drawer-sport" onclick="openLeagueView('basketball',132,'NBA');closeDrawer()"><span class="sport-left">🏀 NBA</span></div>
+  <div class="drawer-sport" onclick="openLeagueView('tennis',2480,'Tennis');closeDrawer()"><span class="sport-left">🎾 Tennis</span></div>
+  <div class="drawer-sport" onclick="openLeagueView('motorsport',40,'Formule 1');closeDrawer()"><span class="sport-left">🏎️ F1</span></div>
+  <div class="drawer-sport" onclick="openLeagueView('rugby',151,'Top 14');closeDrawer()"><span class="sport-left">🏉 Rugby</span></div>
+  <div class="drawer-sport" onclick="openLeagueView('baseball',109,'MLB');closeDrawer()"><span class="sport-left">⚾ Baseball (MLB)</span></div>
+  <div class="drawer-sport" onclick="openLeagueView('ice-hockey',234,'NHL');closeDrawer()"><span class="sport-left">🏒 Hockey (NHL)</span></div>
+  <div class="drawer-sport" onclick="openLeagueView('mma',19906,'MMA / UFC');closeDrawer()"><span class="sport-left">🥊 MMA / UFC</span></div>
+  <div id="drawer-login-block" style="padding:16px 18px;border-top:1px solid rgba(255,255,255,0.07);margin-top:auto;">
+    <button onclick="openAuthModal();closeDrawer()" style="width:100%;padding:9px;background:transparent;border:1px solid #00e5a0;border-radius:8px;color:#00e5a0;font-size:13px;font-weight:600;cursor:pointer;">Se connecter</button>
+  </div>
+</div>
+
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="auth-modal" onclick="if(event.target===this)closeAuthModal()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeAuthModal()">✕</button>
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="tab-login" onclick="switchTab('login')">Connexion</button>
+      <button class="modal-tab" id="tab-signup" onclick="switchTab('signup')">Inscription</button>
+    </div>
+    <button class="modal-google" onclick="signInWithGoogle()">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Continuer avec Google
+    </button>
+    <div class="modal-separator">ou</div>
+    <div class="modal-field">
+      <label>Email</label>
+      <input type="email" id="auth-email" placeholder="votre@email.com" autocomplete="email">
+    </div>
+    <div class="modal-field">
+      <label>Mot de passe</label>
+      <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="modal-submit" id="auth-submit" onclick="handleAuth()">Se connecter</button>
+    <div class="modal-msg" id="auth-msg"></div>
+  </div>
+</div>
+
 <!-- HEADER -->
 <div class="header">
-  <div class="logo">
-    <div class="logo-icon">⚽</div>
+  <button class="hamburger" id="hamburger" onclick="toggleDrawer()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="logo" onclick="showPage('paddock');initPaddock()" style="cursor:pointer">
+    <div class="logo-icon"><img src="/logo.png" alt="BetVision AI"></div>
     <div>
       <div class="logo-text">BetVision AI</div>
       <div class="logo-sub">Algorithme Prédictif</div>
     </div>
   </div>
-  <div class="header-badge">v2.0</div>
+  <div class="header-right">
+    <div id="header-right-normal" style="display:flex;align-items:center;">
+      <button id="btn-connexion" onclick="openAuthModal()" style="background:transparent;border:1px solid #00e5a0;color:#fff;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;">Connexion</button>
+      <img class="user-avatar" id="user-avatar" src="" alt="" style="display:none;width:32px;height:32px;border-radius:50%;border:2px solid #00e5a0;object-fit:cover;cursor:pointer;" onclick="openProfile()">
+    </div>
+    <button id="btn-exit" onclick="exitChatMode()">✕</button>
+  </div>
+</div>
+
+<!-- PAGE: PADDOCK -->
+<div class="page active" id="page-paddock">
+  <div class="paddock-page">
+
+    <!-- Greeting -->
+    <div class="paddock-greeting">
+      <div class="paddock-hello" id="paddock-hello">Bienvenue sur BetVision AI ⚡</div>
+      <div class="paddock-date" id="paddock-date"></div>
+    </div>
+
+    <!-- News Slider -->
+    <div class="news-slider-wrap">
+      <div class="news-slider"
+           ontouchstart="newsSwipeStart(event)"
+           ontouchend="newsSwipeEnd(event)">
+        <div class="news-track" id="news-track"></div>
+      </div>
+      <div class="news-dots" id="news-dots"></div>
+    </div>
+
+    <!-- Top analyses -->
+    <div class="paddock-section">
+      <div class="paddock-section-title">⚡ Top analyses du jour</div>
+      <div id="paddock-top-matches"></div>
+    </div>
+
+    <!-- CTA Premium -->
+    <div class="cta-premium">
+      <div class="cta-premium-title">🚀 Passez Premium</div>
+      <div class="cta-premium-desc">Accédez à toutes les ligues, analyses complètes et signaux exclusifs.</div>
+      <button class="cta-premium-btn">Découvrir Premium →</button>
+    </div>
+
+    <!-- Stats rapides -->
+    <div class="paddock-section">
+      <div class="paddock-section-title">📊 Mes Stats Rapides</div>
+      <div id="paddock-stats"></div>
+    </div>
+
+    <!-- Bloc marketing final -->
+    <div class="paddock-manifesto">
+      <div class="paddock-manifesto-title">🧠 Oublie les cotes. Oublie le feeling.</div>
+      <div class="paddock-manifesto-body">
+        <p>BetVision AI analyse des milliers de stats — forme du moment, historique, confrontations directes, tendances de buts — pour te donner les signaux que les bookmakers ne veulent pas que tu voies.</p>
+        <ul>
+          <li>✅ Analyses statistiques en temps réel</li>
+          <li>✅ Signaux Haute Confiance sur toutes les ligues</li>
+          <li>✅ Suis tes pronostics et mesure ta progression</li>
+          <li>✅ Communauté de passionnés</li>
+        </ul>
+        <p>🤖 Et ton Assistant IA ? C'est ton mentor personnel.<br>
+        Il apprend ton style, retient tes préférences, maîtrise toutes les techniques au monde — value bet, bankroll management, Kelly, Martingale — et évolue avec toi. Plus tu l'utilises, plus il te connaît.<br>
+        C'est pas une IA. C'est TON IA. 🔥</p>
+        <p>Ici, on ne parie pas. On calcule.</p>
+        <p>Mais le dernier mot ? Il t'appartient toujours.<br>
+        Ton instinct, ton sixième sens — c'est toi qui décides.<br>
+        BetVision te donne les armes. Le reste, c'est ton talent.</p>
+      </div>
+      <button class="paddock-manifesto-btn" onclick="currentUser ? toggleDrawer() : openAuthModal()">🚀 Commencer maintenant</button>
+    </div>
+
+  </div>
 </div>
 
 <!-- PAGE: LIGUES -->
-<div class="page active" id="page-leagues">
+<div class="page" id="page-leagues">
   <div class="section-label">Sélectionner une ligue</div>
   <div class="league-grid" id="league-grid">
     <div class="league-card selected" onclick="selectLeague(this,'PL','Premier League','🏴󠁧󠁢󠁥󠁮󠁧󠁿')">
@@ -526,7 +1474,7 @@
 <!-- PAGE: ANALYSE -->
 <div class="page" id="page-analysis">
   <div class="analysis-page">
-    <button class="back-btn" onclick="showPage('leagues')">← Retour</button>
+    <button class="back-btn" onclick="goBack()">← Retour</button>
     <div id="analysis-content"></div>
   </div>
 </div>
@@ -535,27 +1483,133 @@
 <div class="page" id="page-ia">
   <div class="ia-page">
     <div class="ia-intro">
-      <div class="ia-intro-title">🤖 Assistant IA</div>
+      <div class="ia-intro-title"><img src="/icon-ia-card.png" style="width:52px;height:52px;object-fit:contain;clip-path:inset(0 12% 12% 0);vertical-align:middle;margin-right:8px;mix-blend-mode:screen;filter:contrast(2) saturate(1.2)"> Assistant IA</div>
       <div class="ia-intro-sub">Posez vos questions sur les statistiques, tendances et algorithmes prédictifs. L'IA analyse les données pour vous.</div>
     </div>
 
-    <div class="quick-questions">
-      <div class="quick-q" onclick="sendQuick('Quels matchs ont le meilleur potentiel BTTS ce week-end ?')">🎯 Meilleur BTTS</div>
-      <div class="quick-q" onclick="sendQuick('Analyse les équipes en forme en Premier League')">📈 En forme</div>
-      <div class="quick-q" onclick="sendQuick('Quels matchs ont le plus de buts en moyenne cette saison ?')">⚡ +2.5 buts</div>
-      <div class="quick-q" onclick="sendQuick('Donne-moi une analyse risque/rendement pour un combiné de 3 matchs')">🔥 Combiné 3</div>
-    </div>
 
     <div class="chat-box" id="chat-box">
       <div class="chat-msg ai">Bonjour ! Je suis votre assistant d'analyse statistique. Posez-moi vos questions sur les matchs, les tendances ou les algorithmes prédictifs. 📊</div>
     </div>
 
     <div class="chat-input-row">
+      <button class="chat-img-btn" onclick="document.getElementById('ticket-input').click()" title="Analyser un ticket">📎</button>
+      <input type="file" id="ticket-input" accept="image/*" style="display:none" onchange="callVision(this)">
       <textarea class="chat-input" id="chat-input" placeholder="Votre question..." rows="1"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
         oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
       <button class="chat-send" id="chat-send" onclick="sendMessage()">➤</button>
     </div>
+  </div>
+</div>
+
+<!-- PAGE: PROFIL -->
+<div class="page" id="page-profile">
+  <div class="profile-page">
+    <button class="back-btn" onclick="profileGoBack()">← Retour</button>
+
+    <div class="profile-avatar-wrap">
+      <img class="profile-avatar-img" id="profile-avatar-img" src="" alt="" style="display:none">
+      <div class="profile-avatar-placeholder" id="profile-avatar-placeholder">👤</div>
+      <button class="profile-change-photo" onclick="document.getElementById('profile-file-input').click()">📷 Changer la photo</button>
+      <input type="file" id="profile-file-input" accept="image/*" style="display:none" onchange="uploadAvatar(this)">
+      <div class="profile-msg" id="profile-upload-msg"></div>
+    </div>
+
+    <div class="profile-section">
+      <div class="profile-label">Pseudo</div>
+      <input class="profile-input" id="profile-username" type="text" placeholder="Votre pseudo…" maxlength="30">
+      <button class="profile-save-btn" id="profile-save-btn" onclick="saveUsername()">Sauvegarder</button>
+      <div class="profile-msg" id="profile-username-msg"></div>
+    </div>
+
+    <div class="profile-section">
+      <div class="profile-label">Email</div>
+      <input class="profile-input" id="profile-email" type="text" disabled>
+    </div>
+
+    <button class="profile-signout-btn" onclick="signOut();profileGoBack()">Déconnexion</button>
+  </div>
+</div>
+
+<!-- PAGE: FAVORIS -->
+<div class="page" id="page-favoris">
+  <div class="favoris-page">
+    <div class="section-label">Mes Favoris</div>
+    <div id="favoris-not-connected" style="display:none">
+      <div class="empty-state">
+        <div class="empty-icon">🔒</div>
+        <div class="empty-text">Connecte-toi pour voir<br>tes favoris</div>
+      </div>
+      <button onclick="openAuthModal()" style="width:100%;padding:13px;margin-top:12px;background:transparent;border:1px solid #00e5a0;border-radius:var(--radius);color:#00e5a0;font-size:14px;font-weight:700;cursor:pointer;">Se connecter</button>
+    </div>
+    <div id="favoris-list"></div>
+  </div>
+</div>
+
+<!-- PAGE: PRONOSTICS -->
+<div class="page" id="page-pronos">
+  <div class="pronos-page">
+    <div class="section-label">Mes Pronostics</div>
+
+    <div id="pronos-not-connected" style="display:none">
+      <div class="empty-state">
+        <div class="empty-icon">🔒</div>
+        <div class="empty-text">Connecte-toi pour suivre<br>tes pronostics</div>
+      </div>
+      <button onclick="openAuthModal()" style="width:100%;padding:13px;margin-top:12px;background:transparent;border:1px solid #00e5a0;border-radius:var(--radius);color:#00e5a0;font-size:14px;font-weight:700;cursor:pointer;">Se connecter</button>
+    </div>
+
+    <div id="pronos-content">
+      <div class="pronos-kpi-row">
+        <div class="pronos-kpi">
+          <div class="pronos-kpi-value stat-green" id="pronos-rate">—</div>
+          <div class="pronos-kpi-label">Taux de réussite</div>
+        </div>
+        <div class="pronos-kpi">
+          <div class="pronos-kpi-value stat-gold" id="pronos-pending">—</div>
+          <div class="pronos-kpi-label">En cours</div>
+        </div>
+      </div>
+      <div class="pronos-filters">
+        <div class="pronos-filter active" onclick="loadPronos('tous',this)">Tous</div>
+        <div class="pronos-filter" onclick="loadPronos('en_cours',this)">En cours</div>
+        <div class="pronos-filter" onclick="loadPronos('gagne',this)">Gagnés</div>
+        <div class="pronos-filter" onclick="loadPronos('perdu',this)">Perdus</div>
+      </div>
+      <div id="pronos-list"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PRONOSTIC -->
+<div id="prono-overlay" class="prono-overlay" onclick="if(event.target===this)closePronoModal()">
+  <div class="prono-sheet">
+    <button class="prono-sheet-close" onclick="closePronoModal()">✕</button>
+    <div class="prono-sheet-title">🎯 Suivre ce pronostic</div>
+    <div class="prono-sheet-match" id="prono-sheet-match"></div>
+
+    <div class="prono-group-label">BTTS</div>
+    <div class="prono-options" id="prono-grp-btts">
+      <div class="prono-option" onclick="selectProno('btts','oui',this)">⚽ Oui</div>
+      <div class="prono-option" onclick="selectProno('btts','non',this)">🚫 Non</div>
+    </div>
+
+    <div class="prono-group-label">Buts</div>
+    <div class="prono-options" id="prono-grp-goals">
+      <div class="prono-option" onclick="selectProno('goals','+1.5',this)">+1.5G</div>
+      <div class="prono-option" onclick="selectProno('goals','+2.5',this)">+2.5G</div>
+      <div class="prono-option" onclick="selectProno('goals','+3.5',this)">+3.5G</div>
+    </div>
+
+    <div class="prono-group-label">Résultat</div>
+    <div class="prono-options" id="prono-grp-result">
+      <div class="prono-option" id="prono-opt-dom" onclick="selectProno('result','dom',this)">Dom.</div>
+      <div class="prono-option" onclick="selectProno('result','nul',this)">Nul</div>
+      <div class="prono-option" id="prono-opt-ext" onclick="selectProno('result','ext',this)">Ext.</div>
+    </div>
+
+    <button class="prono-confirm-btn" id="prono-confirm-btn" onclick="confirmProno()" disabled>Confirmer</button>
   </div>
 </div>
 
@@ -565,49 +1619,24 @@
     <div class="section-label">Aujourd'hui</div>
     <div class="kpi-row">
       <div class="kpi-card">
-        <div class="kpi-value stat-green" id="kpi-btts">--</div>
+        <div class="kpi-value stat-green" id="kpi-btts">0%</div>
         <div class="kpi-label">BTTS moyen</div>
         <div class="kpi-trend trend-up">Ligues chargées</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-value stat-gold" id="kpi-count">--</div>
+        <div class="kpi-value stat-gold" id="kpi-count">0</div>
         <div class="kpi-label">Matchs analysés</div>
         <div class="kpi-trend trend-up">Toutes ligues</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-value stat-blue" id="kpi-over25">--</div>
+        <div class="kpi-value stat-blue" id="kpi-over25">0%</div>
         <div class="kpi-label">Over 2.5 moyen</div>
         <div class="kpi-trend trend-up">Calcul Poisson</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-value stat-red" id="kpi-high">--</div>
+        <div class="kpi-value stat-red" id="kpi-high">0</div>
         <div class="kpi-label">Haute confiance</div>
         <div class="kpi-trend trend-up">Signal ≥ 75%</div>
-      </div>
-    </div>
-
-    <div class="live-ticker">
-      <div class="ticker-label">
-        <div class="live-dot"></div>
-        En cours
-      </div>
-      <div class="ticker-scroll">
-        <div class="ticker-match">
-          <div class="ticker-teams">Man City vs Arsenal</div>
-          <div class="ticker-score">⚽ 1 - 1 (67')</div>
-        </div>
-        <div class="ticker-match">
-          <div class="ticker-teams">Real Madrid vs Barça</div>
-          <div class="ticker-score">⚽ 2 - 0 (54')</div>
-        </div>
-        <div class="ticker-match">
-          <div class="ticker-teams">PSG vs Monaco</div>
-          <div class="ticker-score">⚽ 0 - 1 (38')</div>
-        </div>
-        <div class="ticker-match">
-          <div class="ticker-teams">Bayern vs Dortmund</div>
-          <div class="ticker-score">⚽ 3 - 1 (82')</div>
-        </div>
       </div>
     </div>
 
@@ -616,19 +1645,66 @@
   </div>
 </div>
 
+<!-- PAGE: CHAT -->
+<div class="page" id="page-chat">
+  <div class="chat-community">
+    <div class="chat-pinned-bar">⚠️ Pour le bon fonctionnement de la communauté : respect obligatoire. Insultes et contenus inappropriés = ban définitif.</div>
+    <div class="chat-feed-wrap" id="community-feed"></div>
+    <div class="chat-input-area">
+      <div class="chat-locked-notice" id="chat-locked-notice" style="display:none">
+        Connecte-toi pour participer → <span onclick="openAuthModal()">Se connecter</span>
+      </div>
+      <div class="chat-send-row" id="chat-send-row" style="display:none">
+        <textarea class="chat-community-input" id="community-input" placeholder="Votre message..." rows="1"
+          oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,110)+'px'"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage()}"></textarea>
+        <button class="chat-action-btn btn-img-chat" onclick="document.getElementById('chat-img-input').click()">📷</button>
+        <button class="chat-action-btn btn-send-chat" onclick="sendChatMessage()">➤</button>
+        <input type="file" id="chat-img-input" accept="image/*" style="display:none" onchange="handleChatImageUpload(event)">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FULLSCREEN IMAGE -->
+<div class="img-overlay" id="img-overlay" onclick="closeImgOverlay()">
+  <img id="img-overlay-el" src="" alt="">
+</div>
+
+<!-- PAGE: LIGUE MATCHES (gérée indépendamment, z-index:50 overlay) -->
+<div id="page-leaguematches" style="display:none">
+  <div class="lm-header">
+    <div class="lm-header-top">
+      <button class="lm-back-btn" onclick="closeLeagueView()">← Retour</button>
+      <div class="lm-title" id="lm-title">Ligue</div>
+      <div style="width:54px"></div>
+    </div>
+  </div>
+  <div class="lm-nav-days">
+    <div class="lm-round-label" id="lm-round">Journée —</div>
+    <div class="lm-nav-btns">
+      <button class="lm-nav-btn" id="lm-btn-previous" onclick="navigateToDay('previous')">← Préc.</button>
+      <button class="lm-nav-btn active" id="lm-btn-current" onclick="navigateToDay('current')">En cours</button>
+      <button class="lm-nav-btn" id="lm-btn-next" onclick="navigateToDay('next')">Suiv. →</button>
+    </div>
+  </div>
+  <div class="lm-list" id="lm-list"><div class="spinner"></div></div>
+</div>
+
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav">
-  <button class="nav-item active" id="nav-leagues" onclick="showPage('leagues')">
-    <span class="nav-icon">🏆</span>Ligues
+  <button class="nav-item active" id="nav-paddock" onclick="showPage('paddock');initPaddock()">
+    <span class="nav-icon"><img src="/icon-paddock.png?v=2" alt="Paddock"></span>Paddock
   </button>
-  <button class="nav-item" id="nav-ia" onclick="showPage('ia')">
-    <span class="nav-icon">🤖</span>IA
+  <button class="nav-item" id="nav-ia" onclick="showPage('ia');loadChatHistory();checkGardienDuTemps();checkMatchEngagement();startLiveWatch()">
+    <span class="nav-icon"><img src="/icon-ia.png?v=2" alt="IA"></span>IA
   </button>
-  <button class="nav-item" id="nav-dashboard" onclick="showPage('dashboard');loadDashboard()">
-    <span class="nav-icon">📊</span>Dashboard
+<button class="nav-item" id="nav-dashboard" onclick="showPage('dashboard');loadDashboard()">
+    <span class="nav-icon"><img src="/icon-dashboard.png?v=2" alt="Dashboard"></span>Dashboard
   </button>
 </nav>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ─── TELEGRAM WEB APP ───
 const tg = window.Telegram?.WebApp;
@@ -641,70 +1717,390 @@ if (tg) {
 
 // ─── STATE ───
 let currentLeague = { code: 'PL', name: 'Premier League', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' };
-let currentMatch  = null;
+let currentMatch     = null;
+let currentOddsData  = null;
+let activeMatchId    = null;
+let previousView     = 'paddock';
 let chatHistory   = [];
-let loadedMatchesMap = {}; // id → match object
+let loadedMatchesMap = {};
+let todayMatchesCache = [];
+let todayMatchesCacheTs = 0;    // timestamp du dernier fetch /api/today
+let liveWatchInterval   = null;
+let liveScoreSnapshot   = {};   // { [matchId]: { score, status, minute } }
+let liveReactCooldown   = {};   // { [matchId]: timestamp } — anti-spam 2 min
+let todayNewsCache = [];
+let todayNewsCacheTs = 0;       // timestamp du dernier fetch /api/news
+let userProfileCache = null;
 
-// ─── DONNÉES DE SECOURS (si API indisponible) ───
-const FALLBACK = {
-  PL: [
-    { id:1, home:'Arsenal', away:'Man City', date:'TBD', time:'--:--', competition:'Premier League',
-      btts:72, over25:65, over15:84, homeWin:42, draw:28, awayWin:30, confidence:78,
-      formHome:['W','W','D','W','L'], formAway:['W','W','W','D','W'],
-      goalsHome:2.1, goalsAway:1.8, cleanHome:0.30, cleanAway:0.40 },
-    { id:2, home:'Chelsea', away:'Liverpool', date:'TBD', time:'--:--', competition:'Premier League',
-      btts:68, over25:71, over15:88, homeWin:35, draw:26, awayWin:39, confidence:82,
-      formHome:['W','D','W','L','W'], formAway:['W','W','W','W','D'],
-      goalsHome:1.9, goalsAway:2.3, cleanHome:0.40, cleanAway:0.30 },
-    { id:3, home:'Tottenham', away:'Newcastle', date:'TBD', time:'--:--', competition:'Premier League',
-      btts:61, over25:58, over15:79, homeWin:44, draw:27, awayWin:29, confidence:65,
-      formHome:['D','W','D','W','W'], formAway:['L','W','W','D','W'],
-      goalsHome:1.6, goalsAway:1.5, cleanHome:0.50, cleanAway:0.50 },
-  ],
-  FL1: [
-    { id:5, home:'PSG', away:'Monaco', date:'TBD', time:'--:--', competition:'Ligue 1',
-      btts:64, over25:60, over15:82, homeWin:55, draw:24, awayWin:21, confidence:74,
-      formHome:['W','W','W','W','W'], formAway:['W','D','W','L','W'],
-      goalsHome:2.8, goalsAway:1.6, cleanHome:0.20, cleanAway:0.40 },
-    { id:6, home:'Marseille', away:'Lyon', date:'TBD', time:'--:--', competition:'Ligue 1',
-      btts:70, over25:67, over15:85, homeWin:40, draw:28, awayWin:32, confidence:76,
-      formHome:['W','D','W','W','D'], formAway:['D','W','L','W','W'],
-      goalsHome:1.9, goalsAway:1.7, cleanHome:0.40, cleanAway:0.40 },
-  ],
-  PD: [
-    { id:7, home:'Barcelona', away:'Real Madrid', date:'TBD', time:'--:--', competition:'La Liga',
-      btts:66, over25:63, over15:86, homeWin:44, draw:25, awayWin:31, confidence:80,
-      formHome:['W','W','D','W','W'], formAway:['W','W','W','W','D'],
-      goalsHome:2.5, goalsAway:2.2, cleanHome:0.30, cleanAway:0.30 },
-  ],
-  SA: [
-    { id:9, home:'Inter', away:'Juventus', date:'TBD', time:'--:--', competition:'Serie A',
-      btts:58, over25:54, over15:77, homeWin:42, draw:30, awayWin:28, confidence:68,
-      formHome:['W','W','W','D','W'], formAway:['W','D','W','W','L'],
-      goalsHome:1.8, goalsAway:1.3, cleanHome:0.30, cleanAway:0.50 },
-  ],
-  BL1: [
-    { id:10, home:'Bayern', away:'Dortmund', date:'TBD', time:'--:--', competition:'Bundesliga',
-      btts:73, over25:78, over15:91, homeWin:60, draw:20, awayWin:20, confidence:85,
-      formHome:['W','W','W','W','W'], formAway:['W','W','D','W','W'],
-      goalsHome:3.1, goalsAway:2.4, cleanHome:0.20, cleanAway:0.20 },
-  ],
-  CL: [
-    { id:11, home:'Real Madrid', away:'PSG', date:'TBD', time:'--:--', competition:'Champions League',
-      btts:69, over25:65, over15:87, homeWin:45, draw:26, awayWin:29, confidence:79,
-      formHome:['W','W','W','W','D'], formAway:['W','W','W','W','W'],
-      goalsHome:2.4, goalsAway:2.1, cleanHome:0.30, cleanAway:0.30 },
-  ],
-};
 
 // ─── NAVIGATION ───
 function showPage(name) {
+  document.getElementById('page-leaguematches').style.display = 'none';
+  const chatPages = ['ia', 'chat'];
+  if (chatPages.includes(name)) {
+    document.body.classList.add('fullchat');
+  } else {
+    document.body.classList.remove('fullchat');
+  }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   const navEl = document.getElementById('nav-' + name);
   if (navEl) navEl.classList.add('active');
+  if (name === 'paddock') initPaddock();
+  if (name !== 'ia') stopLiveWatch();
   window.scrollTo(0, 0);
+}
+
+function exitChatMode() {
+  showPage('paddock');
+}
+
+function goBack() {
+  activeMatchId = null;
+  const dest = previousView;
+  previousView = 'paddock';
+  if (dest === 'favoris') { openFavoris(); }
+  else if (dest === 'leaguematches') { document.getElementById('page-leaguematches').style.display = 'block'; }
+  else { showPage(dest); }
+}
+
+// ─── PROFIL ───
+async function applyUserProfile(user) {
+  await supabaseReady;
+  const meta = user.user_metadata || {};
+  const fallbackAvatar = meta.avatar_url || meta.picture || '';
+  const fallbackName   = meta.full_name?.split(' ')[0] || meta.name?.split(' ')[0] || user.email?.split('@')[0] || '';
+
+  const { data } = await supabaseClient.from('profiles').select('username, avatar_url').eq('id', user.id).single();
+
+  const rawAvatar = data?.avatar_url || fallbackAvatar;
+  const avatarUrl = data?.avatar_url ? rawAvatar + '?t=' + Date.now() : rawAvatar;
+  const name      = data?.username   || fallbackName;
+
+  const avatar     = document.getElementById('user-avatar');
+  const drawerAv   = document.getElementById('drawer-avatar');
+  const drawerName = document.getElementById('drawer-username');
+  if (avatar)     { avatar.src = avatarUrl; }
+  if (drawerAv)   { drawerAv.src = avatarUrl; }
+  if (drawerName) { drawerName.textContent = name; }
+}
+
+function openProfile() {
+  const active = document.querySelector('.page.active');
+  previousView = active ? active.id.replace('page-', '') : 'leagues';
+  showPage('profile');
+  loadProfile();
+}
+
+function profileGoBack() {
+  const dest = previousView || 'leagues';
+  previousView = 'paddock';
+  if (dest === 'favoris') { openFavoris(); } else { showPage(dest); }
+}
+
+async function loadProfile() {
+  if (!currentUser) return;
+  await supabaseReady;
+
+  document.getElementById('profile-email').value = currentUser.email || '';
+
+  const { data } = await supabaseClient
+    .from('profiles').select('username, avatar_url').eq('id', currentUser.id).single();
+
+  const meta = currentUser.user_metadata || {};
+  const username   = data?.username   || meta.full_name?.split(' ')[0] || meta.name?.split(' ')[0] || '';
+  const rawAvatar  = data?.avatar_url || meta.avatar_url || meta.picture || '';
+  const avatarUrl  = data?.avatar_url ? rawAvatar + '?t=' + Date.now() : rawAvatar;
+
+  document.getElementById('profile-username').value = username;
+  setProfileAvatar(avatarUrl);
+}
+
+function setProfileAvatar(url) {
+  const img   = document.getElementById('profile-avatar-img');
+  const ph    = document.getElementById('profile-avatar-placeholder');
+  if (url) {
+    img.src = url; img.style.display = 'block'; ph.style.display = 'none';
+  } else {
+    img.style.display = 'none'; ph.style.display = 'flex';
+  }
+}
+
+async function saveUsername() {
+  if (!currentUser) return;
+  const btn = document.getElementById('profile-save-btn');
+  const msg = document.getElementById('profile-username-msg');
+  const val = document.getElementById('profile-username').value.trim();
+  if (!val) { msg.textContent = 'Le pseudo ne peut pas être vide.'; msg.className = 'profile-msg err'; return; }
+  btn.disabled = true;
+  await supabaseReady;
+  const { error } = await supabaseClient.from('profiles')
+    .upsert({ id: currentUser.id, username: val });
+  btn.disabled = false;
+  if (error) { msg.textContent = 'Erreur : ' + error.message; msg.className = 'profile-msg err'; return; }
+  msg.textContent = '✓ Pseudo mis à jour'; msg.className = 'profile-msg ok';
+  const drawerName = document.getElementById('drawer-username');
+  if (drawerName) drawerName.textContent = val;
+  setTimeout(() => { msg.textContent = ''; }, 3000);
+}
+
+async function uploadAvatar(input) {
+  if (!currentUser || !input.files[0]) return;
+  const msg = document.getElementById('profile-upload-msg');
+  msg.textContent = 'Upload en cours…'; msg.className = 'profile-msg';
+  await supabaseReady;
+
+  // 1. Récupérer l'ancienne URL depuis profiles
+  const { data: profile } = await supabaseClient
+    .from('profiles').select('avatar_url').eq('id', currentUser.id).single();
+
+  // 2. Supprimer l'ancien fichier si c'est bien un fichier Storage
+  if (profile?.avatar_url) {
+    const marker = '/avatars/';
+    const idx = profile.avatar_url.indexOf(marker);
+    if (idx !== -1) {
+      const oldPath = profile.avatar_url.slice(idx + marker.length).split('?')[0];
+      await supabaseClient.storage.from('avatars').remove([oldPath]);
+    }
+  }
+
+  // 3. Uploader le nouveau fichier
+  const file = input.files[0];
+  const ext  = file.name.split('.').pop();
+  const path = `${currentUser.id}/avatar.${ext}`;
+  const { error: upErr } = await supabaseClient.storage.from('avatars').upload(path, file, { upsert: true });
+  if (upErr) { msg.textContent = 'Erreur upload : ' + upErr.message; msg.className = 'profile-msg err'; return; }
+  const { data: urlData } = supabaseClient.storage.from('avatars').getPublicUrl(path);
+  const publicUrl = urlData.publicUrl;
+  await supabaseClient.from('profiles').upsert({ id: currentUser.id, avatar_url: publicUrl });
+  const busted = publicUrl + '?t=' + Date.now();
+  setProfileAvatar(busted);
+  document.getElementById('user-avatar').src = busted;
+  const drawerAv = document.getElementById('drawer-avatar');
+  if (drawerAv) drawerAv.src = busted;
+  msg.textContent = '✓ Photo mise à jour'; msg.className = 'profile-msg ok';
+  setTimeout(() => { msg.textContent = ''; }, 3000);
+}
+
+// ─── PADDOCK ───
+const NEWS_ITEMS = [
+  { tag: 'Analyse IA', title: '🔥 PSG vs Real Madrid — Analyse dispo', sub: 'Ligue des Champions · Ce soir 21h00' },
+  { tag: 'NBA Playoffs', title: '⚡ Lakers en feu — Série 3-1', sub: 'Western Conference · Game 5 demain' },
+  { tag: 'Formule 1', title: '🏎️ GP Miami — Verstappen grand favori', sub: 'Qualifications ce samedi 22h00' },
+  { tag: 'Premier League', title: '⚽ Arsenal vs Man City — Choc au sommet', sub: 'Journée 36 · Dimanche 17h30' },
+  { tag: 'Signaux chauds', title: '📈 3 matchs BTTS +80% ce week-end', sub: 'Algorithme Poisson · Haute confiance' },
+  { tag: 'Tennis', title: '🎾 Alcaraz vs Sinner — Finale Rome', sub: 'ATP Masters 1000 · Demain 15h00' },
+];
+
+let newsIndex  = 0;
+let newsTimer  = null;
+let newsTouch  = 0;
+let newsCount  = NEWS_ITEMS.length;
+
+function initPaddock() {
+  renderPaddockGreeting();
+  buildNewsSlider();
+  startNewsSlider();
+  renderTopMatches();
+  renderPaddockStats();
+}
+
+function renderPaddockGreeting() {
+  const days  = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  const months= ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const now   = new Date();
+  const dateStr = `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+  document.getElementById('paddock-date').textContent = dateStr;
+
+  const hello = document.getElementById('paddock-hello');
+  if (currentUser) {
+    const meta = currentUser.user_metadata || {};
+    const name = meta.full_name?.split(' ')[0] || meta.name?.split(' ')[0] || currentUser.email?.split('@')[0] || '';
+    hello.textContent = `Bonjour ${name} 👋`;
+  } else {
+    hello.textContent = 'Bienvenue sur BetVision AI ⚡';
+  }
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const mins = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
+  if (mins < 60) return `il y a ${mins} min`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `il y a ${hrs}h`;
+  return `il y a ${Math.floor(hrs / 24)}j`;
+}
+
+async function buildNewsSlider() {
+  const track = document.getElementById('news-track');
+  const dots  = document.getElementById('news-dots');
+  if (!track || !dots) return;
+  let items = NEWS_ITEMS.map(n => ({ source: n.tag, title: n.title, meta: n.sub, image: null, url: null }));
+  try {
+    const data = await fetch('/api/news').then(r => r.json());
+    if (Array.isArray(data) && data.length) {
+      todayNewsCache = data.map(a => ({ source: a.source || 'Football', title: a.title || '' }));
+      items = data.map(a => ({
+        source: a.source || 'Football',
+        title:  a.title  || '',
+        meta:   [a.source, timeAgo(a.publishedAt)].filter(Boolean).join(' · '),
+        image:  a.image  || null,
+        url:    a.url    || null,
+      }));
+    }
+  } catch {}
+  newsCount = items.length;
+  track.innerHTML = items.map(n => `
+    <div class="news-card"${n.url ? ` onclick="window.open('${n.url}','_blank')" style="cursor:pointer"` : ''}>
+      ${n.image ? `<img class="news-card-bg" src="${n.image}" loading="lazy" onerror="this.style.display='none'">` : ''}
+      <div class="news-card-body">
+        <div class="news-card-tag">${n.source}</div>
+        <div class="news-card-title">${n.title}</div>
+        <div class="news-card-sub">${n.meta}</div>
+      </div>
+    </div>
+  `).join('');
+  dots.innerHTML = items.map((_, i) =>
+    `<div class="news-dot${i === 0 ? ' active' : ''}" onclick="goToNews(${i})"></div>`
+  ).join('');
+  newsIndex = 0;
+  updateNewsSlider();
+}
+
+function startNewsSlider() {
+  if (newsTimer) clearInterval(newsTimer);
+  newsTimer = setInterval(() => {
+    newsIndex = (newsIndex + 1) % newsCount;
+    updateNewsSlider();
+  }, 3000);
+}
+
+function updateNewsSlider() {
+  const track = document.getElementById('news-track');
+  if (track) track.style.transform = `translateX(-${newsIndex * 100}%)`;
+  document.querySelectorAll('.news-dot').forEach((d, i) =>
+    d.classList.toggle('active', i === newsIndex));
+}
+
+function goToNews(i) {
+  newsIndex = i;
+  updateNewsSlider();
+  if (newsTimer) clearInterval(newsTimer);
+  startNewsSlider();
+}
+
+function newsSwipeStart(e) { newsTouch = e.touches[0].clientX; }
+function newsSwipeEnd(e) {
+  const diff = newsTouch - e.changedTouches[0].clientX;
+  if (Math.abs(diff) < 40) return;
+  newsIndex = diff > 0
+    ? (newsIndex + 1) % newsCount
+    : (newsIndex - 1 + newsCount) % newsCount;
+  updateNewsSlider();
+  if (newsTimer) clearInterval(newsTimer);
+  startNewsSlider();
+}
+
+async function renderTopMatches() {
+  const container = document.getElementById('paddock-top-matches');
+  if (!container) return;
+  if (!currentUser) {
+    container.innerHTML = `<div class="paddock-no-auth" style="text-align:center;padding:20px 12px">
+      🔒 <strong>Analyses réservées aux membres</strong><br>
+      <span style="font-size:13px;color:var(--text-3)">Crée un compte gratuit pour accéder aux analyses du jour</span><br><br>
+      <button onclick="openAuthModal()" style="background:var(--accent);color:#000;border:none;border-radius:8px;padding:10px 22px;font-weight:700;font-size:14px;cursor:pointer">Créer un compte →</button>
+    </div>`;
+    return;
+  }
+  container.innerHTML = '<div class="spinner"></div>';
+  try {
+    // Utilise /api/upcoming pour avoir les prochains matchs non joués sur 10 jours
+    const data = await fetch('/api/upcoming').then(r => r.json());
+    const allMatches = data.matches || [];
+
+    // Garde uniquement les matchs pas encore terminés, triés par dayOffset puis heure
+    const upcoming = allMatches
+      .filter(m => m.status !== 'finished')
+      .sort((a, b) => (a.dayOffset ?? 99) - (b.dayOffset ?? 99) || a.time.localeCompare(b.time));
+
+    // Prend les 2 prochains (meilleur signal = confidence la plus haute parmi les 10 premiers)
+    const pool = upcoming.slice(0, 10);
+    const top = pool
+      .sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))
+      .slice(0, 2);
+
+    if (!top.length) {
+      container.innerHTML = '<div class="paddock-no-auth">Aucun match à venir — revenez bientôt 🔜</div>';
+      return;
+    }
+    top.forEach(m => { loadedMatchesMap[m.id] = m; });
+
+    const dayLabel = m => m.dayLabel && m.dayLabel !== "Aujourd'hui" ? ` · ${m.dayLabel}` : '';
+
+    container.innerHTML = top.map(m => `
+      <div class="top-match-card">
+        <div class="top-match-info">
+          <div class="top-match-teams">${m.home} vs ${m.away}</div>
+          <div class="top-match-meta">${m.competition} · ${m.time}${dayLabel(m)}</div>
+          <div class="top-match-meta">BTTS ${m.btts != null ? m.btts + '%' : '—'} · Over 2.5 ${m.over25 != null ? m.over25 + '%' : '—'} · Conf. ${m.confidence != null ? m.confidence + '%' : '—'}</div>
+        </div>
+        <div class="top-match-right" style="flex-direction:column;align-items:flex-end;gap:6px;">
+          <span class="badge-conf" style="background:#00b377;animation:none;">🎁 GRATUIT</span>
+          <button class="top-match-btn" onclick="openAnalysis(${m.id})">Voir →</button>
+        </div>
+      </div>
+    `).join('');
+  } catch {
+    container.innerHTML = '<div class="paddock-no-auth">Aucun match à venir — revenez bientôt 🔜</div>';
+  }
+}
+
+async function renderPaddockStats() {
+  const container = document.getElementById('paddock-stats');
+  if (!container) return;
+  if (!currentUser) {
+    container.innerHTML = `<div class="paddock-no-auth">
+      <span onclick="openAuthModal()">Connecte-toi</span> pour suivre tes stats de pronostics
+    </div>`;
+    return;
+  }
+  await supabaseReady;
+  const { data } = await supabaseClient
+    .from('pronostics').select('status').eq('user_id', currentUser.id);
+  if (!data || !data.length) {
+    container.innerHTML = '<div class="paddock-no-auth">Aucun pronostic pour l\'instant — <span onclick="openFavoris()">commencer →</span></div>';
+    return;
+  }
+  const validated = data.filter(p => p.status !== 'en_cours');
+  const won       = data.filter(p => p.status === 'gagne').length;
+  const pending   = data.filter(p => p.status === 'en_cours').length;
+  const rate      = validated.length ? Math.round(won / validated.length * 100) : 0;
+  userProfileCache = { total: data.length, won, pending, rate };
+
+  const { data: last } = await supabaseClient
+    .from('pronostics').select('status,home_team,away_team')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false })
+    .limit(1).single();
+  const lastStatus = { gagne: '✅', perdu: '❌', en_cours: '🟡' };
+
+  container.innerHTML = `
+    <div class="paddock-stats-grid">
+      <div class="paddock-stat-card">
+        <div class="paddock-stat-val stat-green">${validated.length ? rate + '%' : '—'}</div>
+        <div class="paddock-stat-label">Réussite</div>
+      </div>
+      <div class="paddock-stat-card">
+        <div class="paddock-stat-val stat-gold">${pending}</div>
+        <div class="paddock-stat-label">En cours</div>
+      </div>
+      <div class="paddock-stat-card">
+        <div class="paddock-stat-val">${last ? lastStatus[last.status] || '—' : '—'}</div>
+        <div class="paddock-stat-label">Dernier</div>
+      </div>
+    </div>
+  `;
 }
 
 // ─── SÉLECTION LIGUE ───
@@ -714,6 +2110,8 @@ function selectLeague(el, code, name, flag) {
   currentLeague = { code, name, flag };
   document.getElementById('matches-label').textContent = `Matchs — ${name}`;
   loadMatches(code);
+  showPage('leagues');
+  document.getElementById('nav-paddock').classList.add('active');
 }
 
 async function loadMatches(code) {
@@ -726,9 +2124,6 @@ async function loadMatches(code) {
     const data = await res.json();
 
     let matches = data?.matches || [];
-
-    // Fallback si l'API ne retourne rien
-    if (!matches.length) matches = FALLBACK[code] || [];
 
     if (!matches.length) {
       list.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-text">Aucun match à venir<br>pour cette ligue</div></div>';
@@ -746,8 +2141,7 @@ async function loadMatches(code) {
     }, 100);
 
   } catch (e) {
-    const matches = FALLBACK[code] || [];
-    matches.forEach(m => { loadedMatchesMap[m.id] = m; });
+    const matches = [];
     list.innerHTML = matches.length
       ? matches.map(m => renderMatchCard(m)).join('')
       : '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Erreur de chargement.<br>Données de secours affichées.</div></div>';
@@ -771,7 +2165,10 @@ function renderMatchCard(m) {
   return `<div class="match-card" onclick="openAnalysis(${m.id})">
     <div class="match-card-header">
       <span class="match-date">${m.date} • ${m.time}</span>
-      <span class="match-competition">${m.competition}</span>
+      <div style="display:flex;align-items:center;gap:4px;">
+        <span class="match-competition">${m.competition}</span>
+        <button class="fav-btn" id="fav-${m.id}" onclick="toggleFavori('${m.id}',event)">${userFavoris.has(String(m.id)) ? '⭐' : '☆'}</button>
+      </div>
     </div>
     <div class="match-teams">
       <div class="team-block"><div class="team-name">${m.home}</div></div>
@@ -786,112 +2183,199 @@ function renderMatchCard(m) {
 }
 
 // ─── ANALYSE MATCH ───
-function openAnalysis(id) {
-  // Chercher dans les matchs chargés dynamiquement, puis dans le fallback
-  currentMatch = loadedMatchesMap[id] ||
-    Object.values(FALLBACK).flat().find(m => m.id === id);
+async function openAnalysis(id) {
+  const fromLeague = document.getElementById('page-leaguematches').style.display === 'block';
+  if (fromLeague) closeLeagueView();
+  if (activeMatchId === id) {
+    activeMatchId = null;
+    showPage('leagues');
+    return;
+  }
+  currentMatch = loadedMatchesMap[id];
   if (!currentMatch) return;
+  activeMatchId = id;
+  previousView = fromLeague ? 'leaguematches' : 'paddock';
+
+  // Si les stats sont à 0 (match ouvert depuis vue ligue), on les recalcule
+  if (currentMatch.btts === 0 || currentMatch.btts === undefined) {
+    try {
+      const params = new URLSearchParams({ competition: currentMatch.competition || '' });
+      if (currentMatch.id)          params.set('matchId',    currentMatch.id);
+      if (currentMatch.homeTeamId)  params.set('homeTeamId', currentMatch.homeTeamId);
+      if (currentMatch.awayTeamId)  params.set('awayTeamId', currentMatch.awayTeamId);
+      const res = await fetch(`/api/compute-stats?${params}`);
+      if (res.ok) {
+        const stats = await res.json();
+        Object.assign(currentMatch, stats);
+        loadedMatchesMap[currentMatch.id] = currentMatch;
+      }
+    } catch (e) {
+      console.warn('Stats recompute failed, using defaults', e);
+    }
+  }
+
+  currentOddsData = null;
+  try {
+    const h2hParams = new URLSearchParams({ eventId: currentMatch.id, sport: 'football' });
+    if (currentMatch.homeTeamId) h2hParams.set('team1Id', currentMatch.homeTeamId);
+    if (currentMatch.awayTeamId) h2hParams.set('team2Id', currentMatch.awayTeamId);
+
+    const oddsParams = new URLSearchParams({ eventId: currentMatch.id });
+    if (currentMatch.homeWin != null) oddsParams.set('homeWin', currentMatch.homeWin);
+    if (currentMatch.draw    != null) oddsParams.set('draw',    currentMatch.draw);
+    if (currentMatch.awayWin != null) oddsParams.set('awayWin', currentMatch.awayWin);
+
+    const [h2hRes, oddsRes] = await Promise.allSettled([
+      fetch(`/api/h2h?${h2hParams}`),
+      fetch(`/api/odds?${oddsParams}`),
+    ]);
+    currentMatch.h2h = h2hRes.status === 'fulfilled' && h2hRes.value.ok ? await h2hRes.value.json() : null;
+    if (oddsRes.status === 'fulfilled' && oddsRes.value.ok) {
+      const od = await oddsRes.value.json();
+      if (od?.odds) currentOddsData = od;
+    }
+  } catch (e) {
+    currentMatch.h2h = null;
+  }
+  loadedMatchesMap[currentMatch.id] = currentMatch;
+
   renderAnalysis(currentMatch);
   showPage('analysis');
-  document.getElementById('nav-leagues').classList.add('active');
+  document.getElementById('nav-paddock').classList.add('active');
 }
 
 function renderAnalysis(m) {
-  const formBlock = (form) => form.map(r => {
-    const cls = r==='W' ? 'form-w' : r==='D' ? 'form-d' : 'form-l';
-    return `<div class="form-dot ${cls}">${r}</div>`;
-  }).join('');
+  const FORM_LABEL = { W: 'V', D: 'N', L: 'D' };
+  const formBlock = (form) => {
+    const slots = Array.from({ length: 5 }, (_, i) => form?.[i] || '?');
+    return slots.map(r => {
+      const cls = r === 'W' ? 'form-w' : r === 'D' ? 'form-d' : r === 'L' ? 'form-l' : 'form-l';
+      const label = FORM_LABEL[r] || r;
+      return `<div class="form-dot ${cls}">${label}</div>`;
+    }).join('');
+  };
+
+  const homeFormData = m.homeForm || m.formHome;
+  const awayFormData = m.awayForm || m.formAway;
 
   const homeWin = m.homeWin ?? 45;
   const drawPct = m.draw    ?? 27;
   const awayWin = m.awayWin ?? (100 - homeWin - drawPct);
-  const gH = typeof m.goalsHome === 'number' ? m.goalsHome.toFixed(1) : m.goalsHome;
-  const gA = typeof m.goalsAway === 'number' ? m.goalsAway.toFixed(1) : m.goalsAway;
+  const gH = typeof m.goalsHome === 'number' ? m.goalsHome.toFixed(1) : (m.goalsHome ?? '–');
+  const gA = typeof m.goalsAway === 'number' ? m.goalsAway.toFixed(1) : (m.goalsAway ?? '–');
   const csH = Math.round((m.cleanHome || 0) * 100);
   const csA = Math.round((m.cleanAway || 0) * 100);
 
+  const homeLogo = m.homeLogo || (m.homeTeamId ? `https://api.sofascore.app/api/v1/team/${m.homeTeamId}/image` : null);
+  const awayLogo = m.awayLogo || (m.awayTeamId ? `https://api.sofascore.app/api/v1/team/${m.awayTeamId}/image` : null);
+  const logoImg = (url, name) => url
+    ? `<img src="${url}" referrerpolicy="no-referrer" alt="${name}" style="width:44px;height:44px;object-fit:contain;border-radius:6px;" onerror="this.style.display='none'">`
+    : '';
+
+  const isFinished = m.status === 'finished';
+  const isLive     = m.status === 'live';
+  const hasScore   = m.score && m.score.home != null && m.score.away != null;
+
+  let centerHtml;
+  if (isFinished && hasScore) {
+    centerHtml = `<div style="text-align:center;flex-shrink:0;padding:0 8px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;white-space:nowrap;color:var(--text-1)">${m.score.home} – ${m.score.away}</div>
+      <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#fff;background:#555;padding:2px 8px;border-radius:4px">Terminé</span>
+    </div>`;
+  } else if (isLive && hasScore) {
+    centerHtml = `<div style="text-align:center;flex-shrink:0;padding:0 8px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;white-space:nowrap;color:var(--accent)">${m.score.home} – ${m.score.away}</div>
+      <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#fff;background:#e11d48;padding:2px 8px;border-radius:4px">LIVE</span>
+    </div>`;
+  } else {
+    centerHtml = `<div style="text-align:center;flex-shrink:0;padding:0 8px;font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;white-space:nowrap;color:var(--accent)">${m.time || '--:--'}</div>`;
+  }
+
+  const h2hBlock = (() => {
+    const h2h = m.h2h;
+    if (!h2h || !h2h.matches || h2h.matches.length === 0) return `
+      <div class="h2h-section">
+        <div class="h2h-section-title">⚔️ Dernières confrontations</div>
+        <div class="h2h-empty">Aucune confrontation récente disponible</div>
+      </div>`;
+    const t1Id = m.homeTeamId;
+    const rows = h2h.matches.map(hm => {
+      const isTeam1Home = Number(hm.homeTeamId) === Number(t1Id);
+      const hs = hm.homeScore, as = hm.awayScore;
+      const t1Win = isTeam1Home ? hs > as : as > hs;
+      const isDraw = hs === as;
+      const scoreCls = isDraw ? 'h2h-draw' : t1Win ? 'h2h-win' : 'h2h-loss';
+      return `<div class="h2h-match-row">
+        <div class="h2h-match-date">${hm.dateFormatted}</div>
+        <div class="h2h-match-teams">${hm.homeTeam} – ${hm.awayTeam}</div>
+        <div class="h2h-match-score ${scoreCls}">${hs}–${as}</div>
+      </div>`;
+    }).join('');
+    const b = h2h.balance;
+    const balanceHtml = `<div class="h2h-balance">${m.home || 'Dom.'} <span class="h2h-win">${b.team1Wins}V</span> · <span class="h2h-draw">${b.draws}N</span> · <span class="h2h-loss">${b.team2Wins}D</span> ${m.away || 'Ext.'}</div>`;
+    const countHtml = h2h.totalMatches < 5 ? `<div class="h2h-count">${h2h.totalMatches} confrontation${h2h.totalMatches > 1 ? 's' : ''} disponible${h2h.totalMatches > 1 ? 's' : ''}</div>` : '';
+    return `<div class="h2h-section">
+      <div class="h2h-section-title">⚔️ Dernières confrontations</div>
+      ${rows}${balanceHtml}${countHtml}
+    </div>`;
+  })();
+
   const content = `
+    <!-- 1. HEADER -->
     <div class="analysis-hero">
+      <button class="analysis-fav-btn" id="analysis-fav-btn" onclick="toggleAnalysisFavori(event)">${userFavoris.has(String(m.id)) ? '⭐' : '☆'}</button>
       <div class="hero-league">${m.competition}</div>
       <div class="hero-teams">
-        <div class="hero-team">
+        <div class="hero-team" style="align-items:center">
+          ${logoImg(homeLogo, m.home)}
           <div class="hero-team-name">${m.home}</div>
-          <div class="hero-team-form">${formBlock(m.formHome)}</div>
+          <div class="hero-team-form">${formBlock(homeFormData)}</div>
         </div>
-        <div class="hero-vs">VS</div>
-        <div class="hero-team" style="text-align:right">
+        ${centerHtml}
+        <div class="hero-team" style="align-items:center;text-align:right">
+          ${logoImg(awayLogo, m.away)}
           <div class="hero-team-name">${m.away}</div>
-          <div class="hero-team-form" style="justify-content:flex-end">${formBlock(m.formAway)}</div>
+          <div class="hero-team-form" style="justify-content:flex-end">${formBlock(awayFormData)}</div>
         </div>
       </div>
-      <div class="hero-datetime">📅 ${m.date} à ${m.time}${m.venue ? ` · 🏟 ${m.venue}` : ''}</div>
+      <div class="hero-datetime">📅 ${m.date}${!isFinished && !isLive ? ` à ${m.time}` : ''}${m.venue ? ` · 🏟 ${m.venue}` : ''}</div>
     </div>
 
-    <div class="stats-grid">
-      <div class="stat-box">
-        <div class="stat-value stat-gold">${m.btts}%</div>
-        <div class="stat-label">BTTS</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value stat-blue">${m.over25}%</div>
-        <div class="stat-label">Over 2.5</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value stat-green">${m.confidence}%</div>
-        <div class="stat-label">Confiance</div>
-      </div>
-    </div>
-
+    <!-- 2. RÉSULTAT PROBABLE 1X2 -->
     <div class="proba-section">
       <div class="proba-title">🏆 Résultat probable (1X2)</div>
       <div class="proba-row">
-        <div class="proba-header">
-          <span class="proba-name">Victoire ${m.home}</span>
-          <span class="proba-pct stat-green">${homeWin}%</span>
-        </div>
+        <div class="proba-header"><span class="proba-name">Victoire ${m.home}</span><span class="proba-pct stat-green">${homeWin}%</span></div>
         <div class="proba-track"><div class="proba-fill fill-green" style="width:0" data-w="${homeWin}"></div></div>
       </div>
       <div class="proba-row">
-        <div class="proba-header">
-          <span class="proba-name">Match nul</span>
-          <span class="proba-pct stat-gold">${drawPct}%</span>
-        </div>
+        <div class="proba-header"><span class="proba-name">Match nul</span><span class="proba-pct stat-gold">${drawPct}%</span></div>
         <div class="proba-track"><div class="proba-fill fill-gold" style="width:0" data-w="${drawPct}"></div></div>
       </div>
       <div class="proba-row">
-        <div class="proba-header">
-          <span class="proba-name">Victoire ${m.away}</span>
-          <span class="proba-pct stat-blue">${awayWin}%</span>
-        </div>
+        <div class="proba-header"><span class="proba-name">Victoire ${m.away}</span><span class="proba-pct stat-blue">${awayWin}%</span></div>
         <div class="proba-track"><div class="proba-fill fill-blue" style="width:0" data-w="${awayWin}"></div></div>
       </div>
     </div>
 
-    <div class="proba-section">
-      <div class="proba-title">📊 Probabilités algorithmiques</div>
-      <div class="proba-row">
-        <div class="proba-header">
-          <span class="proba-name">Les deux équipes marquent</span>
-          <span class="proba-pct stat-gold">${m.btts}%</span>
-        </div>
-        <div class="proba-track"><div class="proba-fill fill-gold" style="width:0" data-w="${m.btts}"></div></div>
+    <!-- 3. BOUTON IA -->
+    <button style="width:100%;padding:14px;background:var(--accent-dim);border:1px solid rgba(0,229,160,0.3);border-radius:var(--radius);color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px;cursor:pointer;margin-bottom:14px;" onclick="askAIAboutMatch()">
+      🤖 Analyser avec l'IA
+    </button>
+
+    <!-- 4. SIGNAL ALGORITHMIQUE -->
+    <div class="signal-card">
+      <div class="signal-header">
+        <span class="signal-title">🎯 Signal algorithmique</span>
+        <span class="signal-badge">${m.confidence >= 80 ? 'Élevé' : m.confidence >= 65 ? 'Modéré' : 'Faible'}</span>
       </div>
-      <div class="proba-row">
-        <div class="proba-header">
-          <span class="proba-name">Plus de 2.5 buts</span>
-          <span class="proba-pct stat-blue">${m.over25}%</span>
-        </div>
-        <div class="proba-track"><div class="proba-fill fill-blue" style="width:0" data-w="${m.over25}"></div></div>
-      </div>
-      <div class="proba-row">
-        <div class="proba-header">
-          <span class="proba-name">Plus de 1.5 buts</span>
-          <span class="proba-pct stat-green">${m.over15}%</span>
-        </div>
-        <div class="proba-track"><div class="proba-fill fill-green" style="width:0" data-w="${m.over15}"></div></div>
+      <div class="signal-meter">
+        <div class="signal-level">${m.confidence}%</div>
+        <div class="signal-desc">Indice calculé via distribution de Poisson : forme récente (5 derniers matchs), attaque/défense dom.–ext. et stats de saison 2025.</div>
       </div>
     </div>
 
+    <!-- 5. BUTS ATTENDUS POISSON -->
     <div class="proba-section">
       <div class="proba-title">⚽ Buts attendus (Poisson)</div>
       <div class="h2h-row">
@@ -905,30 +2389,40 @@ function renderAnalysis(m) {
         <div class="h2h-score stat-gold">${gA}</div>
       </div>
       <div class="h2h-row">
-        <div class="h2h-date">CS dom.</div>
-        <div class="h2h-teams">Prob. feuille blanche</div>
+        <div class="h2h-date">CS</div>
+        <div class="h2h-teams">${m.home}</div>
         <div class="h2h-score stat-blue">${csH}%</div>
       </div>
       <div class="h2h-row">
-        <div class="h2h-date">CS ext.</div>
-        <div class="h2h-teams">Prob. feuille blanche</div>
+        <div class="h2h-date">CS</div>
+        <div class="h2h-teams">${m.away}</div>
         <div class="h2h-score stat-blue">${csA}%</div>
       </div>
     </div>
 
-    <div class="signal-card">
-      <div class="signal-header">
-        <span class="signal-title">🎯 Signal algorithmique</span>
-        <span class="signal-badge">${m.confidence >= 80 ? 'Élevé' : m.confidence >= 65 ? 'Modéré' : 'Faible'}</span>
+    <!-- 6. PROBABILITÉS -->
+    <div class="proba-section">
+      <div class="proba-title">📊 Probabilités algorithmiques</div>
+      <div class="proba-row">
+        <div class="proba-header"><span class="proba-name">Plus de 1.5 buts</span><span class="proba-pct stat-green">${m.over15}%</span></div>
+        <div class="proba-track"><div class="proba-fill fill-green" style="width:0" data-w="${m.over15}"></div></div>
       </div>
-      <div class="signal-meter">
-        <div class="signal-level">${m.confidence}%</div>
-        <div class="signal-desc">Indice calculé via distribution de Poisson : forme récente (5 derniers matchs), attaque/défense dom.–ext. et stats de saison 2025.</div>
+      <div class="proba-row">
+        <div class="proba-header"><span class="proba-name">Plus de 2.5 buts</span><span class="proba-pct stat-blue">${m.over25}%</span></div>
+        <div class="proba-track"><div class="proba-fill fill-blue" style="width:0" data-w="${m.over25}"></div></div>
+      </div>
+      <div class="proba-row">
+        <div class="proba-header"><span class="proba-name">Les deux équipes marquent</span><span class="proba-pct stat-gold">${m.btts}%</span></div>
+        <div class="proba-track"><div class="proba-fill fill-gold" style="width:0" data-w="${m.btts}"></div></div>
       </div>
     </div>
 
-    <button style="width:100%;padding:14px;background:var(--accent-dim);border:1px solid rgba(0,229,160,0.3);border-radius:var(--radius);color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px;cursor:pointer;" onclick="askAIAboutMatch()">
-      🤖 Analyser avec l'IA
+    <!-- 7. H2H -->
+    ${h2hBlock}
+
+    <!-- 8. BOUTON PRONO -->
+    <button style="width:100%;padding:14px;background:var(--gold-dim);border:1px solid rgba(245,200,66,0.3);border-radius:var(--radius);color:var(--gold);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px;cursor:pointer;" onclick="openPronoModal()">
+      🎯 Envoie ton prono ici
     </button>
   `;
 
@@ -952,13 +2446,294 @@ function askAIAboutMatch() {
   }, 400);
 }
 
+// ─── FAVORIS ───
+let userFavoris  = new Set();
+let favorisData  = {};
+
+async function loadFavoris() {
+  await supabaseReady;
+  if (!currentUser) { userFavoris = new Set(); return; }
+  const { data } = await supabaseClient.from('favoris').select('match_id').eq('user_id', currentUser.id);
+  userFavoris = new Set((data || []).map(f => f.match_id));
+  userFavoris.forEach(id => {
+    const btn = document.getElementById('fav-' + id);
+    if (btn) btn.classList.add('is-fav');
+  });
+}
+
+async function toggleFavori(matchId, event) {
+  event.stopPropagation();
+  if (!currentUser) { openAuthModal(); return; }
+  await supabaseReady;
+  const btn = document.getElementById('fav-' + matchId);
+  if (userFavoris.has(String(matchId))) {
+    await supabaseClient.from('favoris').delete().eq('user_id', currentUser.id).eq('match_id', matchId);
+    userFavoris.delete(String(matchId));
+    if (btn) btn.classList.remove('is-fav');
+  } else {
+    const m = loadedMatchesMap[matchId];
+    if (!m) return;
+    await supabaseClient.from('favoris').insert({
+      user_id:    currentUser.id,
+      match_id:   String(matchId),
+      home_team:  m.home,
+      away_team:  m.away,
+      league:     m.competition,
+      match_date: `${m.date} ${m.time}`,
+    });
+    userFavoris.add(String(matchId));
+    if (btn) btn.classList.add('is-fav');
+  }
+}
+
+function openFavoris() {
+  showPage('favoris');
+  renderFavorisPage();
+}
+
+async function renderFavorisPage() {
+  await supabaseReady;
+  const notConn = document.getElementById('favoris-not-connected');
+  const list    = document.getElementById('favoris-list');
+  if (!currentUser) {
+    notConn.style.display = 'block';
+    list.style.display    = 'none';
+    return;
+  }
+  notConn.style.display = 'none';
+  list.style.display    = 'block';
+  list.innerHTML = '<div class="spinner"></div>';
+
+  const { data, error } = await supabaseClient
+    .from('favoris').select('*')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false });
+
+  if (error || !data || !data.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">⭐</div><div class="empty-text">Aucun favori<br>pour l\'instant</div></div>';
+    return;
+  }
+
+  data.forEach(f => { favorisData[f.match_id] = f; });
+
+  list.innerHTML = data.map(f => `
+    <div class="fav-card" id="fav-card-${f.match_id}">
+      <div class="fav-card-info" style="cursor:pointer" onclick="openFavoriAnalysis('${f.match_id}')">
+        <div class="fav-teams">${f.home_team} vs ${f.away_team}</div>
+        <div class="fav-meta">${f.league} · ${f.match_date}</div>
+      </div>
+      <button class="fav-remove" onclick="removeFavori('${f.match_id}')">Retirer ✕</button>
+    </div>
+  `).join('');
+}
+
+function openFavoriAnalysis(matchId) {
+  const m = loadedMatchesMap[matchId];
+  if (m) {
+    currentMatch = m;
+  } else {
+    const f = favorisData[matchId];
+    if (!f) return;
+    const parts = (f.match_date || '').split(' ');
+    currentMatch = {
+      id: matchId, home: f.home_team, away: f.away_team,
+      competition: f.league,
+      date: parts[0] || '', time: parts[1] || '--:--',
+      formHome: ['?','?','?','?','?'], formAway: ['?','?','?','?','?'],
+    };
+  }
+  previousView = 'favoris';
+  renderAnalysis(currentMatch);
+  showPage('analysis');
+  document.getElementById('nav-paddock').classList.add('active');
+}
+
+async function toggleAnalysisFavori(event) {
+  if (!currentMatch) return;
+  await toggleFavori(String(currentMatch.id), event);
+  const btn = document.getElementById('analysis-fav-btn');
+  if (btn) btn.textContent = userFavoris.has(String(currentMatch.id)) ? '⭐' : '☆';
+}
+
+async function removeFavori(matchId) {
+  await supabaseReady;
+  await supabaseClient.from('favoris').delete().eq('user_id', currentUser.id).eq('match_id', matchId);
+  userFavoris.delete(String(matchId));
+  const starBtn = document.getElementById('fav-' + matchId);
+  if (starBtn) starBtn.textContent = '☆';
+  const card = document.getElementById('fav-card-' + matchId);
+  if (card) card.remove();
+  const list = document.getElementById('favoris-list');
+  if (list && !list.querySelector('.fav-card')) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">⭐</div><div class="empty-text">Aucun favori<br>pour l\'instant</div></div>';
+  }
+}
+
+// ─── PRONOSTICS ───
+let selectedProno = { type: null, value: null };
+
+function openPronos() {
+  showPage('pronos');
+  loadPronos('tous');
+}
+
+function openPronoModal() {
+  if (!currentUser) { openAuthModal(); return; }
+  const m = currentMatch;
+  if (!m) return;
+  selectedProno = { type: null, value: null };
+  document.querySelectorAll('.prono-option').forEach(o => o.classList.remove('selected'));
+  document.getElementById('prono-confirm-btn').disabled = true;
+  document.getElementById('prono-sheet-match').textContent = `${m.home} vs ${m.away} — ${m.competition} · ${m.date}`;
+  document.getElementById('prono-opt-dom').textContent = `🏠 ${m.home}`;
+  document.getElementById('prono-opt-ext').textContent = `✈️ ${m.away}`;
+  document.getElementById('prono-overlay').classList.add('open');
+}
+
+function closePronoModal() {
+  document.getElementById('prono-overlay').classList.remove('open');
+}
+
+function selectProno(type, value, el) {
+  const grpMap = { btts: 'prono-grp-btts', goals: 'prono-grp-goals', result: 'prono-grp-result' };
+  document.getElementById(grpMap[type]).querySelectorAll('.prono-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedProno = { type, value };
+  document.getElementById('prono-confirm-btn').disabled = false;
+}
+
+async function confirmProno() {
+  if (!currentUser || !selectedProno.type || !currentMatch) return;
+  const btn = document.getElementById('prono-confirm-btn');
+  btn.disabled = true; btn.textContent = 'Enregistrement…';
+  const m = currentMatch;
+  await supabaseReady;
+  const { error } = await supabaseClient.from('pronostics').insert({
+    user_id:          currentUser.id,
+    match_id:         String(m.id),
+    home_team:        m.home,
+    away_team:        m.away,
+    league:           m.competition,
+    match_date:       `${m.date} ${m.time}`,
+    pronostic_type:   selectedProno.type,
+    pronostic_value:  selectedProno.value,
+    status:           'en_cours',
+  });
+  btn.textContent = 'Confirmer';
+  if (error) { btn.disabled = false; alert('Erreur : ' + error.message); return; }
+  closePronoModal();
+}
+
+async function loadPronos(filter, el) {
+  if (el) {
+    document.querySelectorAll('.pronos-filter').forEach(f => f.classList.remove('active'));
+    el.classList.add('active');
+  }
+  await supabaseReady;
+  if (!currentUser) {
+    document.getElementById('pronos-not-connected').style.display = 'block';
+    document.getElementById('pronos-content').style.display = 'none';
+    return;
+  }
+  document.getElementById('pronos-not-connected').style.display = 'none';
+  document.getElementById('pronos-content').style.display = 'block';
+
+  const list = document.getElementById('pronos-list');
+  list.innerHTML = '<div class="spinner"></div>';
+
+  await checkPronoResults();
+
+  let q = supabaseClient.from('pronostics').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+  if (filter !== 'tous') q = q.eq('status', filter);
+  const { data, error } = await q;
+
+  if (error) { list.innerHTML = '<div class="empty-state"><div class="empty-text">Erreur de chargement</div></div>'; return; }
+
+  const { data: all } = await supabaseClient.from('pronostics').select('status').eq('user_id', currentUser.id);
+  if (all) {
+    const validated = all.filter(p => p.status !== 'en_cours');
+    const won       = all.filter(p => p.status === 'gagne');
+    const pending   = all.filter(p => p.status === 'en_cours');
+    document.getElementById('pronos-rate').textContent    = validated.length ? Math.round(won.length / validated.length * 100) + '%' : '—';
+    document.getElementById('pronos-pending').textContent = pending.length;
+  }
+
+  if (!data || !data.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🎯</div><div class="empty-text">Aucun pronostic<br>pour ce filtre</div></div>';
+    return;
+  }
+
+  const statusLabel = { en_cours: '🟡 En cours', gagne: '✅ Gagné', perdu: '❌ Perdu' };
+  const typeLabel   = { btts: 'BTTS', goals: 'Buts', result: 'Résultat' };
+  const valueLabel  = { oui: 'Oui', non: 'Non', '+1.5': '+1.5G', '+2.5': '+2.5G', '+3.5': '+3.5G', dom: 'Domicile', nul: 'Nul', ext: 'Extérieur' };
+
+  list.innerHTML = data.map(p => `
+    <div class="prono-card">
+      <div class="prono-card-header">
+        <div class="prono-teams">${p.home_team} vs ${p.away_team}</div>
+        <div class="prono-status ${p.status}">${statusLabel[p.status] || p.status}</div>
+      </div>
+      <div class="prono-meta">${p.league} · ${p.match_date}</div>
+      <div class="prono-choice">🎯 ${typeLabel[p.pronostic_type]} — ${valueLabel[p.pronostic_value] || p.pronostic_value}</div>
+    </div>
+  `).join('');
+}
+
+async function checkPronoResults() {
+  if (!currentUser) return;
+  await supabaseReady;
+  const { data: pending } = await supabaseClient
+    .from('pronostics').select('*')
+    .eq('user_id', currentUser.id)
+    .eq('status', 'en_cours');
+  if (!pending || !pending.length) return;
+
+  await Promise.all(pending.map(async p => {
+    try {
+      const r = await fetch(`/api/fixture?id=${p.match_id}`);
+      const d = await r.json();
+      if (!['FT', 'AET', 'PEN'].includes(d.status) || d.homeGoals == null) return;
+      const h = d.homeGoals, a = d.awayGoals;
+      let won = false;
+      if (p.pronostic_type === 'btts') {
+        won = p.pronostic_value === 'oui' ? (h > 0 && a > 0) : (h === 0 || a === 0);
+      } else if (p.pronostic_type === 'goals') {
+        won = (h + a) > parseFloat(p.pronostic_value);
+      } else {
+        if (p.pronostic_value === 'dom') won = h > a;
+        else if (p.pronostic_value === 'nul') won = h === a;
+        else won = h < a;
+      }
+      await supabaseClient.from('pronostics').update({ status: won ? 'gagne' : 'perdu' }).eq('id', p.id);
+    } catch { /* silently ignore */ }
+  }));
+}
+
 // ─── IA CHAT ───
+let waitingForAiName = false;
+
+function getAiName() {
+  return localStorage.getItem('bv_ai_name_' + (currentUser?.id || 'guest')) || null;
+}
+function saveAiName(name) {
+  localStorage.setItem('bv_ai_name_' + (currentUser?.id || 'guest'), name);
+}
+
 async function sendMessage() {
   const input = document.getElementById('chat-input');
   const msg = input.value.trim();
   if (!msg) return;
   input.value = '';
   input.style.height = 'auto';
+
+  if (waitingForAiName) {
+    waitingForAiName = false;
+    saveAiName(msg);
+    appendMessage('user', msg);
+    appendMessage('ai', `Parfait ! Je m'appelle ${msg} 😊 Ravi de te rejoindre sur BetVision. Alors, t'es plutôt foot, basket, tennis ? Dis-moi sur quoi tu veux qu'on travaille ensemble.`);
+    return;
+  }
+
   appendMessage('user', msg);
   await callAI(msg);
 }
@@ -966,6 +2741,235 @@ async function sendMessage() {
 function sendQuick(q) {
   document.getElementById('chat-input').value = q;
   sendMessage();
+}
+
+// ─── GARDIEN DU TEMPS (Skill 3) ───
+async function checkGardienDuTemps() {
+  const mem = getMemory();
+  if (!mem.lastMessageAt) return;
+  const elapsed = Date.now() - mem.lastMessageAt;
+  if (elapsed < 2 * 60 * 60 * 1000) return; // moins de 2h → rien
+  const lastTopic = chatHistory.slice(-6).filter(h => h.role === 'user').pop()?.content || null;
+  if (!lastTopic) return;
+  try {
+    const res = await fetch('/api/ai-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: `[RELANCE_INTERNE] L'utilisateur revient après ${Math.round(elapsed/3600000)}h. Dernier sujet abordé : "${lastTopic}". Génère UNE phrase de relance naturelle, courte, comme si tu reprenais une conversation avec un ami. Pas de "Bonjour", pas de "Comment puis-je". Juste la relance.`,
+        history: [],
+        context: { aiName: getAiName(), memory: formatMemoryBlock() },
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.reply) {
+        setTimeout(() => appendMessage('ai', data.reply), 800);
+        const m = getMemory(); m.lastMessageAt = Date.now(); saveMemory(m);
+      }
+    }
+  } catch {}
+}
+
+// ─── ENGAGEMENT PROACTIF (Avant / Pendant / Après match) ───
+async function checkMatchEngagement() {
+  const mem = getMemory();
+  const antiSpamKey = 'bv_engage_ts_' + (currentUser?.id || 'guest');
+  const lastEngage = parseInt(localStorage.getItem(antiSpamKey) || '0');
+  if (Date.now() - lastEngage < 30 * 60 * 1000) return; // anti-spam 30 min
+
+  const now = Date.now();
+  const matches = todayMatchesCache;
+  if (!matches.length && !Object.keys(mem.facts).length) return;
+
+  // Trouver le match le plus pertinent (favori > tous)
+  let target = null;
+  let matchContext = null;
+
+  for (const m of matches) {
+    const isFav = userFavoris.has(String(m.id));
+    const startMs = m._startTs ? m._startTs * 1000 : null;
+    const isLive = m.status === 'live';
+    const isFinished = m.status === 'finished';
+    const isUpcoming = m.status === 'scheduled' && startMs && startMs - now < 2 * 3600 * 1000 && startMs > now;
+
+    if (isLive)      matchContext = 'live';
+    else if (isFinished) matchContext = 'finished';
+    else if (isUpcoming) matchContext = 'upcoming';
+    else continue;
+
+    if (isFav || !target) { target = m; if (isFav) break; }
+  }
+
+  let prompt;
+  if (target && matchContext === 'live') {
+    prompt = `[ENGAGEMENT] Le match ${target.home} vs ${target.away} est EN COURS maintenant. Score actuel inconnu. Génère UNE phrase courte, excitante, comme un ami qui suit le match en direct. Mentionne les équipes, reste naturel.`;
+  } else if (target && matchContext === 'upcoming') {
+    prompt = `[ENGAGEMENT] Le match ${target.home} vs ${target.away} commence très bientôt (dans moins de 2h). Stats : dom. ${target.homeWin}%, ext. ${target.awayWin}%, BTTS ${target.btts}%. Génère UNE phrase d'accroche courte et naturelle pour en parler à l'utilisateur.`;
+  } else if (target && matchContext === 'finished') {
+    prompt = `[ENGAGEMENT] Le match ${target.home} vs ${target.away} vient de se terminer. Génère UNE phrase naturelle et courte pour relancer la conversation dessus.`;
+  } else {
+    // Pas de match pertinent → message général basé sur la mémoire
+    const factsStr = Object.entries(mem.facts).map(([k,v]) => `${k}: ${v}`).join(', ');
+    if (!factsStr) return;
+    prompt = `[ENGAGEMENT] Tu connais bien cet utilisateur : ${factsStr}. Génère UNE phrase d'accroche spontanée et naturelle basée sur ce que tu sais de lui — une stat intéressante, une question sur son sport favori, une tendance du moment. Pas plus d'une phrase.`;
+  }
+
+  try {
+    const res = await fetch('/api/ai-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: prompt,
+        history: [],
+        context: { aiName: getAiName(), memory: formatMemoryBlock() },
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.reply) {
+        setTimeout(() => appendMessage('ai', data.reply), 600);
+        localStorage.setItem(antiSpamKey, String(Date.now()));
+      }
+    }
+  } catch {}
+}
+
+// ─── MÉMOIRE LONG TERME (Le Journaliste) ───
+function getMemory() {
+  try {
+    const raw = JSON.parse(localStorage.getItem('bv_memory_' + (currentUser?.id || 'guest')) || '{}');
+    return { facts: {}, lifeTags: {}, lastTopic: null, lastMessageAt: null, ...raw };
+  } catch { return { facts: {}, lifeTags: {}, lastTopic: null, lastMessageAt: null }; }
+}
+function saveMemory(mem) {
+  try { localStorage.setItem('bv_memory_' + (currentUser?.id || 'guest'), JSON.stringify(mem)); } catch {}
+}
+function updateMemoryFacts(newFacts) {
+  if (!newFacts?.length) return;
+  const mem = getMemory();
+  newFacts.forEach(({ key, value, type }) => {
+    if (type === 'life') mem.lifeTags[key] = value;
+    else mem.facts[key] = value;
+  });
+  mem.lastMessageAt = Date.now();
+  saveMemory(mem);
+}
+function formatMemoryBlock() {
+  const mem = getMemory();
+  const entries = Object.entries(mem.facts || {});
+  if (!entries.length) return '';
+  return '\n\n🧠 CE QUE TU SAIS DE L\'UTILISATEUR (mémoire long terme) :\n' +
+    entries.map(([k, v]) => `• ${k} : ${v}`).join('\n');
+}
+function getLifeTags() {
+  const mem = getMemory();
+  const tags = mem.lifeTags || {};
+  return Object.keys(tags).length ? tags : null;
+}
+
+// ── Bankroll virtuelle ─────────────────────────────────────
+function getBankroll() {
+  try {
+    const raw = JSON.parse(localStorage.getItem('bv_bankroll_' + (currentUser?.id || 'guest')) || '{}');
+    return { initial: 1000, current: 1000, history: [], totalBets: 0, wins: 0, ...raw };
+  } catch { return { initial: 1000, current: 1000, history: [], totalBets: 0, wins: 0 }; }
+}
+function saveBankroll(b) {
+  try { localStorage.setItem('bv_bankroll_' + (currentUser?.id || 'guest'), JSON.stringify(b)); } catch {}
+}
+function computeKelly(probPct, cote) {
+  if (!probPct || !cote || cote <= 1) return null;
+  const p = probPct / 100;
+  const k = (p * cote - 1) / (cote - 1) * 0.25; // Kelly ¼
+  return Math.min(5, Math.max(0, parseFloat((k * 100).toFixed(1))));
+}
+function recordBankrollResult(matchLabel, prediction, won, stakePct) {
+  const b = getBankroll();
+  const stake = b.current * (stakePct / 100);
+  const pnl   = won ? stake * 0.9 : -stake; // flat ~1.90 cote pour simplifier
+  b.current   = Math.max(0, b.current + pnl);
+  b.totalBets += 1;
+  if (won) b.wins += 1;
+  b.history.push({ date: new Date().toLocaleDateString('fr-FR'), match: matchLabel, prediction, won, pnl, stake });
+  if (b.history.length > 50) b.history = b.history.slice(-50);
+  saveBankroll(b);
+}
+function getBankrollContext() {
+  const b = getBankroll();
+  const winRate = b.totalBets > 0 ? Math.round((b.wins / b.totalBets) * 100) : 0;
+  // Kelly basé sur le meilleur signal en cours
+  let kelly = null;
+  if (currentMatch?.homeWin && currentOddsData?.odds?.home) {
+    kelly = computeKelly(currentMatch.homeWin, currentOddsData.odds.home);
+  }
+  return { initial: b.initial, current: +b.current.toFixed(2), winRate, totalBets: b.totalBets, history: b.history.slice(-3), kelly };
+}
+
+function getPredictions() {
+  try { return JSON.parse(localStorage.getItem('bv_predictions_' + (currentUser?.id || 'guest')) || '[]'); }
+  catch { return []; }
+}
+function savePredictionEntry(home, away, prediction) {
+  const preds = getPredictions();
+  if (preds.some(p => p.home === home && p.away === away && p.actual === null)) return;
+  preds.push({ home, away, prediction, actual: null, correct: null, ts: Date.now() });
+  try { localStorage.setItem('bv_predictions_' + (currentUser?.id || 'guest'), JSON.stringify(preds.slice(-20))); } catch {}
+}
+function refreshPredictionsVsCache() {
+  if (!todayMatchesCache?.length) return getPredictions();
+  const preds = getPredictions();
+  let changed = false;
+  preds.forEach(p => {
+    if (p.actual !== null) return;
+    const m = todayMatchesCache.find(m => m.status === 'finished' && m.score &&
+      (m.home === p.home || m.away === p.away));
+    if (!m) return;
+    const actual = m.score.home > m.score.away ? 'Victoire dom.'
+                 : m.score.home < m.score.away ? 'Victoire ext.' : 'Match nul';
+    p.actual = actual;
+    p.correct = p.prediction?.toLowerCase().includes(actual.split(' ')[0].toLowerCase());
+    changed = true;
+  });
+  if (changed) try { localStorage.setItem('bv_predictions_' + (currentUser?.id || 'guest'), JSON.stringify(preds)); } catch {}
+  return preds.filter(p => p.actual !== null).slice(-5);
+}
+
+function saveChatHistory() {
+  try {
+    const key = 'bv_chat_' + (currentUser?.id || 'guest');
+    localStorage.setItem(key, JSON.stringify(chatHistory.slice(-200)));
+  } catch {}
+}
+
+function loadChatHistory() {
+  try {
+    const key = 'bv_chat_' + (currentUser?.id || 'guest');
+    const saved = JSON.parse(localStorage.getItem(key) || '[]');
+    const box = document.getElementById('chat-box');
+    if (!box) return;
+    if (!saved.length) {
+      const aiName = getAiName();
+      if (!aiName) {
+        waitingForAiName = true;
+        box.innerHTML = '';
+        const div = document.createElement('div');
+        div.className = 'chat-msg ai';
+        div.textContent = "Salut ! 👋 Avant qu'on commence, j'aimerais que tu me donnes un prénom — homme ou femme, c'est toi qui choisis. Je serai ton assistant perso sur BetVision. Alors, tu m'appelles comment ?";
+        box.appendChild(div);
+      }
+      return;
+    }
+    chatHistory = saved;
+    box.innerHTML = '';
+    saved.forEach(h => {
+      const div = document.createElement('div');
+      div.className = `chat-msg ${h.role === 'user' ? 'user' : 'ai'}`;
+      div.textContent = h.content;
+      box.appendChild(div);
+    });
+    box.scrollTop = box.scrollHeight;
+  } catch {}
 }
 
 function appendMessage(role, text) {
@@ -976,6 +2980,7 @@ function appendMessage(role, text) {
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
   chatHistory.push({ role: role === 'user' ? 'user' : 'assistant', content: text });
+  saveChatHistory();
 }
 
 async function callAI(userMsg) {
@@ -989,36 +2994,97 @@ async function callAI(userMsg) {
   document.getElementById('chat-box').appendChild(typing);
   document.getElementById('chat-box').scrollTop = 9999;
 
-  const messages = [
-    {
-      role: 'system',
-      content: `Tu es BetVision AI, expert en analyse statistique et algorithmique du football.
-Tu fournis des analyses basées sur des données réelles : forme récente, distribution de Poisson, stats dom./ext.
-Tu n'utilises JAMAIS "pronos" ou "paris". Tu parles d'"analyse statistique", "algorithme prédictif", "signal de confiance".
-Tu réponds en français, de façon concise et structurée avec des émojis. Maximum 4 paragraphes.
-Tu rappelles toujours que tes analyses sont des outils statistiques et non des conseils financiers.`
-    },
-    ...chatHistory.slice(-8).map(h => ({ role: h.role, content: h.content })),
-    { role: 'user', content: userMsg }
-  ];
+  // Auto-load 3 jours de matchs si cache vide ou > 1h
+  const CACHE_TTL = 60 * 60_000;
+  if (!todayMatchesCache.length || Date.now() - todayMatchesCacheTs > CACHE_TTL) {
+    try {
+      const data = await fetch('/api/upcoming').then(r => r.json());
+      if (data.matches?.length) {
+        todayMatchesCache = data.matches;
+        todayMatchesCacheTs = Date.now();
+        todayMatchesCache.forEach(m => { loadedMatchesMap[m.id] = m; });
+        console.log('[callAI] upcoming chargés:', todayMatchesCache.length, 'matchs sur 3 jours');
+      } else {
+        console.warn('[callAI] /api/upcoming → 0 match. Erreur:', data.error || 'inconnue');
+        if (!todayMatchesCache.length && !Object.keys(loadedMatchesMap).length) {
+          document.getElementById('typing-indicator')?.remove();
+          btn.disabled = false;
+          appendMessage('ai', "Mon API Sport n'a pas chargé de données — vérifie que RAPIDAPI_KEY est bien configurée dans Coolify, puis rafraîchis la page.");
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('[callAI] /api/upcoming échec:', e.message);
+    }
+  }
+
+  // Auto-load news si cache vide ou > 1h
+  if (!todayNewsCache.length || Date.now() - todayNewsCacheTs > 3_600_000) {
+    try {
+      const data = await fetch('/api/news').then(r => r.json());
+      if (Array.isArray(data) && data.length) {
+        todayNewsCache = data.map(a => ({ source: a.source || 'Football', title: a.title || '' }));
+        todayNewsCacheTs = Date.now();
+        console.log('[callAI] news chargées:', todayNewsCache.length, 'articles');
+      }
+    } catch (e) { console.warn('[callAI] /api/news échec:', e.message); }
+  }
+
+  // Construire la liste de matchs la plus complète possible :
+  // todayMatchesCache (top 10 multi-ligues) + loadedMatchesMap (matchs browsés dans les ligues)
+  const buildContextMatches = () => {
+    const base = [...(todayMatchesCache || [])];
+    const existingIds = new Set(base.map(m => String(m.id)));
+    // Ajouter les matchs chargés via openLeagueView qui ne sont pas déjà dans base
+    Object.values(loadedMatchesMap).forEach(m => {
+      if (m.home && m.away && !existingIds.has(String(m.id))) {
+        base.push(m);
+        existingIds.add(String(m.id));
+      }
+    });
+    console.log('[callAI] context matches total:', base.length, '—', base.map(m => m.home + ' vs ' + m.away).slice(0, 5).join(', '));
+    return base.slice(0, 30); // max 30 matchs pour ne pas exploser le prompt
+  };
 
   try {
-    const res = await fetch('/api/chat', {
+    const res = await fetch('/api/ai-chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages })
+      body: JSON.stringify({
+        message: userMsg,
+        history: chatHistory.slice(-25).map(h => ({ role: h.role, content: h.content })),
+        context: {
+          matches: buildContextMatches(), news: todayNewsCache, user: userProfileCache,
+          match: currentMatch || null, aiName: getAiName(), memory: formatMemoryBlock(),
+          predictions: refreshPredictionsVsCache(), lifeTags: getLifeTags(),
+          odds: currentOddsData || null,
+          bankroll: getBankrollContext(),
+        },
+      }),
     });
 
     document.getElementById('typing-indicator')?.remove();
 
     if (res.ok) {
       const data = await res.json();
-      appendMessage('ai', data.choices?.[0]?.message?.content || 'Réponse vide.');
+      updateMemoryFacts(data.facts);
+      // Stocker les prédictions extraites par Groq (clé commençant par "prédiction")
+      if (data.facts?.length) {
+        data.facts.forEach(({ key, value }) => {
+          if (key?.toLowerCase().startsWith('prédiction')) {
+            const parts = value?.split(' vs ');
+            if (parts?.length === 2) savePredictionEntry(parts[0].trim(), parts[1].split(':')[0].trim(), parts[1].split(':')[1]?.trim() || value);
+          }
+        });
+      }
+      const mem = getMemory();
+      mem.lastMessageAt = Date.now();
+      saveMemory(mem);
+      appendMessage('ai', data.reply || 'Réponse vide.');
     } else {
-      // 503 = clé non configurée → mode démo
       appendMessage('ai', getDemoReply(userMsg));
     }
-  } catch (e) {
+  } catch {
     document.getElementById('typing-indicator')?.remove();
     appendMessage('ai', getDemoReply(userMsg));
   }
@@ -1026,31 +3092,176 @@ Tu rappelles toujours que tes analyses sont des outils statistiques et non des c
   btn.disabled = false;
 }
 
+async function callVision(input) {
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+  appendMessage('user', `📎 Ticket envoyé : ${file.name}`);
+  const btn = document.getElementById('chat-send');
+  btn.disabled = true;
+  const typing = document.createElement('div');
+  typing.className = 'chat-msg ai typing';
+  typing.id = 'typing-indicator';
+  typing.textContent = '🔍 Analyse du ticket...';
+  document.getElementById('chat-box').appendChild(typing);
+  document.getElementById('chat-box').scrollTop = 9999;
+  try {
+    const b64 = await new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onload = e => res(e.target.result.split(',')[1]);
+      reader.onerror = rej;
+      reader.readAsDataURL(file);
+    });
+    const r = await fetch('/api/ai-vision', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64: b64, mimeType: file.type, context: { aiName: getAiName() } }),
+    });
+    document.getElementById('typing-indicator')?.remove();
+    if (r.ok) {
+      const data = await r.json();
+      appendMessage('ai', data.reply || 'Impossible de lire le ticket.');
+    } else {
+      appendMessage('ai', "J'arrive pas à lire cette image, envoie-moi une photo plus nette.");
+    }
+  } catch {
+    document.getElementById('typing-indicator')?.remove();
+    appendMessage('ai', "Problème avec l'image, réessaie.");
+  }
+  btn.disabled = false;
+}
+
+function startLiveWatch() {
+  stopLiveWatch();
+  // Seulement si des matchs live ou démarrant dans les 2h
+  const now = Date.now();
+  const watchable = (todayMatchesCache || []).filter(m => {
+    if (m.status === 'live') return true;
+    if (m.status === 'scheduled') {
+      const [h, min] = (m.time || '').split(':').map(Number);
+      const matchTs = new Date().setHours(h || 0, min || 0, 0, 0);
+      return matchTs - now < 2 * 3600_000 && matchTs > now;
+    }
+    return false;
+  });
+  if (!watchable.length) return;
+  pollLiveScores();
+  liveWatchInterval = setInterval(pollLiveScores, 60_000);
+}
+
+function stopLiveWatch() {
+  if (liveWatchInterval) { clearInterval(liveWatchInterval); liveWatchInterval = null; }
+}
+
+async function pollLiveScores() {
+  const ids = (todayMatchesCache || [])
+    .filter(m => m.status === 'live' || m.status === 'scheduled')
+    .map(m => m.id).filter(Boolean);
+  if (!ids.length) return;
+  try {
+    const r = await fetch('/api/live-scores?matchIds=' + ids.join(','));
+    if (!r.ok) return;
+    const scores = await r.json();
+    scores.forEach(s => {
+      // Propager score/status/minute dans loadedMatchesMap et todayMatchesCache
+      if (loadedMatchesMap[s.id]) {
+        if (s.score != null) loadedMatchesMap[s.id].score = s.score;
+        loadedMatchesMap[s.id].status = s.status;
+        if (s.minute != null) loadedMatchesMap[s.id].minute = s.minute;
+      }
+      const cached = todayMatchesCache.find(m => String(m.id) === String(s.id));
+      if (cached) {
+        if (s.score != null) cached.score = s.score;
+        cached.status = s.status;
+        if (s.minute != null) cached.minute = s.minute;
+      }
+      detectAndReact(s);
+    });
+  } catch {}
+}
+
+async function detectAndReact(current) {
+  const prev = liveScoreSnapshot[current.id];
+  liveScoreSnapshot[current.id] = current;
+  if (!prev) return; // première lecture — pas d'événement
+
+  const match = (todayMatchesCache || []).find(m => String(m.id) === String(current.id));
+  const now = Date.now();
+  const cooldown = liveReactCooldown[current.id] || 0;
+  if (now - cooldown < 120_000) return; // anti-spam 2 min par match
+
+  let event = null;
+
+  // But marqué
+  if (current.score && prev.score) {
+    const homeGoal = current.score.home > prev.score.home;
+    const awayGoal = current.score.away > prev.score.away;
+    if (homeGoal) event = `⚽ But de ${match?.home || 'l\'équipe dom.'} ! Score : ${current.score.home}-${current.score.away}`;
+    else if (awayGoal) event = `⚽ But de ${match?.away || 'l\'équipe ext.'} ! Score : ${current.score.home}-${current.score.away}`;
+  }
+  // Match terminé
+  if (!event && prev.status === 'live' && current.status === 'finished') {
+    const s = current.score;
+    event = s
+      ? `🔔 Match terminé : ${match?.home || 'Dom.'} ${s.home} - ${s.away} ${match?.away || 'Ext.'}`
+      : `🔔 Match terminé.`;
+  }
+  // Match commencé
+  if (!event && prev.status === 'scheduled' && current.status === 'live') {
+    event = `🟢 Le match ${match?.home || ''} vs ${match?.away || ''} vient de débuter !`;
+  }
+
+  if (!event) return;
+
+  liveReactCooldown[current.id] = now;
+  // Cherche la prédiction de l'utilisateur sur ce match (depuis predictions cache)
+  const preds = getPredictions();
+  const userPred = preds.find(p => p.home === match?.home || p.away === match?.away);
+
+  try {
+    const res = await fetch('/api/live-react', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event, match: match || null,
+        userPrediction: userPred ? `${userPred.prediction} (${userPred.correct === null ? 'en cours' : userPred.correct ? '✅' : '❌'})` : null,
+        aiName: getAiName(),
+      }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.reply) appendMessage('ai', `🔴 LIVE — ${data.reply}`);
+  } catch {}
+}
+
 function getDemoReply(msg) {
   const q = msg.toLowerCase();
-  if (q.includes('btts') || q.includes('les deux')) {
-    return '📊 Analyse BTTS : Les matchs avec BTTS ≥ 65% correspondent à des rencontres où les deux équipes affichent λ ≥ 1.5 but/match. L\'algorithme Poisson calcule P(BTTS) = (1 − e^−λdom) × (1 − e^−λext). Consultez la page analyse pour les valeurs détaillées. ⚠️ Outil d\'aide à la décision uniquement.';
+  const m = currentMatch;
+  if (q.includes('btts') || q.includes('les deux équipes')) {
+    if (m) return `Sur ${m.home} vs ${m.away}, le BTTS est à ${m.btts}%. ${m.btts >= 65 ? "Signal fort — les deux équipes scorent souvent dans ce type de match." : "C'est pas le signal le plus solide là, je resterais prudent."}`;
+    return "Donne-moi un match sur lequel te positionner, je regarde le BTTS direct.";
   }
   if (q.includes('over') || q.includes('buts')) {
-    return '⚡ Over 2.5 buts : La probabilité est calculée par P(total > 2.5) = 1 − P(0) − P(1) − P(2) avec distribution de Poisson. Les matchs avec λ_total > 2.8 ont statistiquement une prob. Over 2.5 supérieure à 60%. ⚠️ Analyse statistique à titre informatif.';
+    if (m) return `${m.home} vs ${m.away} : Over 2.5 à ${m.over25}%. ${m.over25 >= 65 ? "Y'a de la matière, ce match part souvent sur des buts." : "Mouais, l'algo est pas convaincu sur les buts là."}`;
+    return "Dis-moi le match, je check l'Over direct.";
   }
-  if (q.includes('forme') || q.includes('form')) {
-    return '📈 Forme récente : L\'algorithme analyse les 5 derniers résultats de chaque équipe. Une série WWWWW génère un bonus de +8 pts dans l\'indice de confiance. Les équipes avec ≥ 4 victoires sur 5 présentent un signal renforcé. ⚠️ Analyse statistique uniquement.';
+  if (q.includes('marquer') || q.includes('buteur') || q.includes('score') || q.includes('nante') || q.includes('qui va')) {
+    if (m) return `Sur ${m.home} vs ${m.away} : l'algo donne ${m.homeWin}% dom., ${m.draw}% nul, ${m.awayWin}% ext. Le signal global est à ${m.confidence}%. ${m.confidence >= 70 ? "C'est assez clair." : "C'est serré, je joue la prudence."}`;
+    return "C'est lequel le match ? Dis-moi et j'analyse ça direct.";
   }
-  if (q.includes('combiné') || q.includes('combin')) {
-    return '🎯 Combiné algorithmique : La prob. conjointe de 3 sélections indépendantes à 70% est ≈ 34%. L\'algorithme recommande des signaux ≥ 70% avec faible corrélation entre matchs pour limiter le risque. ⚠️ Ces données sont à titre informatif uniquement.';
-  }
-  if (q.includes('vs') || q.includes('analyse')) {
-    const m = currentMatch;
-    if (m) return `🔍 ${m.home} vs ${m.away} : λ_dom = ${m.goalsHome}, λ_ext = ${m.goalsAway}. BTTS ${m.btts}%, Over 2.5 ${m.over25}%, victoire dom. ${m.homeWin ?? '?'}%. Signal global : ${m.confidence}% (${m.confidence >= 80 ? 'élevé' : m.confidence >= 65 ? 'modéré' : 'faible'}). ⚠️ Analyse statistique uniquement.`;
-  }
-  return '🤖 BetVision AI : Pour activer l\'IA en temps réel, configurez la variable GROQ_API_KEY dans Vercel. En mode démonstration, l\'algorithme Poisson reste pleinement opérationnel pour le calcul des probabilités sur tous les matchs chargés.';
+  if (m) return `${m.home} vs ${m.away} — victoire dom. ${m.homeWin}%, nul ${m.draw}%, ext. ${m.awayWin}%. Signal ${m.confidence}%. Tu veux qu'on creuse un angle ?`;
+  const fallbacks = [
+    "Dis-moi le match qui t'intéresse, je sors les stats.",
+    "C'est quoi le match du moment pour toi ?",
+    "J'attends le nom du match et je te balance l'analyse.",
+  ];
+  return fallbacks[Math.floor(Math.random() * fallbacks.length)];
 }
 
 // ─── DASHBOARD ───
 function loadDashboard() {
   const all = Object.values(loadedMatchesMap);
-  const src = all.length ? all : Object.values(FALLBACK).flat();
+  const src = all;
 
   const avgBTTS  = src.length ? Math.round(src.reduce((s, m) => s + m.btts,   0) / src.length) : '--';
   const avgOver  = src.length ? Math.round(src.reduce((s, m) => s + m.over25, 0) / src.length) : '--';
@@ -1066,10 +3277,7 @@ function loadDashboard() {
 }
 
 function loadTopSignals(src) {
-  const source = src || (() => {
-    const all = Object.values(loadedMatchesMap);
-    return all.length ? all : Object.values(FALLBACK).flat();
-  })();
+  const source = src || Object.values(loadedMatchesMap);
 
   const top = source
     .filter(m => m.confidence >= 68)
@@ -1094,6 +3302,411 @@ function loadTopSignals(src) {
 
 // ─── INIT ───
 loadMatches('PL');
+
+// ─── AUTH MODAL ───
+let authMode = 'login';
+let supabaseClient = null;
+
+function openAuthModal() {
+  document.getElementById('auth-modal').classList.add('open');
+  document.getElementById('auth-email').focus();
+}
+
+function closeAuthModal() {
+  document.getElementById('auth-modal').classList.remove('open');
+  document.getElementById('auth-msg').textContent = '';
+}
+
+function switchTab(mode) {
+  authMode = mode;
+  document.getElementById('tab-login').classList.toggle('active', mode === 'login');
+  document.getElementById('tab-signup').classList.toggle('active', mode === 'signup');
+  document.getElementById('auth-submit').textContent = mode === 'login' ? 'Se connecter' : "S'inscrire";
+  document.getElementById('auth-msg').textContent = '';
+}
+
+async function signInWithGoogle() {
+  await supabaseReady;
+  const msg = document.getElementById('auth-msg');
+  if (!supabaseClient) { msg.style.color = 'var(--red)'; msg.textContent = 'Service indisponible.'; return; }
+  msg.style.color = 'var(--text-3)';
+  msg.textContent = '⏳ Redirection...';
+  const { error } = await supabaseClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: 'https://betvisionai.app' } });
+  if (error) { msg.style.color = 'var(--red)'; msg.textContent = error.message; }
+}
+
+async function handleAuth() {
+  await supabaseReady;
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const msg = document.getElementById('auth-msg');
+  if (!supabaseClient) { msg.style.color = 'var(--red)'; msg.textContent = 'Service indisponible.'; return; }
+  if (!email || !password) { msg.style.color = 'var(--red)'; msg.textContent = 'Remplissez tous les champs.'; return; }
+  msg.style.color = 'var(--text-3)';
+  msg.textContent = '⏳ Traitement...';
+  try {
+    const fn = authMode === 'login'
+      ? supabaseClient.auth.signInWithPassword({ email, password })
+      : supabaseClient.auth.signUp({ email, password });
+    const { error } = await fn;
+    if (error) throw error;
+    msg.style.color = 'var(--accent)';
+    msg.textContent = authMode === 'login' ? '✓ Connecté !' : '✓ Compte créé ! Vérifiez votre email.';
+    if (authMode === 'login') setTimeout(closeAuthModal, 1000);
+  } catch (e) {
+    msg.style.color = 'var(--red)';
+    msg.textContent = e.message || 'Erreur, réessayez.';
+  }
+}
+
+// ─── SUPABASE INIT après DOMContentLoaded ───
+const supabaseReady = new Promise(resolve => {
+  const init = async () => {
+    try {
+      const cfg = await fetch('/api/config').then(r => r.json());
+      supabaseClient = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey);
+      supabaseClient.auth.onAuthStateChange((_event, session) => {
+        const user = session?.user;
+        currentUser = user || null;
+        updateChatInputVisibility();
+        loadFavoris();
+        renderPaddockStats();
+        renderTopMatches();
+        const btnCnx      = document.getElementById('btn-connexion');
+        const avatar      = document.getElementById('user-avatar');
+        const drawerUser  = document.getElementById('drawer-user-block');
+        const drawerLogin = document.getElementById('drawer-login-block');
+        const drawerAv    = document.getElementById('drawer-avatar');
+        const drawerName  = document.getElementById('drawer-username');
+        if (user) {
+          applyUserProfile(user);
+          btnCnx.style.display = 'none';
+          avatar.style.display = 'block';
+          if (drawerUser) drawerUser.style.display = 'block';
+          if (drawerLogin) drawerLogin.style.display = 'none';
+          closeAuthModal();
+        } else {
+          avatar.style.display = 'none';
+          btnCnx.style.display = '';
+          if (drawerUser) drawerUser.style.display = 'none';
+          if (drawerLogin) drawerLogin.style.display = 'block';
+        }
+      });
+    } catch (e) {
+      console.warn('Supabase non initialisé :', e);
+    }
+    resolve();
+    initPaddock();
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+});
+
+async function signOut() {
+  if (!supabaseClient) return;
+  await supabaseClient.auth.signOut();
+}
+
+// ─── DRAWER ───
+function toggleDrawer() {
+  const open = document.getElementById('drawer').classList.toggle('open');
+  document.getElementById('drawer-overlay').classList.toggle('open', open);
+  document.getElementById('hamburger').classList.toggle('open', open);
+}
+
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer-overlay').classList.remove('open');
+  document.getElementById('hamburger').classList.remove('open');
+}
+
+function toggleFootball() {
+  const btn = document.getElementById('sport-football');
+  const sub = document.getElementById('submenu-football');
+  btn.classList.toggle('expanded');
+  sub.classList.toggle('open');
+}
+
+function soonAvailable(sport) {
+  alert(sport + ' — Bientôt disponible !');
+}
+
+// ─── COMMUNITY CHAT ───
+let currentUser = null;
+let chatInitialized = false;
+let chatChannel = null;
+
+function updateChatInputVisibility() {
+  const locked = document.getElementById('chat-locked-notice');
+  const row    = document.getElementById('chat-send-row');
+  if (!locked || !row) return;
+  if (currentUser) {
+    locked.style.display = 'none';
+    row.style.display    = 'flex';
+  } else {
+    locked.style.display = 'block';
+    row.style.display    = 'none';
+  }
+}
+
+function initChat() {
+  updateChatInputVisibility();
+  if (!chatInitialized) {
+    chatInitialized = true;
+    loadChatMessages();
+    subscribeChatRealtime();
+    checkBotMessage();
+  }
+  setTimeout(scrollChatToBottom, 150);
+}
+
+async function loadChatMessages() {
+  if (!supabaseClient) return;
+  const { data } = await supabaseClient
+    .from('messages')
+    .select('*')
+    .order('created_at', { ascending: true })
+    .limit(80);
+  const feed = document.getElementById('community-feed');
+  if (!feed) return;
+  feed.innerHTML = '';
+  (data || []).forEach(appendChatMessage);
+  scrollChatToBottom();
+}
+
+function subscribeChatRealtime() {
+  if (!supabaseClient || chatChannel) return;
+  chatChannel = supabaseClient
+    .channel('public:messages')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+      appendChatMessage(payload.new);
+      scrollChatToBottom();
+    })
+    .subscribe();
+}
+
+function appendChatMessage(msg) {
+  const feed = document.getElementById('community-feed');
+  if (!feed) return;
+  const isOwn = currentUser && msg.user_id === currentUser.id;
+  const time  = new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const av    = msg.avatar_url
+    ? `<img class="chat-av" src="${msg.avatar_url}" alt="">`
+    : `<div class="chat-av">👤</div>`;
+  const imgHtml = msg.image_url
+    ? `<img class="chat-bubble-img" src="${escapeAttr(msg.image_url)}" alt="" onclick="openImgOverlay('${escapeAttr(msg.image_url)}')">`
+    : '';
+  const row = document.createElement('div');
+  row.className = `chat-row${isOwn ? ' own' : ''}`;
+  row.innerHTML = `${av}<div class="chat-bubble"><div class="chat-bubble-name">${escapeHtml(msg.username || 'Anonyme')}</div><div class="chat-bubble-text">${escapeHtml(msg.content || '')}</div>${imgHtml}<div class="chat-bubble-time">${time}</div></div>`;
+  feed.appendChild(row);
+}
+
+function escapeHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escapeAttr(s) { return String(s).replace(/"/g,'&quot;'); }
+
+async function sendChatMessage() {
+  if (!supabaseClient || !currentUser) return;
+  const input = document.getElementById('community-input');
+  const content = input.value.trim();
+  if (!content) return;
+  input.value = ''; input.style.height = 'auto';
+  const meta = currentUser.user_metadata || {};
+  await supabaseClient.from('messages').insert({
+    user_id:    currentUser.id,
+    username:   meta.full_name || meta.name || currentUser.email?.split('@')[0] || 'Anonyme',
+    avatar_url: meta.avatar_url || meta.picture || null,
+    content,
+    image_url:  null,
+  });
+}
+
+async function handleChatImageUpload(event) {
+  if (!supabaseClient || !currentUser) return;
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+  const ext  = file.name.split('.').pop();
+  const path = `${currentUser.id}/${Date.now()}.${ext}`;
+  const { error } = await supabaseClient.storage.from('chat-images').upload(path, file);
+  if (error) { console.warn('Upload error:', error); return; }
+  const { data } = supabaseClient.storage.from('chat-images').getPublicUrl(path);
+  const meta = currentUser.user_metadata || {};
+  await supabaseClient.from('messages').insert({
+    user_id:    currentUser.id,
+    username:   meta.full_name || meta.name || currentUser.email?.split('@')[0] || 'Anonyme',
+    avatar_url: meta.avatar_url || meta.picture || null,
+    content:    '',
+    image_url:  data.publicUrl,
+  });
+}
+
+async function checkBotMessage() {
+  const key  = 'bv_bot_last';
+  const last = parseInt(localStorage.getItem(key) || '0', 10);
+  if (Date.now() - last < 86400000) return;
+  if (!supabaseClient) return;
+  localStorage.setItem(key, String(Date.now()));
+  await supabaseClient.from('messages').insert({
+    user_id:    '00000000-0000-0000-0000-000000000000',
+    username:   'BetVision AI',
+    avatar_url: null,
+    content:    '⚠️ Pour le bon fonctionnement de la communauté : respect obligatoire. Insultes et contenus inappropriés = ban définitif.',
+    image_url:  null,
+  });
+}
+
+function scrollChatToBottom() {
+  const f = document.getElementById('community-feed');
+  if (f) f.scrollTop = f.scrollHeight;
+}
+
+function openImgOverlay(url) {
+  document.getElementById('img-overlay-el').src = url;
+  document.getElementById('img-overlay').classList.add('open');
+}
+
+function closeImgOverlay() {
+  document.getElementById('img-overlay').classList.remove('open');
+}
+
+// ─── LEAGUE MATCHES VIEW ─────────────────────────────────
+let leagueCache = { previous: null, current: null, next: null, sport: null, tournament: null, tournamentName: null };
+
+async function openLeagueView(sport, tournament, tournamentName) {
+  leagueCache = { previous: null, current: null, next: null, sport, tournament, tournamentName };
+
+  document.getElementById('page-leaguematches').style.display = 'block';
+  document.getElementById('lm-title').textContent = tournamentName;
+  document.getElementById('lm-round').textContent = 'Journée —';
+  document.getElementById('lm-list').innerHTML = '<div class="spinner"></div>';
+  _lmSetActiveNavBtn('current');
+  window.scrollTo(0, 0);
+
+  try {
+    const res  = await fetch(`/api/league-matches?sport=${encodeURIComponent(sport)}&tournament=${encodeURIComponent(tournament)}&journee=current`);
+    const data = await res.json();
+    leagueCache.current = data;
+    renderLeagueMatches(data.matches || [], data.journee, tournamentName);
+  } catch {
+    document.getElementById('lm-list').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Erreur de chargement</div></div>';
+  }
+}
+
+function renderLeagueMatches(matches, journee, tournamentName) {
+  if (tournamentName) document.getElementById('lm-title').textContent = tournamentName;
+  const roundLabel = journee
+    ? (isNaN(journee) ? String(journee) : `Journée ${journee}`)
+    : 'Journée —';
+  document.getElementById('lm-round').textContent = roundLabel;
+  const list = document.getElementById('lm-list');
+
+  if (!matches.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-text">Aucun match pour cette journée</div></div>';
+    return;
+  }
+
+  list.innerHTML = matches.map(m => {
+    if (m.status !== 'canceled') {
+      loadedMatchesMap[m.id] = {
+        id: m.id,
+        home: m.homeTeam, away: m.awayTeam,
+        homeTeamId: m.homeTeamId || null,
+        awayTeamId: m.awayTeamId || null,
+        competition: m.tournament,
+        date: m.startDate, time: m.startTime,
+        formHome: ['?','?','?','?','?'], formAway: ['?','?','?','?','?'],
+        btts: 0, over25: 0, over15: 0,
+        homeWin: 0, draw: 0, awayWin: 0,
+        goalsHome: 0, goalsAway: 0, cleanHome: 0, cleanAway: 0,
+        confidence: 50,
+        status: m.status || 'upcoming',
+        score:  m.score  || null,
+      };
+    }
+    let badgeHtml = '';
+    if      (m.status === 'live')      badgeHtml = '<span class="lm-badge live">LIVE</span>';
+    else if (m.status === 'finished')  badgeHtml = '<span class="lm-badge finished">Terminé</span>';
+    else if (m.status === 'postponed') badgeHtml = '<span class="lm-badge postponed">Reporté</span>';
+    else if (m.status === 'canceled')  badgeHtml = '<span class="lm-badge canceled">Annulé</span>';
+
+    let centerHtml;
+    if (m.score && (m.status === 'live' || m.status === 'finished')) {
+      const cls = m.status === 'live' ? 'lm-score live-score' : 'lm-score';
+      const periodStr = m.score.periods ? `<div style="font-size:9px;opacity:0.6;letter-spacing:0.5px">${m.score.periods}</div>` : '';
+      centerHtml = `<div class="lm-score-wrap"><div class="${cls}">${m.score.home} - ${m.score.away}</div>${periodStr}<div class="lm-center-date">${escapeHtml(m.startDate || '')}</div></div>`;
+    } else {
+      centerHtml = `<div class="lm-score-wrap"><div class="lm-time">${m.startTime || '--:--'}</div><div class="lm-center-date">${escapeHtml(m.startDate || '')}</div></div>`;
+    }
+
+    const teamInitials = (name) => (name || '?').split(' ').map(w => w[0]).join('').slice(0,3).toUpperCase();
+    const logoHtml = (url, teamName) => {
+      const initials = teamInitials(teamName);
+      const fallbackId = 'fb' + Math.random().toString(36).slice(2,8);
+      if (!url) return `<div class="lm-logo lm-logo-init"><span>${initials}</span></div>`;
+      return `<img class="lm-logo" src="${url}" referrerpolicy="no-referrer" alt="${initials}"
+        onerror="this.style.display='none';document.getElementById('${fallbackId}').style.display='flex'">
+        <div class="lm-logo lm-logo-init" id="${fallbackId}" style="display:none"><span>${initials}</span></div>`;
+    };
+
+    const favId   = String(m.id);
+    const isFav   = typeof userFavoris !== 'undefined' && userFavoris.has(favId);
+    const favBtn  = m.status !== 'canceled'
+      ? `<button class="lm-fav-btn${isFav ? ' is-fav' : ''}" id="fav-${favId}" onclick="toggleFavori('${favId}',event)">★</button>`
+      : '';
+    const clickAttr = m.status !== 'canceled' ? `onclick="openAnalysis(${JSON.stringify(m.id)})"` : '';
+    return `<div class="lm-card status-${m.status}" ${clickAttr}>
+      <div class="lm-card-date">${escapeHtml(m.startDate || '')}</div>
+      ${favBtn}
+      ${badgeHtml ? `<div class="lm-badge-wrap">${badgeHtml}</div>` : ''}
+      <div class="lm-teams-row">
+        <div class="lm-team">
+          ${logoHtml(m.homeLogo, m.homeTeam)}
+          <div class="lm-team-name">${escapeHtml(m.homeTeam || '?')}</div>
+        </div>
+        ${centerHtml}
+        <div class="lm-team">
+          ${logoHtml(m.awayLogo, m.awayTeam)}
+          <div class="lm-team-name">${escapeHtml(m.awayTeam || '?')}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function closeLeagueView() {
+  document.getElementById('page-leaguematches').style.display = 'none';
+}
+
+async function navigateToDay(direction) {
+  _lmSetActiveNavBtn(direction);
+
+  if (leagueCache[direction]) {
+    const d = leagueCache[direction];
+    renderLeagueMatches(d.matches || [], d.journee, leagueCache.tournamentName);
+    return;
+  }
+
+  document.getElementById('lm-list').innerHTML = '<div class="spinner"></div>';
+  try {
+    const res  = await fetch(`/api/league-matches?sport=${encodeURIComponent(leagueCache.sport)}&tournament=${encodeURIComponent(leagueCache.tournament)}&journee=${direction}`);
+    const data = await res.json();
+    leagueCache[direction] = data;
+    renderLeagueMatches(data.matches || [], data.journee, leagueCache.tournamentName);
+  } catch {
+    document.getElementById('lm-list').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Erreur de chargement</div></div>';
+  }
+}
+
+function _lmSetActiveNavBtn(direction) {
+  ['previous', 'current', 'next'].forEach(d => {
+    const btn = document.getElementById(`lm-btn-${d}`);
+    if (btn) btn.classList.toggle('active', d === direction);
+  });
+}
 </script>
 </body>
 </html>
