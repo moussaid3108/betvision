@@ -309,23 +309,17 @@ app.get('/api/upcoming', async (req, res) => {
     // Trier par dayOffset puis par heure
     allMatches.sort((a, b) => a.dayOffset - b.dayOffset || a.time.localeCompare(b.time));
 
-    // Préchargement cotes Sofascore pour les matchs du jour (sans clé API, gratuit)
+    // Préchargement cotes via RapidAPI pour les matchs du jour
     const todayOnly = allMatches.filter(m => m.dayOffset === 0 && m.status !== 'finished');
     if (todayOnly.length) {
-      console.log(`[odds-prefetch] Fetch cotes pour ${todayOnly.length} matchs du jour...`);
+      console.log(`[odds-prefetch] Fetch cotes pour ${todayOnly.length} matchs du jour (RapidAPI)...`);
       for (const m of todayOnly) {
         if (oddsCache.has(String(m.id))) { console.log(`[odds-prefetch] ${m.home} vs ${m.away} → cache`); continue; }
         try {
           const r = await fetch(
-            `https://api.sofascore.app/api/v1/event/${m.id}/odds/1/featured`,
+            `${SPORT_BASE}/api/v1/event/${m.id}/odds/1/featured`,
             {
-              headers: {
-                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
-                'Accept': 'application/json, text/plain, */*',
-                'Accept-Language': 'fr-FR,fr;q=0.9',
-                'Referer': 'https://www.sofascore.com/',
-                'Origin': 'https://www.sofascore.com',
-              },
+              headers: { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY },
               signal: AbortSignal.timeout(5000)
             }
           );
@@ -867,8 +861,17 @@ const leagueCache       = new Map(); // `${sport}:${tid}:${journee}` → {data, 
 const liveScoreCache    = new Map(); // `${matchId}` → {data, ts}
 const LEAGUE_ROUNDS_TTL = 2 * 3_600_000; // 2h (était 30min — 45 appels RapidAPI par scan)
 
+// Normalisation des slugs sport → slug API Sofascore/SportAPI7
+const SPORT_SLUG_MAP = {
+  'icehockey':    'ice-hockey',
+  'ice_hockey':   'ice-hockey',
+  'martial-arts': 'mma',
+  'boxing':       'boxing',
+};
+
 async function getLeagueRounds(sport, tournamentId, KEY) {
-  const cacheKey = `${sport}:${tournamentId}`;
+  const apiSport = SPORT_SLUG_MAP[sport] || sport;
+  const cacheKey = `${apiSport}:${tournamentId}`;
   const cached = leagueRoundsCache.get(cacheKey);
   if (cached && Date.now() - cached.ts < LEAGUE_ROUNDS_TTL) return cached;
 
@@ -879,7 +882,8 @@ async function getLeagueRounds(sport, tournamentId, KEY) {
     const d = new Date(today);
     d.setDate(d.getDate() + offset);
     const dateStr = d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
-    const url = `${SPORT_BASE}/api/v1/sport/${sport}/scheduled-events/${dateStr}`;
+    const url = `${SPORT_BASE}/api/v1/sport/${apiSport}/scheduled-events/${dateStr}`;
+    if (offset === -14) console.log(`[SOFASCORE-FETCH] sport=${apiSport} tid=${tournamentId} url=.../${apiSport}/scheduled-events/${dateStr}`);
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const r = await fetch(url, { headers: hdr });
@@ -908,14 +912,25 @@ async function getLeagueRounds(sport, tournamentId, KEY) {
     });
   });
 
+  // Regroupement : roundInfo.round (foot/basket) → roundInfo.name (tennis) → jour (fallback)
   const rounds = new Map();
   eventsMap.forEach(e => {
-    const round = e.roundInfo?.round;
-    if (round != null) {
-      if (!rounds.has(round)) rounds.set(round, []);
-      rounds.get(round).push(e);
+    let round = e.roundInfo?.round;
+    if (round == null) {
+      // Tennis/MMA : utiliser le nom de round ou regrouper par semaine
+      const name = e.roundInfo?.name;
+      if (name) {
+        round = `n:${name}`;
+      } else {
+        const weekKey = Math.floor((e.startTimestamp || 0) / (7 * 86400));
+        round = `w${weekKey}`;
+      }
     }
+    if (!rounds.has(round)) rounds.set(round, []);
+    rounds.get(round).push(e);
   });
+
+  console.log(`[SOFASCORE-FETCH] sport=${apiSport} tid=${tournamentId} → ${eventsMap.size} events, ${rounds.size} rounds`);
 
   // Trier par date du premier match (pas par numéro de journée)
   const sortedByDate = [...rounds.keys()].sort((a, b) => {
@@ -964,8 +979,25 @@ function mapEventStatus(type) {
   return 'scheduled';
 }
 
-function mapEventToMatch(e) {
+function mapEventToMatch(e, sport) {
   const d = e.startTimestamp ? new Date(e.startTimestamp * 1000) : null;
+  const hS = e.homeScore, aS = e.awayScore;
+
+  // Score principal (sets gagnés pour tennis, buts/points sinon)
+  let score = null;
+  if (hS?.current != null && aS?.current != null) {
+    score = { home: hS.current, away: aS.current };
+    // Tennis : ajouter le détail des sets (period1, period2…)
+    if (sport === 'tennis') {
+      const periods = [];
+      for (let p = 1; p <= 5; p++) {
+        if (hS[`period${p}`] != null && aS[`period${p}`] != null)
+          periods.push(`${hS[`period${p}`]}-${aS[`period${p}`]}`);
+      }
+      if (periods.length) score.periods = periods.join(' ');
+    }
+  }
+
   return {
     id:          e.id,
     homeTeam:    e.homeTeam?.name || '?',
@@ -977,10 +1009,9 @@ function mapEventToMatch(e) {
     startTime:   d ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }) : '--:--',
     startDate:   d ? d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'Europe/Paris' }) : 'TBD',
     status:      mapEventStatus(e.status?.type),
-    score:       (e.homeScore?.current != null && e.awayScore?.current != null)
-                   ? { home: e.homeScore.current, away: e.awayScore.current }
-                   : null,
+    score,
     tournament:  e.tournament?.name || '',
+    round:       e.roundInfo?.name || null,
   };
 }
 
@@ -1355,15 +1386,22 @@ app.get('/api/league-matches', async (req, res) => {
     const matches = (rounds.get(targetRound) || [])
       .filter(e => journee !== 'current' || (e.startTimestamp || 0) >= todayStart)
       .sort((a, b) => (a.startTimestamp || 0) - (b.startTimestamp || 0))
-      .map(mapEventToMatch);
+      .map(e => mapEventToMatch(e, sport));
+
+    // Libellé de journée adapté au sport
+    const journeeLabel = typeof targetRound === 'string' && targetRound.startsWith('n:')
+      ? targetRound.slice(2)
+      : typeof targetRound === 'string' && targetRound.startsWith('w')
+        ? `Semaine ${targetRound.slice(1)}`
+        : targetRound;
 
     const result = {
-      journee: targetRound,
+      journee: journeeLabel,
       matches,
       journeeInfo: {
         current:  currentRound,
-        previous: previousRound ?? currentRound - 1,
-        next:     nextRound     ?? currentRound + 1,
+        previous: previousRound ?? currentRound,
+        next:     nextRound     ?? currentRound,
       },
     };
 
@@ -1466,16 +1504,12 @@ app.get('/api/odds', async (req, res) => {
   const cached = oddsCache.get(eventId);
   if (cached && Date.now() - cached.ts < ODDS_TTL) return res.json(cached.data);
 
+  const KEY = process.env.RAPIDAPI_KEY;
+  if (!KEY) return res.status(500).json({ error: 'RAPIDAPI_KEY not configured' });
+
   try {
-    // Sofascore public API
-    const r = await fetch(`https://api.sofascore.app/api/v1/event/${eventId}/odds/1/featured`, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'fr-FR,fr;q=0.9',
-        'Referer': 'https://www.sofascore.com/',
-        'Origin': 'https://www.sofascore.com',
-      },
+    const r = await fetch(`${SPORT_BASE}/api/v1/event/${eventId}/odds/1/featured`, {
+      headers: { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY },
       signal: AbortSignal.timeout(6000)
     });
     if (!r.ok) return res.status(502).json({ error: 'Odds unavailable' });
