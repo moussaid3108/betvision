@@ -311,7 +311,16 @@ app.get('/api/upcoming', async (req, res) => {
         try {
           const r = await fetch(
             `https://api.sofascore.app/api/v1/event/${m.id}/odds/1/featured`,
-            { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(5000) }
+            {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+                'Accept': 'application/json, text/plain, */*',
+                'Accept-Language': 'fr-FR,fr;q=0.9',
+                'Referer': 'https://www.sofascore.com/',
+                'Origin': 'https://www.sofascore.com',
+              },
+              signal: AbortSignal.timeout(5000)
+            }
           );
           if (r.ok) {
             const json = await r.json();
@@ -603,10 +612,12 @@ RÉPARTIE & CARACTÈRE (le sel de la conversation) :
 - DOSAGE : 1 vanne pour 3-4 messages normaux. Pas un comique permanent — un pote qui sait placer ses vannes.
 
 COTES BOOKMAKER — RÈGLE :
-- Les cotes réelles bookmaker sont dans le bloc "COTES BOOKMAKER vs ALGO" quand il est présent. C'est la référence absolue pour comparer la valeur.
-- Si ce bloc est ABSENT mais que tu as les probabilités algo du match (homeWin%, draw%, awayWin%) : calcule la cote équitable algo = 100 / probabilité%, et précise que c'est l'estimation algo, pas la cote bookmaker réelle. Exemple : "Algo dom. à 58% → cote équitable ~1.72. Les books ajoutent leur marge, donc attends-toi à quelque chose autour de 1.60-1.65 en réel."
-- Si tu n'as NI cotes NI probas pour ce match : alors seulement tu dis "Sélectionne ce match depuis la liste pour que j'aie ses stats en direct."
-- JAMAIS d'invention pure sans base de calcul. Mais si tu as les probas → utilise-les.
+- Les cotes réelles bookmaker sont dans la ligne du match sous la forme "Cotes: 1=X X=X 2=X". C'est la référence absolue.
+- Si les vraies cotes sont présentes → cite-les et analyse la valeur (compare avec Dom%/Nul%/Ext%).
+- Si les vraies cotes sont ABSENTES mais que tu as Dom%/Nul%/Ext% pour ce match → CALCULE immédiatement la cote équitable : cote = 100 / probabilité. Exemple : Dom. 58% → cote équitable 1.72, Nul 28% → 3.57, Ext. 27% → 3.70. Précise : "C'est l'estimation algo — les books sont généralement 5-10% moins généreux, donc attends-toi à ~1.60/3.20/3.40 en vrai."
+- RÈGLE ABSOLUE : si le match est dans tes blocs ([TODAY_RESULTS], [TODAY_LIVESCORE] ou [NEXT_10_DAYS_SCHEDULE]) → tu as forcément Dom%/Nul%/Ext% → tu DOIS calculer et répondre. JAMAIS "sélectionne le match" pour un match déjà dans ton calendrier.
+- "Sélectionne ce match depuis la liste" → UNIQUEMENT si le match n'est dans AUCUN de tes blocs.
+- JAMAIS d'invention sans base de calcul. Mais si tu as les probas → utilise-les TOUJOURS.
 
 ANALYSTE DE COTES (value bet flair) :
 - Quand tu reçois des données "COTES BOOKMAKER vs ALGO" : compare les écarts et identifie la meilleure valeur.
@@ -1438,9 +1449,17 @@ app.get('/api/odds', async (req, res) => {
   if (cached && Date.now() - cached.ts < ODDS_TTL) return res.json(cached.data);
 
   try {
-    // Sofascore public API (même domaine que les logos d'équipes)
-    const r = await fetch(`https://api.sofascore.app/api/v1/event/${eventId}/odds/1/featured`,
-      { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(6000) });
+    // Sofascore public API
+    const r = await fetch(`https://api.sofascore.app/api/v1/event/${eventId}/odds/1/featured`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'fr-FR,fr;q=0.9',
+        'Referer': 'https://www.sofascore.com/',
+        'Origin': 'https://www.sofascore.com',
+      },
+      signal: AbortSignal.timeout(6000)
+    });
     if (!r.ok) return res.status(502).json({ error: 'Odds unavailable' });
     const json = await r.json();
     const odds = extract1X2(json);
