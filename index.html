@@ -2364,8 +2364,8 @@ function renderAnalysis(m) {
       🤖 Analyser avec l'IA
     </button>
 
-    <!-- 4. COTES BOOKMAKER -->
-    <div id="analysis-odds-block"><div style="text-align:center;padding:14px;opacity:0.4;font-size:13px">Chargement des cotes…</div></div>
+    <!-- 4. COTES BOOKMAKER (rempli par renderOddsBlock) -->
+    <div id="analysis-odds-block"></div>
 
     <!-- 4. SIGNAL ALGORITHMIQUE -->
     <div class="signal-card">
@@ -2442,33 +2442,54 @@ function renderAnalysis(m) {
 function renderOddsBlock(od) {
   const el = document.getElementById('analysis-odds-block');
   if (!el) return;
+
   if (!od?.odds) {
-    el.innerHTML = '';
+    el.innerHTML = `
+      <div style="background:#1a1e2a;border-radius:14px;padding:16px;margin-bottom:14px;border:1px solid rgba(255,255,255,0.06)">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#555d72;margin-bottom:12px">📈 Cotes bookmaker</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
+          <div style="background:#212636;border-radius:10px;padding:14px 6px">
+            <div style="font-size:10px;color:#555d72;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">1 Dom.</div>
+            <div style="font-size:22px;font-weight:900;font-family:'Barlow Condensed',sans-serif;color:#555d72">—</div>
+          </div>
+          <div style="background:#212636;border-radius:10px;padding:14px 6px">
+            <div style="font-size:10px;color:#555d72;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">X Nul</div>
+            <div style="font-size:22px;font-weight:900;font-family:'Barlow Condensed',sans-serif;color:#555d72">—</div>
+          </div>
+          <div style="background:#212636;border-radius:10px;padding:14px 6px">
+            <div style="font-size:10px;color:#555d72;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">2 Ext.</div>
+            <div style="font-size:22px;font-weight:900;font-family:'Barlow Condensed',sans-serif;color:#555d72">—</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:#555d72;text-align:center">Cotes indisponibles pour ce match</div>
+      </div>`;
     return;
   }
+
   const { home, draw, away } = od.odds;
   const bv = od.bestValue;
   const valueBadge = bv
-    ? `<div style="margin-top:10px;padding:9px 12px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.25);border-radius:8px;font-size:12px;color:var(--accent);display:flex;align-items:center;gap:6px">
-        <span style="font-size:16px">🔥</span>
-        <span>Value bet : <strong>${bv.label}</strong> @ <strong>${bv.odds}</strong> <span style="opacity:.7">(+${bv.gap}% vs cote implicite)</span></span>
+    ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.25);border-radius:8px;font-size:12px;color:#00e5a0;display:flex;align-items:center;gap:8px">
+        <span style="font-size:15px">🔥</span>
+        <span>Value bet : <strong>${bv.label}</strong> @ <strong>${bv.odds}</strong> <span style="opacity:.65">(+${bv.gap}% vs cote implicite)</span></span>
        </div>`
     : '';
+
   el.innerHTML = `
-    <div style="background:var(--surface-2);border-radius:var(--radius);padding:16px;margin-bottom:14px">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);margin-bottom:12px">📈 Cotes bookmaker</div>
+    <div style="background:#1a1e2a;border-radius:14px;padding:16px;margin-bottom:14px;border:1px solid rgba(255,255,255,0.06)">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#555d72;margin-bottom:12px">📈 Cotes bookmaker</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
-        <div style="background:var(--surface-1);border-radius:10px;padding:12px 6px">
-          <div style="font-size:10px;color:var(--text-3);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">1 Dom.</div>
-          <div style="font-size:24px;font-weight:900;font-family:'Barlow Condensed',sans-serif;color:var(--text-1);line-height:1">${home}</div>
+        <div style="background:#212636;border-radius:10px;padding:14px 6px">
+          <div style="font-size:10px;color:#8b92a8;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">1 Dom.</div>
+          <div style="font-size:26px;font-weight:900;font-family:'Barlow Condensed',sans-serif;color:#f0f2f7;line-height:1">${home}</div>
         </div>
-        <div style="background:var(--surface-1);border-radius:10px;padding:12px 6px">
-          <div style="font-size:10px;color:var(--text-3);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">X Nul</div>
-          <div style="font-size:24px;font-weight:900;font-family:'Barlow Condensed',sans-serif;color:var(--text-1);line-height:1">${draw ?? '—'}</div>
+        <div style="background:#212636;border-radius:10px;padding:14px 6px">
+          <div style="font-size:10px;color:#8b92a8;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">X Nul</div>
+          <div style="font-size:26px;font-weight:900;font-family:'Barlow Condensed',sans-serif;color:#f0f2f7;line-height:1">${draw ?? '—'}</div>
         </div>
-        <div style="background:var(--surface-1);border-radius:10px;padding:12px 6px">
-          <div style="font-size:10px;color:var(--text-3);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">2 Ext.</div>
-          <div style="font-size:24px;font-weight:900;font-family:'Barlow Condensed',sans-serif;color:var(--text-1);line-height:1">${away}</div>
+        <div style="background:#212636;border-radius:10px;padding:14px 6px">
+          <div style="font-size:10px;color:#8b92a8;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">2 Ext.</div>
+          <div style="font-size:26px;font-weight:900;font-family:'Barlow Condensed',sans-serif;color:#f0f2f7;line-height:1">${away}</div>
         </div>
       </div>
       ${valueBadge}
