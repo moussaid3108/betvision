@@ -2374,17 +2374,17 @@ function renderAnalysis(m) {
     <div class="signal-card">
       <div class="signal-header">
         <span class="signal-title">🎯 Signal algorithmique</span>
-        <span class="signal-badge">${m.confidence >= 80 ? 'Élevé' : m.confidence >= 65 ? 'Modéré' : 'Faible'}</span>
+        <span class="signal-badge" style="${m.confidence >= 80 ? '' : m.confidence >= 65 ? 'background:rgba(245,200,66,.12);border-color:rgba(245,200,66,.3);color:#f5c842' : 'background:rgba(255,120,60,.12);border-color:rgba(255,120,60,.3);color:#ff783c'}">${m.confidence >= 80 ? 'Haute Confiance' : m.confidence >= 65 ? 'Modéré' : 'Prudence conseillée'}</span>
       </div>
       <div class="signal-meter">
         <div class="signal-level">${m.confidence}%</div>
-        <div class="signal-desc">Indice calculé via distribution de Poisson : forme récente (5 derniers matchs), attaque/défense dom.–ext. et stats de saison 2025.</div>
+        <div class="signal-desc">Indice basé sur l'efficacité offensive et la solidité défensive des 5 derniers matchs.</div>
       </div>
     </div>
 
     <!-- 5. BUTS ATTENDUS POISSON -->
     <div class="proba-section">
-      <div class="proba-title">⚽ Buts attendus (Poisson)</div>
+      <div class="proba-title">⚽ Score Prédictif</div>
       <div class="h2h-row">
         <div class="h2h-date">λ dom.</div>
         <div class="h2h-teams">${m.home}</div>
@@ -2474,7 +2474,7 @@ function renderOddsBlock(od) {
   const valueBadge = bv
     ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.25);border-radius:8px;font-size:12px;color:#00e5a0;display:flex;align-items:center;gap:8px">
         <span style="font-size:15px">🔥</span>
-        <span>Value bet : <strong>${bv.label}</strong> @ <strong>${bv.odds}</strong> <span style="opacity:.65">(+${bv.gap}% vs cote implicite)</span></span>
+        <span>Value bet : <strong>${bv.label}</strong> @ <strong>${bv.odds}</strong> <span style="opacity:.65">(+${bv.gap}% vs cote estimée par l'IA)</span></span>
        </div>`
     : '';
 
