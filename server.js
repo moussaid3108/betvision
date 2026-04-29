@@ -302,6 +302,40 @@ app.get('/api/upcoming', async (req, res) => {
     // Trier par dayOffset puis par heure
     allMatches.sort((a, b) => a.dayOffset - b.dayOffset || a.time.localeCompare(b.time));
 
+    // Préchargement cotes Sofascore pour les matchs du jour (sans clé API, gratuit)
+    const todayOnly = allMatches.filter(m => m.dayOffset === 0 && m.status !== 'finished');
+    if (todayOnly.length) {
+      console.log(`[odds-prefetch] Fetch cotes pour ${todayOnly.length} matchs du jour...`);
+      for (const m of todayOnly) {
+        if (oddsCache.has(String(m.id))) { console.log(`[odds-prefetch] ${m.home} vs ${m.away} → cache`); continue; }
+        try {
+          const r = await fetch(
+            `https://api.sofascore.app/api/v1/event/${m.id}/odds/1/featured`,
+            { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(5000) }
+          );
+          if (r.ok) {
+            const json = await r.json();
+            const odds = extract1X2(json);
+            if (odds) {
+              const algoProbs = { home: m.homeWin, draw: m.draw, away: m.awayWin };
+              const vb = (algoProbs.home && algoProbs.draw && algoProbs.away)
+                ? computeValueBet(odds, algoProbs)
+                : { odds, algoProbs: null, impliedProbs: null, gaps: null, bestValue: null };
+              oddsCache.set(String(m.id), { data: vb, ts: Date.now() });
+              console.log(`[odds-prefetch] ${m.home} vs ${m.away} → ${odds.home}/${odds.draw}/${odds.away}`);
+            } else {
+              console.warn(`[odds-prefetch] ${m.home} vs ${m.away} → pas de cotes 1X2`);
+            }
+          } else {
+            console.warn(`[odds-prefetch] ${m.home} vs ${m.away} → HTTP ${r.status}`);
+          }
+        } catch (err) {
+          console.warn(`[odds-prefetch] ${m.home} vs ${m.away} → erreur:`, err.message);
+        }
+        await sleep(300);
+      }
+    }
+
     const result = { matches: allMatches.slice(0, 120) };
     upcomingCache = { data: result, ts: Date.now(), dateKey };
     console.log('[/api/upcoming]', result.matches.length, 'matchs sur 10 jours mis en cache 1h');
@@ -394,7 +428,9 @@ app.post('/api/ai-chat', async (req, res) => {
         : '';
       const form = (m.formHome && m.formAway) ? ` | Forme: ${m.formHome}/${m.formAway}` : '';
       const day = m.dayLabel && m.dayLabel !== 'Aujourd\'hui' ? ` [${m.dayLabel}]` : '';
-      return `• ${m.home} vs ${m.away} (${m.competition}, ${m.time}${day})${scoreInfo}${stats}${form}`;
+      const cachedOdds = oddsCache.get(String(m.id))?.data?.odds;
+      const oddsStr = cachedOdds ? ` | Cotes: 1=${cachedOdds.home} X=${cachedOdds.draw} 2=${cachedOdds.away}` : '';
+      return `• ${m.home} vs ${m.away} (${m.competition}, ${m.time}${day})${scoreInfo}${stats}${form}${oddsStr}`;
     };
 
     // [LAST_5_RESULTS] — forme des équipes (5 derniers matchs par équipe)
