@@ -2381,18 +2381,18 @@ function renderAnalysis(m) {
         <span class="signal-title">🎯 Signal algorithmique</span>
         <span class="signal-badge" style="${m.confidence >= 80 ? '' : m.confidence >= 65 ? 'background:rgba(245,200,66,.12);border-color:rgba(245,200,66,.3);color:#f5c842' : 'background:rgba(255,120,60,.12);border-color:rgba(255,120,60,.3);color:#ff783c'}">${m.confidence >= 80 ? 'Haute Confiance' : m.confidence >= 65 ? 'Modéré' : 'Prudence conseillée'}</span>
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0 10px;gap:8px">
-        <div style="text-align:center;flex:1">
-          <div style="font-size:11px;color:#8b92a8;font-weight:600;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.home}</div>
-          <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;line-height:1;color:${homeWin >= awayWin ? '#00e5a0' : '#555d72'}">${homeWin}%</div>
+      <div style="display:flex;align-items:stretch;justify-content:space-between;margin:14px 0 10px;gap:6px">
+        <div style="text-align:center;flex:1;min-width:0;padding:10px 6px;background:#212636;border-radius:10px">
+          <div style="font-size:11px;color:#8b92a8;font-weight:600;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.home}</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:900;line-height:1;color:${homeWin >= awayWin ? '#00e5a0' : '#555d72'}">${homeWin}%</div>
         </div>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">
-          <div style="font-size:12px;color:#555d72;font-weight:700">vs</div>
-          <div style="font-size:10px;color:#555d72">Nul <span style="color:#f5c842;font-weight:700">${drawPct}%</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;flex-shrink:0;padding:0 4px">
+          <div style="font-size:11px;color:#555d72;font-weight:700">VS</div>
+          <div style="font-size:9px;color:#555d72;text-align:center">Nul<br><span style="color:#f5c842;font-weight:700;font-size:13px">${drawPct}%</span></div>
         </div>
-        <div style="text-align:center;flex:1">
-          <div style="font-size:11px;color:#8b92a8;font-weight:600;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.away}</div>
-          <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;line-height:1;color:${awayWin > homeWin ? '#00e5a0' : '#555d72'}">${awayWin}%</div>
+        <div style="text-align:center;flex:1;min-width:0;padding:10px 6px;background:#212636;border-radius:10px">
+          <div style="font-size:11px;color:#8b92a8;font-weight:600;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.away}</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:900;line-height:1;color:${awayWin > homeWin ? '#00e5a0' : '#555d72'}">${awayWin}%</div>
         </div>
       </div>
       <div class="signal-meter">
@@ -2505,16 +2505,15 @@ function renderOddsBlock(od) {
     const aW = currentMatch.awayWin ?? 0;
     const signalOutcome = hW >= dW && hW >= aW ? 'home' : aW > hW && aW >= dW ? 'away' : 'draw';
     if (bv.outcome !== signalOutcome) {
-      contradictionNote = `<div style="margin-top:8px;padding:8px 12px;background:rgba(255,120,60,.08);border:1px solid rgba(255,120,60,.25);border-radius:8px;font-size:12px;color:#ff9060;line-height:1.5">
-        ⚠️ <strong>Pourquoi l'outsider ?</strong> La cote ${bv.odds} sur ${bv.label} est trop généreuse par rapport au risque réel estimé. Le signal favorise l'autre équipe, mais le bookmaker sous-estime ici l'outsider — c'est précisément ce qu'on appelle une value bet.
+      contradictionNote = `<div style="margin-top:8px;padding:10px 12px;background:rgba(255,120,60,.08);border:1px solid rgba(255,120,60,.25);border-radius:8px;font-size:12px;color:#ff9060;line-height:1.5">
+        ⚠️ <strong>Pourquoi ce choix ?</strong> L'IA donne l'avantage au favori, mais la cote sur l'outsider est anormalement haute. C'est ce qu'on appelle une erreur du bookmaker : le gain potentiel justifie largement le risque pris.
       </div>`;
     }
   }
 
   const valueBadge = bv
-    ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.25);border-radius:8px;font-size:12px;color:#00e5a0;display:flex;align-items:center;gap:8px">
-        <span style="font-size:15px">🔥</span>
-        <span>Value bet : <strong>${bv.label}</strong> @ <strong>${bv.odds}</strong> <span style="opacity:.65">(+${bv.gap}% vs cote estimée par l'IA)</span></span>
+    ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.25);border-radius:8px;font-size:13px;color:#00e5a0;line-height:1.5">
+        🔥 <strong>Belle Opportunité :</strong> La cote de ${bv.label} (${bv.odds}) est mieux payée que prévu par l'IA.
        </div>${contradictionNote}`
     : '';
 
