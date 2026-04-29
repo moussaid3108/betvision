@@ -1464,21 +1464,54 @@ app.get('/api/live-scores', async (req, res) => {
 const oddsCache = new Map();
 const ODDS_TTL  = 30 * 60_000; // 30 min
 
+function parseFractionalOdds(c) {
+  if (typeof c.odds === 'number' && c.odds > 1) return c.odds;
+  if (typeof c.odds === 'string' && parseFloat(c.odds) > 1) return parseFloat(c.odds);
+  // Fractional: "17/10" → 2.70, "2/1" → 3.00
+  const frac = c.fractionalValue || c.initialFractionalValue;
+  if (frac && frac.includes('/')) {
+    const [n, d] = frac.split('/').map(Number);
+    if (n > 0 && d > 0) return +(1 + n / d).toFixed(2);
+  }
+  return null;
+}
+
 function extract1X2(data) {
-  // Rassemble tous les markets possibles selon la structure de l'API Sofascore
   const candidates = [];
-  if (Array.isArray(data?.markets))              candidates.push(...data.markets);
-  if (Array.isArray(data?.odds?.markets))        candidates.push(...data.odds.markets);
-  if (Array.isArray(data?.featured?.markets))    candidates.push(...data.featured.markets);
-  if (data?.featured?.choices)                   candidates.push(data.featured);
+  if (Array.isArray(data?.markets))           candidates.push(...data.markets);
+  if (Array.isArray(data?.odds?.markets))     candidates.push(...data.odds.markets);
+  if (Array.isArray(data?.featured?.markets)) candidates.push(...data.featured.markets);
+  if (data?.featured?.choices)               candidates.push(data.featured);
+  // Format SportAPI7 : data.featured.default / data.featured.<bookmaker>
+  if (data?.featured && typeof data.featured === 'object' && !Array.isArray(data.featured)) {
+    for (const v of Object.values(data.featured)) {
+      if (v && typeof v === 'object' && Array.isArray(v.choices)) candidates.push(v);
+    }
+  }
 
   for (const m of candidates) {
-    const choices = m?.choices || [];
-    const h = choices.find(c => ['1','Home','1 (Dom.)'].includes(c.name))?.odds;
-    const d = choices.find(c => ['X','Draw','Nul'].includes(c.name))?.odds;
-    const a = choices.find(c => ['2','Away','2 (Ext.)'].includes(c.name))?.odds;
-    if (h && d && a && h > 1 && d > 1 && a > 1)
-      return { home: +parseFloat(h).toFixed(2), draw: +parseFloat(d).toFixed(2), away: +parseFloat(a).toFixed(2) };
+    if (!Array.isArray(m?.choices) || m.choices.length < 2) continue;
+    // Limiter aux marchés 1X2 / Full time
+    const grp = ((m.marketGroup || m.marketName || '')).toLowerCase();
+    if (grp && !grp.includes('1x2') && !grp.includes('full time') && !grp.includes('result') && !grp.includes('winner')) continue;
+
+    const choices = m.choices;
+    const h = choices.find(c => ['1','Home','1 (Dom.)'].includes(c.name));
+    const d = choices.find(c => ['X','Draw','Nul'].includes(c.name));
+    const a = choices.find(c => ['2','Away','2 (Ext.)'].includes(c.name));
+
+    const hO = h ? parseFractionalOdds(h) : null;
+    const dO = d ? parseFractionalOdds(d) : null;
+    const aO = a ? parseFractionalOdds(a) : null;
+    if (hO && dO && aO && hO > 1 && dO > 1 && aO > 1)
+      return { home: +hO.toFixed(2), draw: +dO.toFixed(2), away: +aO.toFixed(2) };
+
+    // Fallback positionnel pour les marchés 1X2 à 3 choix sans name reconnu
+    if (choices.length === 3) {
+      const vals = choices.map(parseFractionalOdds);
+      if (vals.every(v => v && v > 1))
+        return { home: +vals[0].toFixed(2), draw: +vals[1].toFixed(2), away: +vals[2].toFixed(2) };
+    }
   }
   return null;
 }
