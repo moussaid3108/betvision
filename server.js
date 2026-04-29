@@ -309,23 +309,17 @@ app.get('/api/upcoming', async (req, res) => {
     // Trier par dayOffset puis par heure
     allMatches.sort((a, b) => a.dayOffset - b.dayOffset || a.time.localeCompare(b.time));
 
-    // Préchargement cotes Sofascore pour les matchs du jour (sans clé API, gratuit)
+    // Préchargement cotes via RapidAPI pour les matchs du jour
     const todayOnly = allMatches.filter(m => m.dayOffset === 0 && m.status !== 'finished');
     if (todayOnly.length) {
-      console.log(`[odds-prefetch] Fetch cotes pour ${todayOnly.length} matchs du jour...`);
+      console.log(`[odds-prefetch] Fetch cotes pour ${todayOnly.length} matchs du jour (RapidAPI)...`);
       for (const m of todayOnly) {
         if (oddsCache.has(String(m.id))) { console.log(`[odds-prefetch] ${m.home} vs ${m.away} → cache`); continue; }
         try {
           const r = await fetch(
-            `https://api.sofascore.app/api/v1/event/${m.id}/odds/1/featured`,
+            `${SPORT_BASE}/api/v1/event/${m.id}/odds/1/featured`,
             {
-              headers: {
-                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
-                'Accept': 'application/json, text/plain, */*',
-                'Accept-Language': 'fr-FR,fr;q=0.9',
-                'Referer': 'https://www.sofascore.com/',
-                'Origin': 'https://www.sofascore.com',
-              },
+              headers: { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY },
               signal: AbortSignal.timeout(5000)
             }
           );
@@ -1510,16 +1504,12 @@ app.get('/api/odds', async (req, res) => {
   const cached = oddsCache.get(eventId);
   if (cached && Date.now() - cached.ts < ODDS_TTL) return res.json(cached.data);
 
+  const KEY = process.env.RAPIDAPI_KEY;
+  if (!KEY) return res.status(500).json({ error: 'RAPIDAPI_KEY not configured' });
+
   try {
-    // Sofascore public API
-    const r = await fetch(`https://api.sofascore.app/api/v1/event/${eventId}/odds/1/featured`, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'fr-FR,fr;q=0.9',
-        'Referer': 'https://www.sofascore.com/',
-        'Origin': 'https://www.sofascore.com',
-      },
+    const r = await fetch(`${SPORT_BASE}/api/v1/event/${eventId}/odds/1/featured`, {
+      headers: { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY },
       signal: AbortSignal.timeout(6000)
     });
     if (!r.ok) return res.status(502).json({ error: 'Odds unavailable' });
