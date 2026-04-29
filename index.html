@@ -2427,30 +2427,7 @@ function renderAnalysis(m) {
     <!-- 7. H2H -->
     ${h2hBlock}
 
-    <!-- 8. SIMULATEUR POISSON INTERACTIF -->
-    <div class="proba-section" id="poisson-sim-section">
-      <div class="proba-title">🎲 Simulateur Poisson</div>
-      <div style="margin-bottom:14px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <span style="font-size:12px;color:#8b92a8;font-weight:600">λ dom. <span id="ps-lh-val" style="color:#00e5a0;font-weight:700">${typeof m.goalsHome === 'number' ? m.goalsHome.toFixed(1) : 1.3}</span></span>
-          <span style="font-size:11px;color:#555d72">${m.home}</span>
-        </div>
-        <input type="range" id="ps-lh" min="0.1" max="4.0" step="0.1" value="${typeof m.goalsHome === 'number' ? m.goalsHome.toFixed(1) : 1.3}"
-          style="width:100%;accent-color:#00e5a0;cursor:pointer" oninput="updatePoissonSim()">
-      </div>
-      <div style="margin-bottom:16px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <span style="font-size:12px;color:#8b92a8;font-weight:600">λ ext. <span id="ps-la-val" style="color:#f5c842;font-weight:700">${typeof m.goalsAway === 'number' ? m.goalsAway.toFixed(1) : 1.1}</span></span>
-          <span style="font-size:11px;color:#555d72">${m.away}</span>
-        </div>
-        <input type="range" id="ps-la" min="0.1" max="4.0" step="0.1" value="${typeof m.goalsAway === 'number' ? m.goalsAway.toFixed(1) : 1.1}"
-          style="width:100%;accent-color:#f5c842;cursor:pointer" oninput="updatePoissonSim()">
-      </div>
-      <div id="ps-grid" style="overflow-x:auto"></div>
-      <div id="ps-stats" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px;text-align:center"></div>
-    </div>
-
-    <!-- 9. BOUTON PRONO -->
+    <!-- 8. BOUTON PRONO -->
     <button style="width:100%;padding:14px;background:var(--gold-dim);border:1px solid rgba(245,200,66,0.3);border-radius:var(--radius);color:var(--gold);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px;cursor:pointer;" onclick="openPronoModal()">
       🎯 Envoie ton prono ici
     </button>
@@ -2462,88 +2439,7 @@ function renderAnalysis(m) {
       el.style.width = el.dataset.w + '%';
       el.style.transition = 'width 1.2s cubic-bezier(.4,0,.2,1)';
     });
-    updatePoissonSim();
   }, 100);
-}
-
-function poissonProb(lambda, k) {
-  let logP = -lambda + k * Math.log(lambda);
-  for (let i = 1; i <= k; i++) logP -= Math.log(i);
-  return Math.exp(logP);
-}
-
-function updatePoissonSim() {
-  const lhEl = document.getElementById('ps-lh');
-  const laEl = document.getElementById('ps-la');
-  if (!lhEl || !laEl) return;
-  const lh = parseFloat(lhEl.value);
-  const la = parseFloat(laEl.value);
-  document.getElementById('ps-lh-val').textContent = lh.toFixed(1);
-  document.getElementById('ps-la-val').textContent = la.toFixed(1);
-
-  const MAX = 5;
-  const grid = [];
-  for (let h = 0; h < MAX; h++) {
-    grid[h] = [];
-    for (let a = 0; a < MAX; a++) {
-      grid[h][a] = poissonProb(lh, h) * poissonProb(la, a);
-    }
-  }
-
-  let maxP = 0;
-  for (let h = 0; h < MAX; h++)
-    for (let a = 0; a < MAX; a++)
-      if (grid[h][a] > maxP) maxP = grid[h][a];
-
-  let over25 = 0, btts = 0, homeW = 0, drawP = 0, awayW = 0;
-  for (let h = 0; h < MAX; h++) {
-    for (let a = 0; a < MAX; a++) {
-      const p = grid[h][a];
-      if (h + a > 2.5) over25 += p;
-      if (h > 0 && a > 0) btts += p;
-      if (h > a) homeW += p;
-      else if (h === a) drawP += p;
-      else awayW += p;
-    }
-  }
-
-  let html = `<table style="border-collapse:collapse;width:100%;font-family:'Barlow Condensed',sans-serif;font-size:12px">`;
-  html += `<tr><th style="background:#0f1218;padding:5px 6px;color:#555d72;font-size:10px;border:1px solid #1e2434">↓H \\ A→</th>`;
-  for (let a = 0; a < MAX; a++)
-    html += `<th style="background:#0f1218;padding:5px 6px;color:#f5c842;border:1px solid #1e2434">${a}</th>`;
-  html += '</tr>';
-
-  for (let h = 0; h < MAX; h++) {
-    html += `<tr><th style="background:#0f1218;padding:5px 6px;color:#00e5a0;border:1px solid #1e2434">${h}</th>`;
-    for (let a = 0; a < MAX; a++) {
-      const p = grid[h][a];
-      const pct = (p * 100).toFixed(1);
-      const isTop = p === maxP;
-      const isHigh = p >= maxP * 0.6;
-      const bg = isTop ? '#00e5a0' : isHigh ? 'rgba(0,229,160,0.18)' : '#1a1e2a';
-      const clr = isTop ? '#0f1218' : isHigh ? '#00e5a0' : '#8b92a8';
-      const fw = isTop || isHigh ? '700' : '400';
-      html += `<td style="background:${bg};color:${clr};font-weight:${fw};text-align:center;padding:5px 4px;border:1px solid #1e2434">${pct}%</td>`;
-    }
-    html += '</tr>';
-  }
-  html += '</table>';
-  document.getElementById('ps-grid').innerHTML = html;
-
-  const statsHtml = `
-    <div style="background:#212636;border-radius:10px;padding:10px 6px">
-      <div style="font-size:10px;color:#555d72;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">+2.5 buts</div>
-      <div style="font-size:20px;font-weight:900;color:#00e5a0">${(over25*100).toFixed(0)}%</div>
-    </div>
-    <div style="background:#212636;border-radius:10px;padding:10px 6px">
-      <div style="font-size:10px;color:#555d72;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">BTTS</div>
-      <div style="font-size:20px;font-weight:900;color:#f5c842">${(btts*100).toFixed(0)}%</div>
-    </div>
-    <div style="background:#212636;border-radius:10px;padding:10px 6px">
-      <div style="font-size:9px;color:#555d72;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">1 / X / 2</div>
-      <div style="font-size:13px;font-weight:700;color:#f0f2f7">${(homeW*100).toFixed(0)} / ${(drawP*100).toFixed(0)} / ${(awayW*100).toFixed(0)}</div>
-    </div>`;
-  document.getElementById('ps-stats').innerHTML = statsHtml;
 }
 
 function renderOddsBlock(od) {
