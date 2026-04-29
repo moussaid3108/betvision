@@ -2027,19 +2027,34 @@ async function renderTopMatches() {
   }
   container.innerHTML = '<div class="spinner"></div>';
   try {
-    const data = await fetch('/api/today').then(r => r.json());
-    todayMatchesCache = data.matches || [];
-    const top  = todayMatchesCache.slice(0, 2);
+    // Utilise /api/upcoming pour avoir les prochains matchs non joués sur 10 jours
+    const data = await fetch('/api/upcoming').then(r => r.json());
+    const allMatches = data.matches || [];
+
+    // Garde uniquement les matchs pas encore terminés, triés par dayOffset puis heure
+    const upcoming = allMatches
+      .filter(m => m.status !== 'finished')
+      .sort((a, b) => (a.dayOffset ?? 99) - (b.dayOffset ?? 99) || a.time.localeCompare(b.time));
+
+    // Prend les 2 prochains (meilleur signal = confidence la plus haute parmi les 10 premiers)
+    const pool = upcoming.slice(0, 10);
+    const top = pool
+      .sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))
+      .slice(0, 2);
+
     if (!top.length) {
-      container.innerHTML = '<div class="paddock-no-auth">Aucun match aujourd\'hui — revenez demain 🔜</div>';
+      container.innerHTML = '<div class="paddock-no-auth">Aucun match à venir — revenez bientôt 🔜</div>';
       return;
     }
     top.forEach(m => { loadedMatchesMap[m.id] = m; });
+
+    const dayLabel = m => m.dayLabel && m.dayLabel !== "Aujourd'hui" ? ` · ${m.dayLabel}` : '';
+
     container.innerHTML = top.map(m => `
       <div class="top-match-card">
         <div class="top-match-info">
           <div class="top-match-teams">${m.home} vs ${m.away}</div>
-          <div class="top-match-meta">${m.competition} · ${m.date} · ${m.time}</div>
+          <div class="top-match-meta">${m.competition} · ${m.time}${dayLabel(m)}</div>
           <div class="top-match-meta">BTTS ${m.btts != null ? m.btts + '%' : '—'} · Over 2.5 ${m.over25 != null ? m.over25 + '%' : '—'} · Conf. ${m.confidence != null ? m.confidence + '%' : '—'}</div>
         </div>
         <div class="top-match-right" style="flex-direction:column;align-items:flex-end;gap:6px;">
@@ -2049,7 +2064,7 @@ async function renderTopMatches() {
       </div>
     `).join('');
   } catch {
-    container.innerHTML = '<div class="paddock-no-auth">Aucun match aujourd\'hui — revenez demain 🔜</div>';
+    container.innerHTML = '<div class="paddock-no-auth">Aucun match à venir — revenez bientôt 🔜</div>';
   }
 }
 
