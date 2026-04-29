@@ -1465,20 +1465,25 @@ const oddsCache = new Map();
 const ODDS_TTL  = 30 * 60_000; // 30 min
 
 function extract1X2(data) {
-  const candidates = [
-    ...(data?.markets || []),
-    ...(data?.odds?.markets || []),
-    data?.featured ? [data.featured] : [],
-  ].flat();
+  // Rassemble tous les markets possibles selon la structure de l'API Sofascore
+  const candidates = [];
+  if (Array.isArray(data?.markets))              candidates.push(...data.markets);
+  if (Array.isArray(data?.odds?.markets))        candidates.push(...data.odds.markets);
+  if (Array.isArray(data?.featured?.markets))    candidates.push(...data.featured.markets);
+  if (data?.featured?.choices)                   candidates.push(data.featured);
+
   for (const m of candidates) {
     const choices = m?.choices || [];
-    const h = choices.find(c => c.name === '1' || c.name === 'Home' || c.name === '1 (Dom.)')?.odds;
-    const d = choices.find(c => c.name === 'X' || c.name === 'Draw' || c.name === 'Nul')?.odds;
-    const a = choices.find(c => c.name === '2' || c.name === 'Away' || c.name === '2 (Ext.)')?.odds;
-    if (h && d && a && h > 1 && d > 1 && a > 1) return { home: +h.toFixed(2), draw: +d.toFixed(2), away: +a.toFixed(2) };
+    const h = choices.find(c => ['1','Home','1 (Dom.)'].includes(c.name))?.odds;
+    const d = choices.find(c => ['X','Draw','Nul'].includes(c.name))?.odds;
+    const a = choices.find(c => ['2','Away','2 (Ext.)'].includes(c.name))?.odds;
+    if (h && d && a && h > 1 && d > 1 && a > 1)
+      return { home: +parseFloat(h).toFixed(2), draw: +parseFloat(d).toFixed(2), away: +parseFloat(a).toFixed(2) };
   }
   return null;
 }
+
+const OUTCOME_LABELS = { home: 'Domicile', draw: 'Nul', away: 'Extérieur' };
 
 function computeValueBet(odds, algoProbs) {
   const imp = { home: 1 / odds.home, draw: 1 / odds.draw, away: 1 / odds.away };
@@ -1488,12 +1493,15 @@ function computeValueBet(odds, algoProbs) {
     away: Math.round((algoProbs.away / 100 - imp.away) * 100),
   };
   const best = Object.entries(gaps).sort((a, b) => b[1] - a[1])[0];
+  const bestValue = best[1] > 0
+    ? { outcome: best[0], gap: best[1], label: OUTCOME_LABELS[best[0]], odds: odds[best[0]] }
+    : null;
   return {
     odds,
     algoProbs,
     impliedProbs: { home: Math.round(imp.home * 100), draw: Math.round(imp.draw * 100), away: Math.round(imp.away * 100) },
     gaps,
-    bestValue: { outcome: best[0], gap: best[1] },
+    bestValue,
   };
 }
 
@@ -1508,14 +1516,24 @@ app.get('/api/odds', async (req, res) => {
   if (!KEY) return res.status(500).json({ error: 'RAPIDAPI_KEY not configured' });
 
   try {
-    const r = await fetch(`${SPORT_BASE}/api/v1/event/${eventId}/odds/1/featured`, {
+    const oddsUrl = `${SPORT_BASE}/api/v1/event/${eventId}/odds/1/featured`;
+    const r = await fetch(oddsUrl, {
       headers: { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY },
       signal: AbortSignal.timeout(6000)
     });
-    if (!r.ok) return res.status(502).json({ error: 'Odds unavailable' });
+    if (!r.ok) {
+      console.warn(`[/api/odds] eventId=${eventId} → HTTP ${r.status}`);
+      return res.status(502).json({ error: 'Odds unavailable' });
+    }
     const json = await r.json();
+    const topKeys = Object.keys(json).join(',');
+    console.log(`[/api/odds] eventId=${eventId} → keys: ${topKeys}`);
     const odds = extract1X2(json);
-    if (!odds) return res.status(404).json({ error: 'No 1X2 odds found' });
+    if (!odds) {
+      console.warn(`[/api/odds] eventId=${eventId} → extract1X2 failed, raw: ${JSON.stringify(json).slice(0,300)}`);
+      return res.status(404).json({ error: 'No 1X2 odds found' });
+    }
+    console.log(`[/api/odds] eventId=${eventId} → ${odds.home}/${odds.draw}/${odds.away}`);
 
     const algoProbs = {
       home: parseInt(homeWin) || null,
