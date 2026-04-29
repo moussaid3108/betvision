@@ -2269,6 +2269,11 @@ function renderAnalysis(m) {
   const gA = typeof m.goalsAway === 'number' ? m.goalsAway.toFixed(1) : (m.goalsAway ?? '–');
   const csH = Math.round((m.cleanHome || 0) * 100);
   const csA = Math.round((m.cleanAway || 0) * 100);
+  const bestOutcome = homeWin >= drawPct && homeWin >= awayWin
+    ? `Victoire ${m.home}` : drawPct >= homeWin && drawPct >= awayWin
+    ? 'Match nul' : `Victoire ${m.away}`;
+  const mlH = typeof m.goalsHome === 'number' ? Math.floor(m.goalsHome) : 1;
+  const mlA = typeof m.goalsAway === 'number' ? Math.floor(m.goalsAway) : 0;
 
   const homeLogo = m.homeLogo || (m.homeTeamId ? `https://api.sofascore.app/api/v1/team/${m.homeTeamId}/image` : null);
   const awayLogo = m.awayLogo || (m.awayTeamId ? `https://api.sofascore.app/api/v1/team/${m.awayTeamId}/image` : null);
@@ -2377,33 +2382,40 @@ function renderAnalysis(m) {
         <span class="signal-badge" style="${m.confidence >= 80 ? '' : m.confidence >= 65 ? 'background:rgba(245,200,66,.12);border-color:rgba(245,200,66,.3);color:#f5c842' : 'background:rgba(255,120,60,.12);border-color:rgba(255,120,60,.3);color:#ff783c'}">${m.confidence >= 80 ? 'Haute Confiance' : m.confidence >= 65 ? 'Modéré' : 'Prudence conseillée'}</span>
       </div>
       <div class="signal-meter">
-        <div class="signal-level">${m.confidence}%</div>
+        <div>
+          <div style="font-size:12px;color:#8b92a8;font-weight:600;margin-bottom:2px">Confiance ${bestOutcome}</div>
+          <div class="signal-level">${m.confidence}%</div>
+        </div>
         <div class="signal-desc">Indice basé sur l'efficacité offensive et la solidité défensive des 5 derniers matchs.</div>
       </div>
     </div>
 
-    <!-- 5. BUTS ATTENDUS POISSON -->
+    <!-- 5. SCORE PRÉDICTIF -->
     <div class="proba-section">
       <div class="proba-title">⚽ Score Prédictif</div>
       <div class="h2h-row">
-        <div class="h2h-date">λ dom.</div>
-        <div class="h2h-teams">${m.home}</div>
-        <div class="h2h-score stat-green">${gH}</div>
+        <div class="h2h-date" style="font-size:10px;color:#555d72">Attaque</div>
+        <div class="h2h-teams">Potentiel offensif ${m.home}</div>
+        <div class="h2h-score stat-green">${gH} buts</div>
       </div>
       <div class="h2h-row">
-        <div class="h2h-date">λ ext.</div>
-        <div class="h2h-teams">${m.away}</div>
-        <div class="h2h-score stat-gold">${gA}</div>
+        <div class="h2h-date" style="font-size:10px;color:#555d72">Attaque</div>
+        <div class="h2h-teams">Potentiel offensif ${m.away}</div>
+        <div class="h2h-score stat-gold">${gA} buts</div>
       </div>
       <div class="h2h-row">
-        <div class="h2h-date">CS</div>
-        <div class="h2h-teams">${m.home}</div>
+        <div class="h2h-date" style="font-size:10px;color:#555d72">Défense</div>
+        <div class="h2h-teams">Cage inviolée ${m.home}</div>
         <div class="h2h-score stat-blue">${csH}%</div>
       </div>
       <div class="h2h-row">
-        <div class="h2h-date">CS</div>
-        <div class="h2h-teams">${m.away}</div>
+        <div class="h2h-date" style="font-size:10px;color:#555d72">Défense</div>
+        <div class="h2h-teams">Cage inviolée ${m.away}</div>
         <div class="h2h-score stat-blue">${csA}%</div>
+      </div>
+      <div style="margin-top:12px;padding:12px 16px;background:#212636;border-radius:10px;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:12px;color:#8b92a8;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Score le plus probable</span>
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;color:#00e5a0">${mlH} – ${mlA}</span>
       </div>
     </div>
 
