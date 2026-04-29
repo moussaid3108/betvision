@@ -3236,6 +3236,17 @@ async function pollLiveScores() {
         cached.status = s.status;
         if (s.minute != null) cached.minute = s.minute;
       }
+      // Re-render la fiche d'analyse si c'est le match actuellement ouvert
+      if (currentMatch && String(s.id) === String(currentMatch.id)) {
+        currentMatch.status = s.status;
+        if (s.score != null) currentMatch.score = s.score;
+        if (s.minute != null) currentMatch.minute = s.minute;
+        const analysisPage = document.getElementById('page-analysis');
+        if (analysisPage && analysisPage.style.display !== 'none') {
+          renderAnalysis(currentMatch);
+          renderOddsBlock(currentOddsData);
+        }
+      }
       detectAndReact(s);
     });
   } catch {}
