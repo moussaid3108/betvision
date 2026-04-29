@@ -55,6 +55,8 @@ const LEAGUES = {
   23:  { name: 'Serie A',          lH: 1.30, lA: 1.00 },
   35:  { name: 'Bundesliga',       lH: 1.55, lA: 1.20 },
   7:   { name: 'Champions League', lH: 1.25, lA: 1.00 },
+  238: { name: 'Liga Portugal',    lH: 1.40, lA: 1.05 },
+  13:  { name: 'Liga Portugal',    lH: 1.40, lA: 1.05 }, // ID alternatif Sofascore
 };
 
 
@@ -244,7 +246,12 @@ app.get('/api/upcoming', async (req, res) => {
         } else {
           const data = await r.json();
           days.push({ offset, dateStr, events: data?.events || [] });
-          console.log(`[/api/upcoming] offset +${offset} → ${(data?.events||[]).filter(e=>LEAGUES[e?.tournament?.uniqueTournament?.id]).length} matchs ligue`);
+          const known = (data?.events||[]).filter(e=>LEAGUES[e?.tournament?.uniqueTournament?.id]);
+          const unknown = [...new Set((data?.events||[])
+            .filter(e=>!LEAGUES[e?.tournament?.uniqueTournament?.id])
+            .map(e=>`${e?.tournament?.uniqueTournament?.id}:${e?.tournament?.name||'?'}`)
+          )].slice(0, 8);
+          console.log(`[/api/upcoming] offset +${offset} → ${known.length} matchs ligue | hors-filtre: ${unknown.join(', ') || 'aucun'}`);
         }
       } catch (err) {
         console.warn(`[/api/upcoming] offset ${offset} → erreur:`, err.message);
