@@ -2496,35 +2496,34 @@ function renderOddsBlock(od) {
   }
 
   const { home, draw, away } = od.odds;
-  const bv = od.bestValue;
-  const bvOutcomeProb = (od.algoProbs && bv) ? Math.round(od.algoProbs[bv.outcome] * 100) : null;
-  const isSafeValueBet = bvOutcomeProb === null || bvOutcomeProb >= 30;
 
-  let contradictionNote = '';
-  if (bv && isSafeValueBet && currentMatch) {
+  // Belle Opportunité calculée sur les stats de l'algo UNIQUEMENT — pas sur les cotes
+  let valueBadge = '';
+  if (currentMatch) {
     const hW = currentMatch.homeWin ?? 0;
     const dW = currentMatch.draw ?? 0;
     const aW = currentMatch.awayWin ?? 0;
-    const signalOutcome = hW >= dW && hW >= aW ? 'home' : aW > hW && aW >= dW ? 'away' : 'draw';
-    if (bv.outcome !== signalOutcome) {
-      const contradictionText = (bvOutcomeProb !== null && bvOutcomeProb >= 40)
-        ? "L'IA donne l'avantage au favori, mais la cote sur l'outsider est anormalement haute. C'est ce qu'on appelle une erreur du bookmaker : le gain potentiel justifie le risque pris."
-        : `L'IA privilégie le favori. L'outsider n'a que ${bvOutcomeProb}% de chances — c'est risqué. À jouer en toute petite mise uniquement si tu veux tenter le coup.`;
-      contradictionNote = `<div style="margin-top:8px;padding:10px 12px;background:rgba(255,120,60,.08);border:1px solid rgba(255,120,60,.25);border-radius:8px;font-size:12px;color:#ff9060;line-height:1.5">
-        ⚠️ <strong>Pourquoi ce choix ?</strong> ${contradictionText}
-      </div>`;
-    }
-  }
+    const conf = currentMatch.confidence ?? 0;
 
-  let valueBadge = '';
-  if (bv && isSafeValueBet) {
-    valueBadge = `<div style="margin-top:10px;padding:10px 12px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.25);border-radius:8px;font-size:13px;color:#00e5a0;line-height:1.5">
-      🔥 <strong>Belle Opportunité :</strong> La cote de ${bv.label} (${bv.odds}) est mieux payée que prévu par l'IA.
-    </div>${contradictionNote}`;
-  } else if (bv && !isSafeValueBet) {
-    valueBadge = `<div style="margin-top:10px;padding:10px 12px;background:rgba(245,200,66,.06);border:1px solid rgba(245,200,66,.2);border-radius:8px;font-size:12px;color:#f5c842;line-height:1.5">
-      ⚠️ <strong>Cote à surveiller</strong> — mais ${bv.label} n'a que ${bvOutcomeProb}% de chances de victoire. Risque trop élevé, à éviter.
-    </div>`;
+    // Règle 1 : si un favori domine à ≥65%, pas de belle opportunité
+    const hasDominant = hW >= 65 || aW >= 65;
+
+    if (!hasDominant && conf >= 60) {
+      let bestLabel = null, bestProb = 0, bestCote = null;
+      if (hW >= dW && hW >= aW && hW >= 35) {
+        bestLabel = `Victoire ${currentMatch.home}`; bestProb = hW; bestCote = home;
+      } else if (aW > hW && aW >= dW && aW >= 35) {
+        bestLabel = `Victoire ${currentMatch.away}`; bestProb = aW; bestCote = away;
+      } else if (dW >= hW && dW >= aW && dW >= 35) {
+        bestLabel = 'Match nul'; bestProb = dW; bestCote = draw ?? '—';
+      }
+
+      if (bestLabel) {
+        valueBadge = `<div style="margin-top:10px;padding:10px 12px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.25);border-radius:8px;font-size:13px;color:#00e5a0;line-height:1.5">
+          🔥 <strong>Belle Opportunité :</strong> L'algo est confiant sur <strong>${bestLabel}</strong> — ${bestProb}% selon les stats. Cote disponible&nbsp;: <strong>${bestCote}</strong>.
+        </div>`;
+      }
+    }
   }
 
   el.innerHTML = `
