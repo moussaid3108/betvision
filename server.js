@@ -1330,7 +1330,18 @@ app.get('/api/league-matches', async (req, res) => {
     // Navigation par date chronologique, pas par numéro de journée
     const currentIdx    = sortedByDate.indexOf(currentRound);
     const previousRound = currentIdx > 0 ? sortedByDate[currentIdx - 1] : null;
-    const nextRound     = currentIdx < sortedByDate.length - 1 ? sortedByDate[currentIdx + 1] : null;
+
+    // "next" : prochain round avec au moins un match non terminé (évite rounds déjà joués)
+    let nextRound = null;
+    for (let i = currentIdx + 1; i < sortedByDate.length; i++) {
+      const rMatches = rounds.get(sortedByDate[i]) || [];
+      const hasUpcoming = rMatches.some(e => e.status?.type !== 'finished' && e.status?.type !== 'canceled');
+      if (hasUpcoming) { nextRound = sortedByDate[i]; break; }
+    }
+    // Fallback : prochain round dans la liste même s'il est terminé
+    if (nextRound == null && currentIdx < sortedByDate.length - 1) {
+      nextRound = sortedByDate[currentIdx + 1];
+    }
     const targetRound   = { current: currentRound, previous: previousRound, next: nextRound }[journee];
 
     if (targetRound == null)
