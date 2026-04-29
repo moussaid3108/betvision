@@ -1232,6 +1232,14 @@
 <div class="drawer" id="drawer">
   <div class="drawer-header">⚡ BetVision AI</div>
 
+  <!-- NAVIGATION PRINCIPALE -->
+  <div class="drawer-sport" onclick="showPage('chat');initChat();closeDrawer()"><span class="sport-left">💬 Chat communauté</span></div>
+  <div class="drawer-sport" onclick="openPronos();closeDrawer()"><span class="sport-left">🎟️ Mes Pronostics</span></div>
+  <div class="drawer-sport" onclick="openFavoris();closeDrawer()"><span class="sport-left">⭐ Favoris</span></div>
+
+  <!-- SPORTS -->
+  <div style="padding:8px 18px 4px;font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--text-3);text-transform:uppercase;border-top:1px solid rgba(255,255,255,0.07);margin-top:4px">Sports & Ligues</div>
+
   <!-- FOOTBALL -->
   <div class="drawer-sport" id="sport-football" onclick="toggleFootball()">
     <span class="sport-left">⚽ Football</span>
@@ -1289,17 +1297,6 @@
   <div class="drawer-sport" onclick="openLeagueView('baseball',109,'MLB');closeDrawer()"><span class="sport-left">⚾ Baseball (MLB)</span></div>
   <div class="drawer-sport" onclick="openLeagueView('icehockey',234,'NHL');closeDrawer()"><span class="sport-left">🏒 Hockey (NHL)</span></div>
   <div class="drawer-sport" onclick="openLeagueView('mma',19906,'MMA / UFC');closeDrawer()"><span class="sport-left">🥊 MMA / UFC</span></div>
-  <div class="drawer-sport" onclick="showPage('chat');initChat();closeDrawer()" style="border-top:1px solid rgba(255,255,255,0.08);margin-top:4px"><span class="sport-left">💬 Chat communauté</span></div>
-  <div class="drawer-sport" onclick="openPronos();closeDrawer()"><span class="sport-left">📊 Mes Pronostics</span></div>
-  <div class="drawer-sport" onclick="openFavoris();closeDrawer()"><span class="sport-left">⭐ Favoris</span></div>
-
-  <div id="drawer-user-block" style="display:none;margin-top:auto;padding:16px 18px;border-top:1px solid rgba(255,255,255,0.07);">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-      <img id="drawer-avatar" src="" alt="" style="width:36px;height:36px;border-radius:50%;border:2px solid #00e5a0;object-fit:cover;">
-      <span id="drawer-username" style="font-size:14px;font-weight:600;color:var(--text-1);"></span>
-    </div>
-    <button onclick="signOut();closeDrawer()" style="width:100%;padding:9px;background:transparent;border:1px solid rgba(255,77,106,0.4);border-radius:8px;color:#ff4d6a;font-size:13px;font-weight:600;cursor:pointer;">Déconnexion</button>
-  </div>
   <div id="drawer-login-block" style="padding:16px 18px;border-top:1px solid rgba(255,255,255,0.07);margin-top:auto;">
     <button onclick="openAuthModal();closeDrawer()" style="width:100%;padding:9px;background:transparent;border:1px solid #00e5a0;border-radius:8px;color:#00e5a0;font-size:13px;font-weight:600;cursor:pointer;">Se connecter</button>
   </div>
