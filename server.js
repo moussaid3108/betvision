@@ -13,7 +13,7 @@ app.use(express.json());
 
 // ─── Cache fichier persistant (survit aux redémarrages) ──────
 const DISK_CACHE_PATH = path.join(__dirname, 'upcoming_cache.json');
-const DISK_CACHE_MAX_AGE = 6 * 3_600_000; // 6h
+const DISK_CACHE_MAX_AGE = 12 * 3_600_000; // 12h
 
 function readDiskCache() {
   try {
@@ -80,9 +80,9 @@ const LEAGUES = {
 let todayCache = { data: null, ts: 0, date: '' };
 const TODAY_TTL = 30 * 60_000;
 
-// Cache global /api/upcoming — 1h (3 jours de matchs)
+// Cache global /api/upcoming — 3h
 let upcomingCache = { data: null, ts: 0, dateKey: '' };
-const UPCOMING_TTL = 60 * 60_000;
+const UPCOMING_TTL = 3 * 60 * 60_000;
 
 app.get('/api/today', async (req, res) => {
   const KEY = process.env.RAPIDAPI_KEY;
@@ -237,8 +237,8 @@ app.get('/api/upcoming', async (req, res) => {
 
   const hdr = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
 
-  // Horizon 10 jours (aujourd'hui + 9 suivants)
-  const OFFSETS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+  // Horizon 5 jours (aujourd'hui + 4 suivants) — économie quota RapidAPI
+  const OFFSETS = [0, 1, 2, 3, 4];
   const dayLabel = offset => {
     if (offset === 0) return 'Aujourd\'hui';
     if (offset === 1) return 'Demain';
@@ -339,43 +339,7 @@ app.get('/api/upcoming', async (req, res) => {
 
     // Trier par dayOffset puis par heure
     allMatches.sort((a, b) => a.dayOffset - b.dayOffset || a.time.localeCompare(b.time));
-
-    // Préchargement cotes via RapidAPI pour les matchs du jour
-    const todayOnly = allMatches.filter(m => m.dayOffset === 0 && m.status !== 'finished');
-    if (todayOnly.length) {
-      console.log(`[odds-prefetch] Fetch cotes pour ${todayOnly.length} matchs du jour (RapidAPI)...`);
-      for (const m of todayOnly) {
-        if (oddsCache.has(String(m.id))) { console.log(`[odds-prefetch] ${m.home} vs ${m.away} → cache`); continue; }
-        try {
-          const r = await fetch(
-            `${SPORT_BASE}/api/v1/event/${m.id}/odds/1/featured`,
-            {
-              headers: { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY },
-              signal: AbortSignal.timeout(5000)
-            }
-          );
-          if (r.ok) {
-            const json = await r.json();
-            const odds = extract1X2(json);
-            if (odds) {
-              const algoProbs = { home: m.homeWin, draw: m.draw, away: m.awayWin };
-              const vb = (algoProbs.home && algoProbs.draw && algoProbs.away)
-                ? computeValueBet(odds, algoProbs)
-                : { odds, algoProbs: null, impliedProbs: null, gaps: null, bestValue: null };
-              oddsCache.set(String(m.id), { data: vb, ts: Date.now() });
-              console.log(`[odds-prefetch] ${m.home} vs ${m.away} → ${odds.home}/${odds.draw}/${odds.away}`);
-            } else {
-              console.warn(`[odds-prefetch] ${m.home} vs ${m.away} → pas de cotes 1X2`);
-            }
-          } else {
-            console.warn(`[odds-prefetch] ${m.home} vs ${m.away} → HTTP ${r.status}`);
-          }
-        } catch (err) {
-          console.warn(`[odds-prefetch] ${m.home} vs ${m.away} → erreur:`, err.message);
-        }
-        await sleep(300);
-      }
-    }
+    // Odds fetched on-demand via /api/odds — pas de préchargement pour préserver le quota
 
     const matches = allMatches.slice(0, 120);
     const result = { matches };
