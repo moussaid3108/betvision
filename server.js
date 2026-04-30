@@ -1,6 +1,7 @@
 import express from 'express';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import fs from 'fs';
 
 import matchesHandler from './api/matches.js';
 import chatHandler    from './api/chat.js';
@@ -10,7 +11,22 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 app.use(express.json());
 
-// ─── API routes ───────────────────────────────────────────
+// ─── Cache fichier persistant (survit aux redémarrages) ──────
+const DISK_CACHE_PATH = path.join(__dirname, 'upcoming_cache.json');
+const DISK_CACHE_MAX_AGE = 6 * 3_600_000; // 6h
+
+function readDiskCache() {
+  try {
+    const raw = fs.readFileSync(DISK_CACHE_PATH, 'utf8');
+    const c = JSON.parse(raw);
+    if (c?.ts && Date.now() - c.ts < DISK_CACHE_MAX_AGE && Array.isArray(c.matches)) return c;
+  } catch {}
+  return null;
+}
+
+function writeDiskCache(matches) {
+  try { fs.writeFileSync(DISK_CACHE_PATH, JSON.stringify({ matches, ts: Date.now() })); } catch {}
+}
 app.get('/api/config', (_req, res) => {
   res.json({
     supabaseUrl: 'https://txifvjkpajnmbnadvcah.supabase.co',
@@ -229,11 +245,20 @@ app.get('/api/upcoming', async (req, res) => {
     return `Dans ${offset} jours`;
   };
 
+  // Tentative cache disque (survit aux redémarrages, évite de brûler le quota au restart)
+  const diskCache = readDiskCache();
+  if (diskCache) {
+    console.log(`[/api/upcoming] DISK CACHE HIT — ${diskCache.matches.length} matchs (quota préservé)`);
+    upcomingCache = { data: { matches: diskCache.matches }, ts: diskCache.ts, dateKey };
+    return res.json({ matches: diskCache.matches });
+  }
+
   console.log('[/api/upcoming] CACHE MISS — fetch 10 jours RapidAPI (séquentiel 300ms anti-429)');
 
   try {
     const sleep = ms => new Promise(r => setTimeout(r, ms));
     const days = [];
+    let httpErrors = 0;
     for (const offset of OFFSETS) {
       const d = new Date(baseDate);
       d.setDate(d.getDate() + offset);
@@ -243,6 +268,7 @@ app.get('/api/upcoming', async (req, res) => {
           { headers: hdr, signal: AbortSignal.timeout(8000) });
         if (!r.ok) {
           console.warn(`[/api/upcoming] offset ${offset} → HTTP ${r.status}`);
+          if (r.status === 429) httpErrors++;
           days.push({ offset, events: [] });
         } else {
           const data = await r.json();
@@ -351,12 +377,27 @@ app.get('/api/upcoming', async (req, res) => {
       }
     }
 
-    const result = { matches: allMatches.slice(0, 120) };
+    const matches = allMatches.slice(0, 120);
+    const result = { matches };
+
+    // Quota épuisé (tout 429) → fallback disque si dispo
+    if (matches.length === 0 && httpErrors >= OFFSETS.length - 2) {
+      const fallback = readDiskCache();
+      if (fallback) {
+        console.warn(`[/api/upcoming] Quota 429 — fallback disque (${fallback.matches.length} matchs)`);
+        upcomingCache = { data: { matches: fallback.matches }, ts: Date.now(), dateKey };
+        return res.json({ matches: fallback.matches });
+      }
+    }
+
     upcomingCache = { data: result, ts: Date.now(), dateKey };
-    console.log('[/api/upcoming]', result.matches.length, 'matchs sur 10 jours mis en cache 1h');
+    if (matches.length > 0) writeDiskCache(matches);
+    console.log('[/api/upcoming]', matches.length, 'matchs sur 10 jours mis en cache 1h');
     res.json(result);
   } catch (e) {
     console.error('[/api/upcoming] Erreur:', e.message);
+    const fallback = readDiskCache();
+    if (fallback) return res.json({ matches: fallback.matches });
     if (upcomingCache.data) return res.json(upcomingCache.data);
     res.status(500).json({ error: e.message, matches: [] });
   }
