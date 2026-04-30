@@ -1136,49 +1136,6 @@ app.get('/api/team-stats', async (req, res) => {
 
 const COMPUTE_STATS_TTL = 6 * 3_600_000; // 6h
 const LIGUE_AVG_GOALS_CONCEDED = 1.2;
-const CL_EL_NAMES = ['champions league', 'europa league', 'conference league'];
-
-async function getH2HStats(matchId, team1Id, KEY) {
-  const hdr = { 'x-rapidapi-host': SPORT_HOST, 'x-rapidapi-key': KEY };
-  const THREE_YEARS_AGO = Date.now() / 1000 - 3 * 365 * 86400;
-  let allEvents = [];
-  try {
-    const r = await fetch(`${SPORT_BASE}/api/v1/event/${matchId}/h2h`,
-      { headers: hdr, signal: AbortSignal.timeout(6000) });
-    if (r.ok) {
-      const j = await r.json();
-      allEvents = (j.previousEvents || j.events || [])
-        .filter(e => e.status?.code === 100 && (e.startTimestamp || 0) > THREE_YEARS_AGO);
-    }
-  } catch {}
-  if (allEvents.length < 2) return null;
-
-  const goals = allEvents.map(e => {
-    const isT1Home = Number(e.homeTeam?.id) === Number(team1Id);
-    const hs = e.homeScore?.current ?? 0;
-    const as = e.awayScore?.current ?? 0;
-    return { t1Goals: isT1Home ? hs : as, t2Goals: isT1Home ? as : hs, total: hs + as };
-  });
-
-  const totals = goals.map(g => g.total);
-  const meanTotal = totals.reduce((a, b) => a + b, 0) / totals.length;
-  const stdTotal  = Math.sqrt(totals.map(t => (t - meanTotal) ** 2).reduce((a, b) => a + b, 0) / totals.length);
-  const anomalyThreshold = meanTotal + 1.5 * stdTotal;
-
-  let sumWT1 = 0, sumWT2 = 0, totalW = 0;
-  for (const g of goals) {
-    const w = g.total > anomalyThreshold ? 0.3 : 1.0;
-    sumWT1 += g.t1Goals * w; sumWT2 += g.t2Goals * w; totalW += w;
-  }
-
-  return {
-    lambdaHome: parseFloat((sumWT1 / totalW).toFixed(3)),
-    lambdaAway: parseFloat((sumWT2 / totalW).toFixed(3)),
-    stdTotal:   parseFloat(stdTotal.toFixed(2)),
-    matchCount: goals.length,
-  };
-}
-
 
 app.get('/api/compute-stats', async (req, res) => {
   const { competition, matchId, homeTeamId, awayTeamId } = req.query;
@@ -1225,28 +1182,7 @@ app.get('/api/compute-stats', async (req, res) => {
     lambdaSource = 'league-default';
   }
 
-  // ── CL / EL : ajustement H2H sur 3 ans + détection anomalies ──
-  let confidencePenalty = 0;
-  const isCLEL = CL_EL_NAMES.some(n => (competition || '').toLowerCase().includes(n));
-  if (isCLEL && matchId && KEY) {
-    try {
-      const h2h = await getH2HStats(matchId, homeTeamId, KEY);
-      if (h2h && h2h.matchCount >= 2) {
-        const teamWeight   = lambdaSource === 'team-based' ? 0.55 : 0.30;
-        const h2hWeight    = 1 - teamWeight;
-        lH = parseFloat((teamWeight * lH + h2hWeight * h2h.lambdaHome).toFixed(3));
-        lA = parseFloat((teamWeight * lA + h2hWeight * h2h.lambdaAway).toFixed(3));
-        if (h2h.stdTotal > 2.0) confidencePenalty = -10;
-        console.log(`[CL-EL H2H] matchId=${matchId} h2h(${h2h.matchCount}) λH=${h2h.lambdaHome} λA=${h2h.lambdaAway} std=${h2h.stdTotal} → blended lH=${lH} lA=${lA}`);
-      }
-    } catch (err) {
-      console.warn('[CL-EL H2H] Failed:', err.message);
-    }
-  }
-
   const s = matchScore(lH, lA);
-  if (confidencePenalty) s.confidence = Math.max(42, s.confidence + confidencePenalty);
-
   const data = {
     btts:         s.btts,
     over25:       s.over25,
@@ -1257,7 +1193,7 @@ app.get('/api/compute-stats', async (req, res) => {
     confidence:   s.confidence,
     goalsHome:    parseFloat(lH.toFixed(2)),
     goalsAway:    parseFloat(lA.toFixed(2)),
-    lambdaSource: isCLEL ? `${lambdaSource}+h2h-clel` : lambdaSource,
+    lambdaSource,
     ...(homeForm !== undefined && { homeForm, awayForm }),
   };
 
