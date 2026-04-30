@@ -239,7 +239,8 @@ app.get('/api/upcoming', async (req, res) => {
       d.setDate(d.getDate() + offset);
       const dateStr = d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
       try {
-        const r = await fetch(`${SPORT_BASE}/api/v1/sport/football/scheduled-events/${dateStr}`, { headers: hdr });
+        const r = await fetch(`${SPORT_BASE}/api/v1/sport/football/scheduled-events/${dateStr}`,
+          { headers: hdr, signal: AbortSignal.timeout(8000) });
         if (!r.ok) {
           console.warn(`[/api/upcoming] offset ${offset} → HTTP ${r.status}`);
           days.push({ offset, events: [] });

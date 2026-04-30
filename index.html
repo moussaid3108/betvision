@@ -2015,8 +2015,10 @@ async function renderTopMatches() {
   }
   container.innerHTML = '<div class="spinner"></div>';
   try {
-    // Utilise /api/upcoming pour avoir les prochains matchs non joués sur 10 jours
-    const data = await fetch('/api/upcoming').then(r => r.json());
+    const res = await fetch('/api/upcoming');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
     const allMatches = data.matches || [];
 
     // Garde uniquement les matchs pas encore terminés, triés par dayOffset puis heure
@@ -2051,8 +2053,12 @@ async function renderTopMatches() {
         </div>
       </div>
     `).join('');
-  } catch {
-    container.innerHTML = '<div class="paddock-no-auth">Aucun match à venir — revenez bientôt 🔜</div>';
+  } catch(err) {
+    console.error('[renderTopMatches]', err.message);
+    container.innerHTML = `<div class="paddock-no-auth" style="text-align:center;padding:20px 12px">
+      ⚠️ Données temporairement indisponibles<br>
+      <span style="font-size:12px;color:var(--text-3)">Actualise la page dans quelques secondes</span>
+    </div>`;
   }
 }
 
