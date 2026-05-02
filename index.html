@@ -1655,13 +1655,19 @@
         Connecte-toi pour participer → <span onclick="openAuthModal()">Se connecter</span>
       </div>
       <div class="chat-send-row" id="chat-send-row" style="display:none">
-        <textarea class="chat-community-input" id="community-input" placeholder="Votre message..." rows="1"
-          inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="true"
-          oninput="this.style.height='';this.style.height=Math.min(this.scrollHeight,110)+'px'"
-          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage()}"></textarea>
-        <button class="chat-action-btn btn-img-chat" onclick="document.getElementById('chat-img-input').click()">📷</button>
-        <button class="chat-action-btn btn-send-chat" onclick="sendChatMessage()">➤</button>
-        <input type="file" id="chat-img-input" accept="image/*" style="display:none" onchange="handleChatImageUpload(event)">
+        <div id="chat-img-preview" style="display:none;position:relative;margin-bottom:6px">
+          <img id="chat-img-preview-el" src="" alt="" style="max-height:80px;max-width:100%;border-radius:8px;display:block">
+          <button onclick="clearChatImgPreview()" style="position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.6);border:none;color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-end">
+          <textarea class="chat-community-input" id="community-input" placeholder="Votre message..." rows="1"
+            inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="true"
+            oninput="this.style.height='';this.style.height=Math.min(this.scrollHeight,110)+'px'"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage()}"></textarea>
+          <button class="chat-action-btn btn-img-chat" id="chat-img-btn" onclick="document.getElementById('chat-img-input').click()">📷</button>
+          <button class="chat-action-btn btn-send-chat" onclick="sendChatMessage()">➤</button>
+        </div>
+        <input type="file" id="chat-img-input" accept="image/*" style="display:none" onchange="previewChatImg(event)">
       </div>
     </div>
   </div>
@@ -3671,12 +3677,29 @@ async function sendChatMessage() {
   const meta = currentUser.user_metadata || {};
   const username   = currentProfile.username   || meta.full_name || meta.name || currentUser.email?.split('@')[0] || 'Anonyme';
   const avatar_url = currentProfile.avatar_url || meta.avatar_url || meta.picture || null;
+
+  let image_url = null;
+  if (pendingChatImg) {
+    const btn = document.getElementById('chat-img-btn');
+    if (btn) btn.disabled = true;
+    const ext  = pendingChatImg.name.split('.').pop();
+    const path = `${currentUser.id}/${Date.now()}.${ext}`;
+    const { error: upErr } = await supabaseClient.storage.from('chat-images').upload(path, pendingChatImg);
+    if (upErr) { console.error('[Chat] image upload error:', upErr); if (btn) btn.disabled = false; return; }
+    const { data: urlData } = supabaseClient.storage.from('chat-images').getPublicUrl(path);
+    image_url = urlData.publicUrl;
+    clearChatImgPreview();
+    if (btn) btn.disabled = false;
+  }
+
+  if (!content && !image_url) return;
+
   const { error } = await supabaseClient.from('messages').insert({
     user_id: currentUser.id,
     username,
     avatar_url,
-    content,
-    image_url: null,
+    content: content || '',
+    image_url,
   });
   if (error) {
     console.error('[Chat] sendChatMessage error:', error);
@@ -3685,24 +3708,25 @@ async function sendChatMessage() {
   input.value = ''; input.style.height = '';
 }
 
-async function handleChatImageUpload(event) {
-  if (!supabaseClient || !currentUser) return;
+let pendingChatImg = null;
+
+function previewChatImg(event) {
   const file = event.target.files[0];
   if (!file) return;
   event.target.value = '';
-  const ext  = file.name.split('.').pop();
-  const path = `${currentUser.id}/${Date.now()}.${ext}`;
-  const { error } = await supabaseClient.storage.from('chat-images').upload(path, file);
-  if (error) { console.warn('Upload error:', error); return; }
-  const { data } = supabaseClient.storage.from('chat-images').getPublicUrl(path);
-  const meta = currentUser.user_metadata || {};
-  await supabaseClient.from('messages').insert({
-    user_id:    currentUser.id,
-    username:   meta.full_name || meta.name || currentUser.email?.split('@')[0] || 'Anonyme',
-    avatar_url: meta.avatar_url || meta.picture || null,
-    content:    '',
-    image_url:  data.publicUrl,
-  });
+  pendingChatImg = file;
+  const preview = document.getElementById('chat-img-preview');
+  const img     = document.getElementById('chat-img-preview-el');
+  img.src = URL.createObjectURL(file);
+  preview.style.display = 'block';
+}
+
+function clearChatImgPreview() {
+  pendingChatImg = null;
+  const preview = document.getElementById('chat-img-preview');
+  const img     = document.getElementById('chat-img-preview-el');
+  if (preview) preview.style.display = 'none';
+  if (img) { URL.revokeObjectURL(img.src); img.src = ''; }
 }
 
 async function checkBotMessage() {
