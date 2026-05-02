@@ -1046,7 +1046,7 @@
   #page-chat { padding: 0; }
   .chat-community {
     display: flex; flex-direction: column;
-    height: calc(100vh - 138px);
+    height: calc(100dvh - 138px);
   }
   .chat-pinned-bar {
     margin: 10px 14px 0;
@@ -1656,7 +1656,8 @@
       </div>
       <div class="chat-send-row" id="chat-send-row" style="display:none">
         <textarea class="chat-community-input" id="community-input" placeholder="Votre message..." rows="1"
-          oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,110)+'px'"
+          inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="true"
+          oninput="this.style.height='';this.style.height=Math.min(this.scrollHeight,110)+'px'"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage()}"></textarea>
         <button class="chat-action-btn btn-img-chat" onclick="document.getElementById('chat-img-input').click()">📷</button>
         <button class="chat-action-btn btn-send-chat" onclick="sendChatMessage()">➤</button>
@@ -3567,6 +3568,22 @@ function soonAvailable(sport) {
 let currentUser = null;
 let chatInitialized = false;
 let chatChannel = null;
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => {
+    const comm = document.querySelector('.chat-community');
+    if (!comm) return;
+    const active = document.activeElement;
+    const isInput = active && active.id === 'community-input';
+    if (isInput) {
+      const offset = window.innerHeight - window.visualViewport.height;
+      comm.style.height = `calc(100dvh - 138px - ${offset}px)`;
+      setTimeout(scrollChatToBottom, 80);
+    } else {
+      comm.style.height = '';
+    }
+  });
+}
 
 function updateChatInputVisibility() {
   const locked = document.getElementById('chat-locked-notice');
