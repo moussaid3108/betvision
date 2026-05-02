@@ -9,7 +9,7 @@ import chatHandler    from './api/chat.js';
 const app     = express();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // ─── Cache fichier persistant (survit aux redémarrages) ──────
 const DISK_CACHE_PATH = path.join(__dirname, 'upcoming_cache.json');
