@@ -3611,13 +3611,18 @@ function initChat() {
 
 async function loadChatMessages() {
   if (!supabaseClient) return;
-  const { data } = await supabaseClient
+  const { data, error } = await supabaseClient
     .from('messages')
     .select('*')
     .order('created_at', { ascending: true })
     .limit(80);
   const feed = document.getElementById('community-feed');
   if (!feed) return;
+  if (error) {
+    console.error('[Chat] loadChatMessages error:', error);
+    feed.innerHTML = `<div style="text-align:center;color:#ff7070;font-size:13px;padding:20px">⚠️ Erreur de chargement des messages<br><small style="color:#8b92a8">${error.message}</small></div>`;
+    return;
+  }
   feed.innerHTML = '';
   (data || []).forEach(appendChatMessage);
   scrollChatToBottom();
@@ -3659,15 +3664,19 @@ async function sendChatMessage() {
   const input = document.getElementById('community-input');
   const content = input.value.trim();
   if (!content) return;
-  input.value = ''; input.style.height = 'auto';
   const meta = currentUser.user_metadata || {};
-  await supabaseClient.from('messages').insert({
+  const { error } = await supabaseClient.from('messages').insert({
     user_id:    currentUser.id,
     username:   meta.full_name || meta.name || currentUser.email?.split('@')[0] || 'Anonyme',
     avatar_url: meta.avatar_url || meta.picture || null,
     content,
     image_url:  null,
   });
+  if (error) {
+    console.error('[Chat] sendChatMessage error:', error);
+    return;
+  }
+  input.value = ''; input.style.height = '';
 }
 
 async function handleChatImageUpload(event) {
