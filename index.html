@@ -1648,7 +1648,10 @@
 <!-- PAGE: CHAT -->
 <div class="page" id="page-chat">
   <div class="chat-community">
-    <div class="chat-pinned-bar">⚠️ Pour le bon fonctionnement de la communauté : respect obligatoire. Insultes et contenus inappropriés = ban définitif.</div>
+    <div class="chat-pinned-bar" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <span>⚠️ Pour le bon fonctionnement de la communauté : respect obligatoire. Insultes et contenus inappropriés = ban définitif.</span>
+      <button id="chat-clear-btn" onclick="clearAllChatMessages()" style="display:none;flex-shrink:0;background:rgba(255,50,50,0.15);border:1px solid rgba(255,50,50,0.3);color:#ff7070;border-radius:8px;padding:5px 8px;font-size:15px;cursor:pointer">🗑️</button>
+    </div>
     <div class="chat-feed-wrap" id="community-feed"></div>
     <div class="chat-input-area">
       <div class="chat-locked-notice" id="chat-locked-notice" style="display:none">
@@ -3597,16 +3600,28 @@ if (window.visualViewport) {
 }
 
 function updateChatInputVisibility() {
-  const locked = document.getElementById('chat-locked-notice');
-  const row    = document.getElementById('chat-send-row');
+  const locked   = document.getElementById('chat-locked-notice');
+  const row      = document.getElementById('chat-send-row');
+  const clearBtn = document.getElementById('chat-clear-btn');
   if (!locked || !row) return;
   if (currentUser) {
-    locked.style.display = 'none';
-    row.style.display    = 'flex';
+    locked.style.display   = 'none';
+    row.style.display      = 'flex';
+    if (clearBtn) clearBtn.style.display = 'flex';
   } else {
-    locked.style.display = 'block';
-    row.style.display    = 'none';
+    locked.style.display   = 'block';
+    row.style.display      = 'none';
+    if (clearBtn) clearBtn.style.display = 'none';
   }
+}
+
+async function clearAllChatMessages() {
+  if (!supabaseClient || !currentUser) return;
+  if (!confirm('Supprimer tous les messages du chat ?')) return;
+  const { error } = await supabaseClient.from('messages').delete().not('id', 'is', null);
+  if (error) { showChatToast('Erreur : ' + error.message); return; }
+  const feed = document.getElementById('community-feed');
+  if (feed) feed.innerHTML = '';
 }
 
 function initChat() {
