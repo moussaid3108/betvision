@@ -3685,7 +3685,12 @@ async function sendChatMessage() {
     const ext  = pendingChatImg.name.split('.').pop();
     const path = `${currentUser.id}/${Date.now()}.${ext}`;
     const { error: upErr } = await supabaseClient.storage.from('chat-images').upload(path, pendingChatImg);
-    if (upErr) { console.error('[Chat] image upload error:', upErr); if (btn) btn.disabled = false; return; }
+    if (upErr) {
+      console.error('[Chat] image upload error:', upErr);
+      if (btn) btn.disabled = false;
+      showChatToast('Erreur envoi image : ' + (upErr.message || 'vérifier les politiques Storage'));
+      return;
+    }
     const { data: urlData } = supabaseClient.storage.from('chat-images').getPublicUrl(path);
     image_url = urlData.publicUrl;
     clearChatImgPreview();
@@ -3719,6 +3724,20 @@ function previewChatImg(event) {
   const img     = document.getElementById('chat-img-preview-el');
   img.src = URL.createObjectURL(file);
   preview.style.display = 'block';
+}
+
+function showChatToast(msg) {
+  let t = document.getElementById('chat-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'chat-toast';
+    t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#ff4444;color:#fff;padding:8px 16px;border-radius:20px;font-size:13px;z-index:9999;pointer-events:none;transition:opacity .3s';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.opacity = '0'; }, 3500);
 }
 
 function clearChatImgPreview() {
