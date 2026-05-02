@@ -1732,6 +1732,7 @@ let liveReactCooldown   = {};   // { [matchId]: timestamp } — anti-spam 2 min
 let todayNewsCache = [];
 let todayNewsCacheTs = 0;       // timestamp du dernier fetch /api/news
 let userProfileCache = null;
+let currentProfile = { username: null, avatar_url: null };
 
 
 // ─── NAVIGATION ───
@@ -1778,6 +1779,9 @@ async function applyUserProfile(user) {
   const rawAvatar = data?.avatar_url || fallbackAvatar;
   const avatarUrl = data?.avatar_url ? rawAvatar + '?t=' + Date.now() : rawAvatar;
   const name      = data?.username   || fallbackName;
+
+  currentProfile.username   = name;
+  currentProfile.avatar_url = rawAvatar || null;
 
   const avatar     = document.getElementById('user-avatar');
   const drawerAv   = document.getElementById('drawer-avatar');
@@ -3665,12 +3669,14 @@ async function sendChatMessage() {
   const content = input.value.trim();
   if (!content) return;
   const meta = currentUser.user_metadata || {};
+  const username   = currentProfile.username   || meta.full_name || meta.name || currentUser.email?.split('@')[0] || 'Anonyme';
+  const avatar_url = currentProfile.avatar_url || meta.avatar_url || meta.picture || null;
   const { error } = await supabaseClient.from('messages').insert({
-    user_id:    currentUser.id,
-    username:   meta.full_name || meta.name || currentUser.email?.split('@')[0] || 'Anonyme',
-    avatar_url: meta.avatar_url || meta.picture || null,
+    user_id: currentUser.id,
+    username,
+    avatar_url,
     content,
-    image_url:  null,
+    image_url: null,
   });
   if (error) {
     console.error('[Chat] sendChatMessage error:', error);
