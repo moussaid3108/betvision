@@ -3183,6 +3183,16 @@ function appendMessage(role, text) {
   saveChatHistory();
 }
 
+function appendImageMsg(file, caption) {
+  const box = document.getElementById('chat-box');
+  const div = document.createElement('div');
+  div.className = 'chat-msg user';
+  const blobUrl = URL.createObjectURL(file);
+  div.innerHTML = `${caption ? `<div style="margin-bottom:5px">${caption}</div>` : ''}<img src="${blobUrl}" style="max-width:100%;max-height:180px;object-fit:cover;border-radius:8px;display:block;cursor:zoom-in" onclick="openImgOverlay('${blobUrl}')">`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
 async function callAI(userMsg) {
   const btn = document.getElementById('chat-send');
   btn.disabled = true;
@@ -3300,8 +3310,7 @@ async function callVision(input) {
 }
 
 async function callVisionFile(file, textMsg) {
-  if (textMsg) appendMessage('user', textMsg);
-  appendMessage('user', `📷 Image envoyée`);
+  appendImageMsg(file, textMsg || null);
   const btn = document.getElementById('chat-send');
   btn.disabled = true;
   const typing = document.createElement('div');
