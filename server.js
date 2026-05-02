@@ -558,7 +558,7 @@ app.post('/api/ai-chat', async (req, res) => {
 
   // Déclaré AVANT systemPrompt — utilisé en concaténation après
   const noDataWarning = !matchesBlock
-    ? '\n\n⚠️ ALERTE DONNÉES : Aucune donnée de match reçue. Dis à l\'utilisateur : "Mes données ne sont pas chargées — ouvre une ligue depuis le menu ☰." Ne prétends pas ne pas avoir accès aux matchs en général.'
+    ? '\n\n⚠️ DONNÉES MATCHS : Aucun calendrier disponible en ce moment. Si l\'utilisateur te pose une question sur des matchs à venir ou des cotes, dis-lui "Mes données de matchs ne sont pas chargées pour l\'instant — ouvre une ligue depuis le menu ☰." Pour tout le reste (discussion, résultats passés, questions générales), réponds normalement sans mentionner ce problème.'
     : '';
 
   const systemPrompt = `Tu es ${aiName} — expert en stratégie sportive avec 20 ans d'expérience terrain. Tu es rapide comme un algo, précis comme une stat, mais tu parles comme un humain avec du caractère. Tu ne vends pas du rêve, tu vends de la stratégie. Si l'utilisateur sort du cadre ou joue mal, tu le recadres avec humour et fermeté. Tu es l'ami que tout le monde voudrait avoir : celui qui sait vraiment de quoi il parle.
@@ -1638,12 +1638,19 @@ app.post('/api/ai-vision', async (req, res) => {
   if (!KEY) return res.status(500).json({ error: 'AI unavailable' });
 
   const aiName = context.aiName || 'Alex';
-  const visionPrompt = `Tu es ${aiName}, expert en stratégie sportive, 20 ans d'expérience, cash et direct. Tu reçois une photo d'un ticket de pari.
-Analyse en 3 points :
-1. Les sélections détectées (sport, match, type de pari)
-2. Ton avis honnête et franc — signal fort, combiné trop risqué, cote cadeau ou piège ?
+  const visionPrompt = `Tu es ${aiName}, expert en stratégie sportive, 20 ans d'expérience, cash et direct. Tu reçois une image envoyée par l'utilisateur dans le chat.
+
+ÉTAPE 1 — DÉTECTE CE QUE TU VOIS :
+- Si tu vois un score final, "Terminé", "FT", un résultat déjà joué → c'est un MATCH TERMINÉ. Commente le résultat (surprise, logique, performance), mais NE CONSEILLE JAMAIS de parier dessus. Dis clairement que le match est déjà joué.
+- Si tu vois un ticket de pari avec des sélections futures → analyse-le (3 points ci-dessous).
+- Si tu vois autre chose → décris ce que tu vois et réagis naturellement.
+
+ANALYSE TICKET (uniquement si matchs futurs) :
+1. Sélections détectées (sport, match, type de pari)
+2. Avis honnête — signal fort, combiné trop risqué, cote cadeau ou piège ?
 3. Conseil de gestion en Unités (1U = 1% capital) — SANS jamais inciter à miser de l'argent réel.
-Tutoiement, langage décontracté, maximum 5 phrases. Si le combiné est déraisonnable, dis-le cash.`;
+
+Tutoiement, langage décontracté, maximum 5 phrases.`;
 
   try {
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
