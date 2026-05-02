@@ -1362,7 +1362,6 @@
       <img class="user-avatar" id="user-avatar" src="" alt="" style="display:none;width:32px;height:32px;border-radius:50%;border:2px solid #00e5a0;object-fit:cover;cursor:pointer;" onclick="openProfile()">
     </div>
     <button id="btn-exit" onclick="exitChatMode()">✕</button>
-    <button id="btn-clear-ia" onclick="confirmClearIA()" style="display:none;background:rgba(255,50,50,0.15);border:1px solid rgba(255,50,50,0.3);color:#ff7070;border-radius:8px;padding:5px 9px;font-size:16px;cursor:pointer">🗑️</button>
   </div>
 </div>
 
@@ -1483,9 +1482,10 @@
 <!-- PAGE: IA -->
 <div class="page" id="page-ia">
   <div class="ia-page">
-    <div class="ia-intro">
+    <div class="ia-intro" style="position:relative">
       <div class="ia-intro-title"><img src="/icon-ia-card.png" style="width:52px;height:52px;object-fit:contain;clip-path:inset(0 12% 12% 0);vertical-align:middle;margin-right:8px;mix-blend-mode:screen;filter:contrast(2) saturate(1.2)"> Assistant IA</div>
       <div class="ia-intro-sub">Posez vos questions sur les statistiques, tendances et algorithmes prédictifs. L'IA analyse les données pour vous.</div>
+      <button onclick="confirmClearIA()" style="position:absolute;bottom:10px;right:10px;background:rgba(255,50,50,0.15);border:1px solid rgba(255,50,50,0.3);color:#ff7070;border-radius:8px;padding:5px 9px;font-size:16px;cursor:pointer">🗑️</button>
     </div>
 
 
@@ -1493,13 +1493,19 @@
       <div class="chat-msg ai">Bonjour ! Je suis votre assistant d'analyse statistique. Posez-moi vos questions sur les matchs, les tendances ou les algorithmes prédictifs. 📊</div>
     </div>
 
-    <div class="chat-input-row">
-      <button class="chat-img-btn" onclick="document.getElementById('ticket-input').click()" title="Analyser un ticket">📎</button>
-      <input type="file" id="ticket-input" accept="image/*" style="display:none" onchange="callVision(this)">
-      <textarea class="chat-input" id="chat-input" placeholder="Votre question..." rows="1"
-        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
-        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
-      <button class="chat-send" id="chat-send" onclick="sendMessage()">➤</button>
+    <div class="chat-input-row" style="flex-direction:column;align-items:stretch">
+      <div id="ia-img-preview" style="display:none;position:relative;margin-bottom:6px">
+        <img id="ia-img-preview-el" src="" alt="" style="max-height:80px;max-width:100%;border-radius:8px;display:block">
+        <button onclick="clearIAImgPreview()" style="position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.6);border:none;color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:flex-end">
+        <button class="chat-img-btn" onclick="document.getElementById('ticket-input').click()">📷</button>
+        <input type="file" id="ticket-input" accept="image/*" style="display:none" onchange="previewIAImg(event)">
+        <textarea class="chat-input" id="chat-input" placeholder="Votre question..." rows="1"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
+          oninput="this.style.height='';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+        <button class="chat-send" id="chat-send" onclick="sendMessage()">➤</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1762,8 +1768,6 @@ function showPage(name) {
   if (navEl) navEl.classList.add('active');
   if (name === 'paddock') initPaddock();
   if (name !== 'ia') stopLiveWatch();
-  const clearIA = document.getElementById('btn-clear-ia');
-  if (clearIA) clearIA.style.display = name === 'ia' ? 'flex' : 'none';
   window.scrollTo(0, 0);
 }
 
@@ -2855,12 +2859,42 @@ function saveAiName(name) {
   localStorage.setItem('bv_ai_name_' + (currentUser?.id || 'guest'), name);
 }
 
+let pendingIAImg = null;
+
+function previewIAImg(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+  pendingIAImg = file;
+  const preview = document.getElementById('ia-img-preview');
+  const img     = document.getElementById('ia-img-preview-el');
+  img.src = URL.createObjectURL(file);
+  preview.style.display = 'block';
+}
+
+function clearIAImgPreview() {
+  pendingIAImg = null;
+  const preview = document.getElementById('ia-img-preview');
+  const img     = document.getElementById('ia-img-preview-el');
+  if (preview) preview.style.display = 'none';
+  if (img) { URL.revokeObjectURL(img.src); img.src = ''; }
+}
+
 async function sendMessage() {
   const input = document.getElementById('chat-input');
   const msg = input.value.trim();
-  if (!msg) return;
+  if (!msg && !pendingIAImg) return;
+
+  if (pendingIAImg) {
+    const file = pendingIAImg;
+    clearIAImgPreview();
+    input.value = ''; input.style.height = '';
+    await callVisionFile(file, msg);
+    return;
+  }
+
   input.value = '';
-  input.style.height = 'auto';
+  input.style.height = '';
 
   if (waitingForAiName) {
     waitingForAiName = false;
@@ -3262,7 +3296,12 @@ async function callVision(input) {
   const file = input.files?.[0];
   input.value = '';
   if (!file) return;
-  appendMessage('user', `📎 Ticket envoyé : ${file.name}`);
+  await callVisionFile(file, '');
+}
+
+async function callVisionFile(file, textMsg) {
+  if (textMsg) appendMessage('user', textMsg);
+  appendMessage('user', `📷 Image envoyée`);
   const btn = document.getElementById('chat-send');
   btn.disabled = true;
   const typing = document.createElement('div');
