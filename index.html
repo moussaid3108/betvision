@@ -1362,6 +1362,7 @@
       <img class="user-avatar" id="user-avatar" src="" alt="" style="display:none;width:32px;height:32px;border-radius:50%;border:2px solid #00e5a0;object-fit:cover;cursor:pointer;" onclick="openProfile()">
     </div>
     <button id="btn-exit" onclick="exitChatMode()">✕</button>
+    <button id="btn-clear-ia" onclick="confirmClearIA()" style="display:none;background:rgba(255,50,50,0.15);border:1px solid rgba(255,50,50,0.3);color:#ff7070;border-radius:8px;padding:5px 9px;font-size:16px;cursor:pointer">🗑️</button>
   </div>
 </div>
 
@@ -1761,6 +1762,8 @@ function showPage(name) {
   if (navEl) navEl.classList.add('active');
   if (name === 'paddock') initPaddock();
   if (name !== 'ia') stopLiveWatch();
+  const clearIA = document.getElementById('btn-clear-ia');
+  if (clearIA) clearIA.style.display = name === 'ia' ? 'flex' : 'none';
   window.scrollTo(0, 0);
 }
 
@@ -3073,6 +3076,36 @@ function saveChatHistory() {
     const key = 'bv_chat_' + (currentUser?.id || 'guest');
     localStorage.setItem(key, JSON.stringify(chatHistory.slice(-200)));
   } catch {}
+}
+
+function confirmClearIA() {
+  let modal = document.getElementById('clear-ia-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'clear-ia-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+    modal.innerHTML = `
+      <div style="background:#13161f;border:1px solid rgba(255,50,50,0.3);border-radius:16px;padding:24px;max-width:320px;width:100%;text-align:center">
+        <div style="font-size:36px;margin-bottom:12px">🗑️</div>
+        <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:10px">Remise à zéro de l'IA</div>
+        <div style="font-size:13px;color:#8b92a8;line-height:1.5;margin-bottom:20px">Tout l'historique de conversation sera effacé.<br><strong style="color:#ff7070">Cette action est irréversible.</strong></div>
+        <div style="display:flex;gap:10px">
+          <button onclick="document.getElementById('clear-ia-modal').style.display='none'" style="flex:1;padding:11px;background:#1e2233;border:1px solid var(--border);border-radius:10px;color:#8b92a8;font-size:14px;cursor:pointer">Annuler</button>
+          <button onclick="executeClearIA()" style="flex:1;padding:11px;background:rgba(255,50,50,0.2);border:1px solid rgba(255,50,50,0.4);border-radius:10px;color:#ff7070;font-size:14px;font-weight:700;cursor:pointer">Effacer</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
+}
+
+function executeClearIA() {
+  document.getElementById('clear-ia-modal').style.display = 'none';
+  const key = 'bv_chat_' + (currentUser?.id || 'guest');
+  localStorage.removeItem(key);
+  if (typeof chatHistory !== 'undefined') chatHistory.length = 0;
+  const box = document.getElementById('chat-box');
+  if (box) box.innerHTML = '<div class="chat-msg ai">Bonjour ! Je suis votre assistant d\'analyse statistique. Posez-moi vos questions sur les matchs, les tendances ou les algorithmes prédictifs. 📊</div>';
 }
 
 function loadChatHistory() {
