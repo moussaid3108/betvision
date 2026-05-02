@@ -1078,7 +1078,7 @@
   }
   .chat-bubble-name { font-size: 10px; font-weight: 700; color: var(--accent); margin-bottom: 2px; }
   .chat-bubble-text { font-size: 13px; color: var(--text-1); line-height: 1.4; word-break: break-word; }
-  .chat-bubble-img { max-width: 100%; border-radius: 8px; margin-top: 5px; cursor: zoom-in; display: block; }
+  .chat-bubble-img { max-width: 100%; max-height: 180px; object-fit: cover; border-radius: 8px; margin-top: 5px; cursor: zoom-in; display: block; }
   .chat-bubble-time { font-size: 9px; color: var(--text-3); margin-top: 3px; text-align: right; }
   .chat-input-area {
     padding: 8px 14px 10px; border-top: 1px solid var(--border);
@@ -3673,7 +3673,6 @@ async function sendChatMessage() {
   if (!supabaseClient || !currentUser) return;
   const input = document.getElementById('community-input');
   const content = input.value.trim();
-  if (!content) return;
   const meta = currentUser.user_metadata || {};
   const username   = currentProfile.username   || meta.full_name || meta.name || currentUser.email?.split('@')[0] || 'Anonyme';
   const avatar_url = currentProfile.avatar_url || meta.avatar_url || meta.picture || null;
